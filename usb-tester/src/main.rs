@@ -2,7 +2,6 @@ use std::time::Duration;
 use libusb::DeviceHandle;
 
 fn main() {
-    std::fs::File::open("")
     let ctx = libusb::Context::new().unwrap();
     for dev in ctx.devices().unwrap().iter() {
         let dev_desc = dev.device_descriptor().unwrap();

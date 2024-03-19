@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 cortex-m-rt = { workspace = true, optional = true }
+embedded-hal.workspace = true
 rp2040-boot2 = { workspace = true, optional = true }
 rp2040-hal.workspace = true
 rp-pico.workspace = true
@@ -20,7 +21,6 @@ cortex-m.workspace = true
 cortex-m-rtic.workspace = true
 critical-section.workspace = true
 embedded-graphics.workspace = true
-embedded-hal.workspace = true
 embedded-sdmmc.workspace = true
 hd44780-driver.workspace = true
 heapless.workspace = true
