@@ -103,7 +103,7 @@ fn main() -> ! {
     ));
 
     let mut read = [0u8; 1024];
-    let mut write = [0u8; 1024];
+    let mut write = [0u8; 2048];
     // Set up the USB Communications Class Device driver
     let mut serial = SerialPort::new_with_store(&usb_bus, read, write);
     /*
@@ -153,7 +153,6 @@ fn main() -> ! {
     pins.gpio27.set_input_enable(true);
     pins.gpio28.set_input_enable(true);
     let mut pin_state: [(bool, bool, bool); 26] = [(false, false, false); 26];
-    let mut dbg = DebugBuffer::new();
 
     // Create a USB device with a fake VID and PID
     let mut usb_dev = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x27dd))
@@ -166,20 +165,18 @@ fn main() -> ! {
 
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
-    let _ = dbg.write_str("Starting output runner\r\n");
     loop {
         let now = timer.get_counter();
         if let Some(dur) = now.checked_duration_since(prev) {
             if dur.to_secs() > 2 {
-                let _ = dbg.write_str("Ping\r\n");
+                //let _ = dbg.write_str("Ping\r\n");
                 prev = now;
             }
         }
         handle_usb(&mut usb_dev, &mut serial, &mut last_chars, &mut output_all);
         //check_matrix(&btns);
-        check_all_pins(&pins, &mut pin_state, &mut dbg);
         if output_all {
-            handle_output(&mut serial, &mut dbg, &mut timer);
+            check_all_pins(&pins, &mut pin_state, &mut serial, &mut timer);
         }
     }
 }
@@ -258,14 +255,6 @@ fn handle_usb<B: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(usb_dev: &mut
     }
 }
 
-fn handle_output<B: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(serial: &mut SerialPort<B, B1, B2>, dbg: &mut DebugBuffer, timer: &mut Timer) {
-    dbg.use_content(|s| {
-        if !s.is_empty() {
-            serial_write_all(serial, s, timer)
-        }
-    });
-}
-
 fn serial_write_all<W: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(serial: &mut SerialPort<W, B1, B2>, buf: &[u8], timer: &mut Timer) {
     for chunk in buf.chunks(16) {
         let mut rem = chunk;
@@ -326,7 +315,7 @@ static MATRIX: SpinLockN<Matrix> = SpinLockN::new(
     }
 );
 
-fn check_all_pins(pins: &Pins, pin_state: &mut [(bool, bool, bool); 26], dbg: &mut DebugBuffer) {
+fn check_all_pins<W: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(pins: &Pins, pin_state: &mut [(bool, bool, bool); 26], serial: &mut SerialPort<W, B1, B2>, timer: &mut Timer) {
     let cur_state = [
         get_state(pins.gpio0.as_input()),
         get_state(pins.gpio1.as_input()),
@@ -355,14 +344,12 @@ fn check_all_pins(pins: &Pins, pin_state: &mut [(bool, bool, bool); 26], dbg: &m
         get_state(pins.gpio27.as_input()),
         get_state(pins.gpio28.as_input()),
     ];
-    unsafe {
-        if *pin_state != cur_state {
-            for (ind, (old, new)) in (pin_state.iter().zip(cur_state.iter())).enumerate() {
-                if old != new {
-                    let _ = dbg.write_fmt(format_args!("Diff on {ind} ({}, {}, {}) -> ({}, {}, {})\r\n", old.0, old.1, old.2, new.0, new.1, new.2));
-                }
-            }
-            *pin_state = cur_state;
+    for (ind, (old, new)) in (pin_state.iter_mut().zip(cur_state.iter())).enumerate() {
+        if old != new {
+            let mut bytes: String<128> = String::new();
+            let _ = bytes.write_fmt(format_args!("Diff on {ind} ({}, {}, {}) -> ({}, {}, {})\r\n", old.0, old.1, old.2, new.0, new.1, new.2));
+            serial_write_all(serial, bytes.as_bytes(), timer);
+            *old = *new;
         }
     }
 }
