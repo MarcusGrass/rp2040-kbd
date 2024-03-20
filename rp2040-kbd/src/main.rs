@@ -16,8 +16,6 @@ mod debugger;
 mod lock;
 
 use core::borrow::BorrowMut;
-use core::cell::UnsafeCell;
-use core::convert::Infallible;
 // The macro for our start-up function
 use elite_pi::{entry, Pins};
 
@@ -39,17 +37,20 @@ use usb_device::{class_prelude::*, prelude::*};
 // USB Communications Class Device support
 use usbd_serial::SerialPort;
 
-use crate::debugger::DebugBuffer;
 use crate::lock::SpinLockN;
 use core::fmt::Write;
-use core::sync::atomic::{AtomicU32, Ordering};
-use elite_pi::pac::UART0;
-use embedded_hal::digital::v2::{InputPin, PinState};
+use embedded_graphics::Drawable;
+use embedded_graphics::geometry::Point;
+use embedded_graphics::mono_font::iso_8859_1::{FONT_6X9};
+use embedded_graphics::mono_font::MonoTextStyleBuilder;
+use embedded_graphics::pixelcolor::BinaryColor;
+use embedded_graphics::text::{Baseline, Text};
+use embedded_hal::digital::v2::{InputPin, OutputPin};
 use embedded_hal::prelude::_embedded_hal_blocking_delay_DelayMs;
 use heapless::String;
 use rp2040_hal::fugit::RateExtU32;
 use rp2040_hal::gpio::bank0::{
-    Gpio19, Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio28, Gpio29, Gpio6, Gpio7, Gpio8,
+    Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio6, Gpio7, Gpio8,
     Gpio9,
 };
 use rp2040_hal::gpio::{
@@ -57,9 +58,12 @@ use rp2040_hal::gpio::{
 };
 use rp2040_hal::pio::PIOExt;
 use rp2040_hal::rom_data::reset_to_usb_boot;
-use rp2040_hal::sio::{Spinlock, Spinlock0};
-use rp2040_hal::uart::{DataBits, StopBits, UartConfig, UartPeripheral};
+use rp2040_hal::uart::{DataBits, StopBits, UartConfig};
 use rp2040_hal::{Clock, Timer};
+use ssd1306::mode::DisplayConfig;
+use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
+use ssd1306::size::DisplaySize128x32;
+use ssd1306::Ssd1306;
 
 /// Entry point to our bare-metal application.
 ///
@@ -114,16 +118,35 @@ fn main() -> ! {
         )
         .unwrap();
 
-    let (mut pio, sm0, _, _, _) = pac.PIO0.split(&mut pac.RESETS);
+    let sda_pin = pins.gpio2.into_function::<hal::gpio::FunctionI2C>();
+    let scl_pin = pins.gpio3.into_function::<hal::gpio::FunctionI2C>();
 
-    let _i2c_pio = i2c_pio::I2C::new(
-        &mut pio,
-        pins.gpio2,
-        pins.gpio3,
-        sm0,
-        100.kHz(),
-        clocks.system_clock.freq(),
+    let i2c = hal::I2C::i2c1(
+        pac.I2C1,
+        sda_pin,
+        scl_pin,
+        400.kHz(),
+        &mut pac.RESETS,
+        &clocks.peripheral_clock,
     );
+
+    let interface = ssd1306::I2CDisplayInterface::new(i2c);
+    let mut display = Ssd1306::new(interface, DisplaySize128x32, DisplayRotation::Rotate90)
+        .into_buffered_graphics_mode();
+    display.init().unwrap();
+    display.clear();
+    let _ = display.flush();
+    /*
+    let text_style = MonoTextStyleBuilder::new()
+        .font(&FONT_6X9)
+        .text_color(BinaryColor::On)
+        .build();
+    Text::with_baseline("Hello world!", Point::zero(), text_style, Baseline::Top)
+            .draw(&mut display)
+            .unwrap();
+    display.flush().unwrap();
+
+     */
 
     let mut prev = timer.get_counter();
 
@@ -140,6 +163,27 @@ fn main() -> ! {
     let mut write = [0u8; 2048];
     // Set up the USB Communications Class Device driver
     let mut serial = SerialPort::new_with_store(&usb_bus, read, write);
+    let mut type_out: String<512> = String::new();
+    // Specs for all:
+    // PullType down
+    // DriveStrength 4mA
+    // InputEnabled true
+    // Slew rate slow
+    // schmitt enabled true
+    let _ = type_out.write_fmt(format_args!("gpio29: {:?}\r\n", pins.gpio29.get_schmitt_enabled()));
+    let _ = type_out.write_fmt(format_args!("gpio27: {:?}\r\n", pins.gpio27.get_schmitt_enabled()));
+    let _ = type_out.write_fmt(format_args!("gpio6: {:?}\r\n", pins.gpio6.get_schmitt_enabled()));
+    let _ = type_out.write_fmt(format_args!("gpio7: {:?}\r\n", pins.gpio7.get_schmitt_enabled()));
+    let _ = type_out.write_fmt(format_args!("gpio8: {:?}\r\n", pins.gpio8.get_schmitt_enabled()));
+
+    let _ = type_out.write_fmt(format_args!("gpio9: {:?}\r\n", pins.gpio9.get_schmitt_enabled()));
+    let _ = type_out.write_fmt(format_args!("gpio26: {:?}\r\n", pins.gpio26.get_schmitt_enabled()));
+    let _ = type_out.write_fmt(format_args!("gpio22: {:?}\r\n", pins.gpio22.get_schmitt_enabled()));
+    let _ = type_out.write_fmt(format_args!("gpio20: {:?}\r\n", pins.gpio20.get_schmitt_enabled()));
+    let _ = type_out.write_fmt(format_args!("gpio23: {:?}\r\n", pins.gpio23.get_schmitt_enabled()));
+    let _ = type_out.write_fmt(format_args!("gpio21: {:?}\r\n", pins.gpio21.get_schmitt_enabled()));
+
+
     let mut btns = ButtonPins::new(
         (
             pins.gpio29.into_pull_up_input(),
@@ -150,7 +194,7 @@ fn main() -> ! {
         ),
         (
             pins.gpio9.into_pull_down_input(),
-            pins.gpio26.into_pull_up_input(),
+            pins.gpio26.into_pull_down_input(),
             pins.gpio22.into_pull_down_input(),
             pins.gpio20.into_pull_down_input(),
             pins.gpio23.into_pull_down_input(),
@@ -158,9 +202,6 @@ fn main() -> ! {
         ),
     );
     btns.init();
-    // Encoder
-    pins.gpio5.into_pull_up_input();
-    pins.gpio4.into_pull_down_input();
 
     /*
     pins.gpio0.set_input_enable(true);
@@ -210,6 +251,7 @@ fn main() -> ! {
 
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
+    let mut has_dumped = false;
     loop {
         let now = timer.get_counter();
         if let Some(dur) = now.checked_duration_since(prev) {
@@ -241,6 +283,10 @@ fn main() -> ! {
         }
         handle_usb(&mut usb_dev, &mut serial, &mut last_chars, &mut output_all);
         if output_all {
+            if !has_dumped {
+                serial_write_all(&mut serial, type_out.as_bytes(), &mut timer);
+                has_dumped = true;
+            }
             check_matrix(&btns, &mut serial, &mut timer);
         }
     }
@@ -259,7 +305,7 @@ struct ButtonPins {
     ),
     cols: (
         ColPin<Gpio9>,
-        RowPin<Gpio26>,
+        ColPin<Gpio26>,
         ColPin<Gpio22>,
         ColPin<Gpio20>,
         ColPin<Gpio23>,
@@ -334,23 +380,7 @@ impl ButtonPins {
         }
     }
 
-    pub fn new(
-        rows: (
-            RowPin<Gpio29>,
-            RowPin<Gpio27>,
-            RowPin<Gpio6>,
-            RowPin<Gpio7>,
-            RowPin<Gpio8>,
-        ),
-        cols: (
-            ColPin<Gpio9>,
-            RowPin<Gpio26>,
-            ColPin<Gpio22>,
-            ColPin<Gpio20>,
-            ColPin<Gpio23>,
-            ColPin<Gpio21>,
-        ),
-    ) -> Self {
+    pub fn new(rows: (RowPin<Gpio29>, RowPin<Gpio27>, RowPin<Gpio6>, RowPin<Gpio7>, RowPin<Gpio8>), cols: (ColPin<Gpio9>, ColPin<Gpio26>, ColPin<Gpio22>, ColPin<Gpio20>, ColPin<Gpio23>, ColPin<Gpio21>)) -> Self {
         Self { rows, cols }
     }
 }

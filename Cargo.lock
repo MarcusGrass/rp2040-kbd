@@ -542,21 +542,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d231dfb89cfffdbc30e7fc41579ed6066ad03abda9e567ccafae602b97ec5024"
 
 [[package]]
-name = "i2c-pio"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "249ecfbf2595b766a42a837160f88be0138a90534a02a789ed0cd56236b8f056"
-dependencies = [
- "cortex-m",
- "embedded-hal",
- "fugit",
- "nb 1.1.0",
- "pio",
- "pio-proc",
- "rp2040-hal",
-]
-
-[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1029,7 +1014,6 @@ dependencies = [
  "embedded-sdmmc",
  "hd44780-driver",
  "heapless",
- "i2c-pio",
  "nb 1.1.0",
  "panic-halt",
  "pio",
