@@ -55,11 +55,11 @@ use rp2040_hal::gpio::bank0::{
 use rp2040_hal::gpio::{
     AsInputPin, FunctionNull, FunctionSio, Pin, PinId, PullDown, PullUp, SioInput,
 };
+use rp2040_hal::pio::PIOExt;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::sio::{Spinlock, Spinlock0};
-use rp2040_hal::{Clock, Timer};
-use rp2040_hal::pio::PIOExt;
 use rp2040_hal::uart::{DataBits, StopBits, UartConfig, UartPeripheral};
+use rp2040_hal::{Clock, Timer};
 
 /// Entry point to our bare-metal application.
 ///
@@ -150,7 +150,7 @@ fn main() -> ! {
         ),
         (
             pins.gpio9.into_pull_down_input(),
-            pins.gpio26.into_pull_down_input(),
+            pins.gpio26.into_pull_up_input(),
             pins.gpio22.into_pull_down_input(),
             pins.gpio20.into_pull_down_input(),
             pins.gpio23.into_pull_down_input(),
@@ -259,7 +259,7 @@ struct ButtonPins {
     ),
     cols: (
         ColPin<Gpio9>,
-        ColPin<Gpio26>,
+        RowPin<Gpio26>,
         ColPin<Gpio22>,
         ColPin<Gpio20>,
         ColPin<Gpio23>,
@@ -334,7 +334,23 @@ impl ButtonPins {
         }
     }
 
-    pub fn new(rows: (RowPin<Gpio29>, RowPin<Gpio27>, RowPin<Gpio6>, RowPin<Gpio7>, RowPin<Gpio8>), cols: (ColPin<Gpio9>, ColPin<Gpio26>, ColPin<Gpio22>, ColPin<Gpio20>, ColPin<Gpio23>, ColPin<Gpio21>)) -> Self {
+    pub fn new(
+        rows: (
+            RowPin<Gpio29>,
+            RowPin<Gpio27>,
+            RowPin<Gpio6>,
+            RowPin<Gpio7>,
+            RowPin<Gpio8>,
+        ),
+        cols: (
+            ColPin<Gpio9>,
+            RowPin<Gpio26>,
+            ColPin<Gpio22>,
+            ColPin<Gpio20>,
+            ColPin<Gpio23>,
+            ColPin<Gpio21>,
+        ),
+    ) -> Self {
         Self { rows, cols }
     }
 }
@@ -500,7 +516,10 @@ fn check_matrix<W: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(
         //let _ = cur_state.write_fmt(format_args!("r{ind}:[{},{}]), ", new_row.0 as u8, new_row.1 as u8));
         if old_row != new_row {
             let mut s: String<128> = String::new();
-            let _ = s.write_fmt(format_args!("Diff on r{}\r\n", ind));
+            let _ = s.write_fmt(format_args!(
+                "Diff on r{}[{},{}]->[{},{}]\r\n",
+                ind, old_row.0 as u8, old_row.1 as u8, new_row.0 as u8, new_row.1 as u8
+            ));
             serial_write_all(serial_port, s.as_bytes(), timer);
         }
     }
@@ -508,7 +527,10 @@ fn check_matrix<W: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(
         //let _ = cur_state.write_fmt(format_args!("c{ind}:[{},{}]), ", new_col.0 as u8, new_col.1 as u8));
         if old_col != new_col {
             let mut s: String<128> = String::new();
-            let _ = s.write_fmt(format_args!("Diff on c{}\r\n", ind));
+            let _ = s.write_fmt(format_args!(
+                "Diff on c{}[{},{}]->[{},{}]\r\n",
+                ind, old_col.0 as u8, old_col.1 as u8, new_col.0 as u8, new_col.1 as u8
+            ));
             serial_write_all(serial_port, s.as_bytes(), timer);
         }
     }
