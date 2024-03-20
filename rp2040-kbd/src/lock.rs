@@ -1,6 +1,6 @@
+use crate::debugger::DebugBuffer;
 use core::cell::UnsafeCell;
 use rp2040_hal::sio::{Spinlock, Spinlock0, Spinlock16};
-use crate::debugger::DebugBuffer;
 
 #[derive(Debug)]
 #[repr(transparent)]
@@ -22,7 +22,7 @@ impl<T> SpinLockN<T> {
         let lock = Spinlock::claim();
         SpinLockGuard {
             _lock: lock,
-            value: unsafe {self.value.get().as_mut().unwrap_unchecked()},
+            value: unsafe { self.value.get().as_mut().unwrap_unchecked() },
         }
     }
 
@@ -30,7 +30,7 @@ impl<T> SpinLockN<T> {
         let lock = Spinlock::claim();
         SpinLockGuard {
             _lock: lock,
-            value: unsafe {self.value.get().as_mut().unwrap_unchecked()},
+            value: unsafe { self.value.get().as_mut().unwrap_unchecked() },
         }
     }
 }
@@ -38,5 +38,5 @@ impl<T> SpinLockN<T> {
 #[derive(Debug)]
 pub(crate) struct SpinLockGuard<'a, T, L> {
     _lock: L,
-    pub(crate) value: &'a mut T
+    pub(crate) value: &'a mut T,
 }

@@ -328,6 +328,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11157ac094ffbdde99aa67b23417ebdd801842852b500e395a45a9c0aac03e4a"
 
 [[package]]
+name = "elite-pi"
+version = "0.1.0"
+dependencies = [
+ "cortex-m-rt",
+ "fugit",
+ "rp2040-boot2",
+ "rp2040-hal",
+ "usb-device",
+]
+
+[[package]]
 name = "embedded-dma"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -957,19 +968,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rp-pico"
-version = "0.8.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6341771e6f8e5d130b2b3cbc23435b7847761adf198af09f4b2a60407d43bd56"
-dependencies = [
- "cortex-m-rt",
- "fugit",
- "rp2040-boot2",
- "rp2040-hal",
- "usb-device",
-]
-
-[[package]]
 name = "rp2040-boot2"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1025,6 +1023,7 @@ dependencies = [
  "critical-section",
  "defmt",
  "defmt-rtt",
+ "elite-pi",
  "embedded-graphics",
  "embedded-hal",
  "embedded-sdmmc",
@@ -1035,7 +1034,6 @@ dependencies = [
  "panic-halt",
  "pio",
  "pio-proc",
- "rp-pico",
  "rp2040-boot2",
  "rp2040-hal",
  "smart-leds",

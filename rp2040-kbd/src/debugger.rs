@@ -18,7 +18,6 @@ impl Write for DebugBuffer {
 }
 
 impl DebugBuffer {
-
     pub(crate) const fn new() -> Self {
         Self {
             inner: [0u8; 4096 * 4],

@@ -1,5 +1,5 @@
-use std::time::Duration;
 use libusb::DeviceHandle;
+use std::time::Duration;
 
 fn main() {
     let ctx = libusb::Context::new().unwrap();
@@ -24,11 +24,15 @@ fn main() {
 
 fn use_dev_handle(mut handle: DeviceHandle) {
     handle.claim_interface(0).unwrap();
-    let write = handle.write_bulk(1, b"Hello!", Duration::from_secs(3)).unwrap();
+    let write = handle
+        .write_bulk(1, b"Hello!", Duration::from_secs(3))
+        .unwrap();
     println!("Wrote {write} bytes");
     let mut buf = vec![0; 2048];
     handle.claim_interface(0).unwrap();
-    let read = handle.read_bulk(129, buf.as_mut_slice(), Duration::from_secs(3)).unwrap();
+    let read = handle
+        .read_bulk(129, buf.as_mut_slice(), Duration::from_secs(3))
+        .unwrap();
     println!("Read {} bytes", read);
     println!("{:?}", core::str::from_utf8(&buf[..read]));
 }

@@ -10,8 +10,9 @@ cortex-m-rt = { workspace = true, optional = true }
 embedded-hal.workspace = true
 rp2040-boot2 = { workspace = true, optional = true }
 rp2040-hal.workspace = true
-rp-pico.workspace = true
+elite-pi.workspace = true
 heapless.workspace = true
+i2c-pio.workspace = true
 usb-device.workspace = true
 usbd-serial.workspace = true
 panic-halt.workspace = true
@@ -24,7 +25,6 @@ embedded-graphics.workspace = true
 embedded-sdmmc.workspace = true
 hd44780-driver.workspace = true
 heapless.workspace = true
-i2c-pio.workspace = true
 nb.workspace = true
 pio.workspace = true
 pio-proc.workspace = true
