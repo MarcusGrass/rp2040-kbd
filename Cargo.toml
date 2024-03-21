@@ -25,6 +25,7 @@ panic-probe = "0.3.1"
 pio = "0.2.1"
 pio-proc = "0.2.2"
 elite-pi = {path = "../rp-hal-boards/boards/elite-pi"}
+rotary-encoder-embedded = "0.2.0"
 rp2040-boot2 = "0.3.0"
 rp2040-hal = "0.9.0"
 st7789 = "0.6.1"

@@ -953,6 +953,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "rotary-encoder-embedded"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01c89f3f7f863c203d8346f58b485731765ecc22c27f3186b53e2013bda7d65d"
+dependencies = [
+ "embedded-hal",
+]
+
+[[package]]
 name = "rp2040-boot2"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1018,6 +1027,7 @@ dependencies = [
  "panic-halt",
  "pio",
  "pio-proc",
+ "rotary-encoder-embedded",
  "rp2040-boot2",
  "rp2040-hal",
  "smart-leds",

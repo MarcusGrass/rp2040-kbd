@@ -48,14 +48,11 @@ use embedded_graphics::text::{Baseline, Text};
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use embedded_hal::prelude::_embedded_hal_blocking_delay_DelayMs;
 use heapless::String;
+use rotary_encoder_embedded::{Direction, RotaryEncoder};
+use rotary_encoder_embedded::standard::StandardMode;
 use rp2040_hal::fugit::RateExtU32;
-use rp2040_hal::gpio::bank0::{
-    Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio6, Gpio7, Gpio8,
-    Gpio9,
-};
-use rp2040_hal::gpio::{
-    AsInputPin, FunctionNull, FunctionSio, Pin, PinId, PullDown, PullUp, SioInput,
-};
+use rp2040_hal::gpio::bank0::{Gpio20, Gpio21, Gpio22, Gpio23, Gpio24, Gpio26, Gpio27, Gpio29, Gpio6, Gpio7, Gpio8, Gpio9};
+use rp2040_hal::gpio::{AsInputPin, FunctionNull, FunctionSio, InputOverride, Pin, PinId, PullBusKeep, PullDown, PullUp, SioInput, SioOutput};
 use rp2040_hal::pio::PIOExt;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::uart::{DataBits, StopBits, UartConfig};
@@ -64,6 +61,8 @@ use ssd1306::mode::DisplayConfig;
 use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
 use ssd1306::size::DisplaySize128x32;
 use ssd1306::Ssd1306;
+
+type PowerLedPin = Pin<Gpio24, FunctionSio<SioOutput>, PullDown>;
 
 /// Entry point to our bare-metal application.
 ///
@@ -148,6 +147,11 @@ fn main() -> ! {
 
      */
 
+    let rotary_dt = pins.gpio4.into_pull_down_input();
+    let rotary_clk = pins.gpio5.into_pull_down_input();
+    let mut _rotary_enc = RotaryEncoder::new(rotary_dt, rotary_clk)
+        .into_standard_mode();
+
     let mut prev = timer.get_counter();
 
     // Set up the USB driver
@@ -183,26 +187,26 @@ fn main() -> ! {
     let _ = type_out.write_fmt(format_args!("gpio23: {:?}\r\n", pins.gpio23.get_schmitt_enabled()));
     let _ = type_out.write_fmt(format_args!("gpio21: {:?}\r\n", pins.gpio21.get_schmitt_enabled()));
 
-
-    let mut btns = ButtonPins::new(
-        (
-            pins.gpio29.into_pull_up_input(),
-            pins.gpio27.into_pull_up_input(),
-            pins.gpio6.into_pull_up_input(),
-            pins.gpio7.into_pull_up_input(),
-            pins.gpio8.into_pull_up_input(),
+    let mut btns = ButtonPins {
+        rows: (
+        pins.gpio29.into_pull_up_input(),
+        pins.gpio27.into_pull_up_input(),
+        pins.gpio6.into_pull_up_input(),
+        pins.gpio7.into_pull_up_input(),
+        pins.gpio8.into_pull_up_input(),
         ),
-        (
-            pins.gpio9.into_pull_down_input(),
-            pins.gpio26.into_pull_down_input(),
-            pins.gpio22.into_pull_down_input(),
-            pins.gpio20.into_pull_down_input(),
-            pins.gpio23.into_pull_down_input(),
-            pins.gpio21.into_pull_down_input(),
+        cols: (
+        pins.gpio9.into_pull_down_input(),
+        pins.gpio26.into_pull_down_input(),
+        pins.gpio22.into_pull_down_input(),
+        pins.gpio20.into_pull_down_input(),
+        pins.gpio23.into_pull_down_input(),
+        pins.gpio21.into_pull_down_input(),
         ),
-    );
+    };
     btns.init();
 
+    let mut power_led_pin = pins.power_led.into_push_pull_output();
     /*
     pins.gpio0.set_input_enable(true);
     pins.gpio1.set_input_enable(true);
@@ -252,6 +256,7 @@ fn main() -> ! {
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut has_dumped = false;
+    let mut prev_bank = 0;
     loop {
         let now = timer.get_counter();
         if let Some(dur) = now.checked_duration_since(prev) {
@@ -281,13 +286,24 @@ fn main() -> ! {
                 prev = now;
             }
         }
-        handle_usb(&mut usb_dev, &mut serial, &mut last_chars, &mut output_all);
+        handle_usb(&mut usb_dev, &mut serial, &mut power_led_pin, &mut last_chars, &mut output_all);
         if output_all {
             if !has_dumped {
                 serial_write_all(&mut serial, type_out.as_bytes(), &mut timer);
                 has_dumped = true;
             }
             check_matrix(&btns, &mut serial, &mut timer);
+            //check_rotary_enc(&mut rotary_enc, &mut serial, &mut timer);
+            /*
+            let bank = rp2040_hal::Sio::read_bank0();
+            if prev_bank != bank {
+                let mut s: String<64> = String::new();
+                let _ = s.write_fmt(format_args!("Bank0: {bank:b}\r\n"));
+                serial_write_all(&mut serial, s.as_bytes(), &mut timer);
+                prev_bank = bank;
+            }
+
+             */
         }
     }
 }
@@ -380,14 +396,12 @@ impl ButtonPins {
         }
     }
 
-    pub fn new(rows: (RowPin<Gpio29>, RowPin<Gpio27>, RowPin<Gpio6>, RowPin<Gpio7>, RowPin<Gpio8>), cols: (ColPin<Gpio9>, ColPin<Gpio26>, ColPin<Gpio22>, ColPin<Gpio20>, ColPin<Gpio23>, ColPin<Gpio21>)) -> Self {
-        Self { rows, cols }
-    }
 }
 
 fn handle_usb<B: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(
     usb_dev: &mut UsbDevice<B>,
     serial: &mut SerialPort<B, B1, B2>,
+    power_led: &mut PowerLedPin,
     last_chars: &mut [u8],
     output_all: &mut bool,
 ) {
@@ -409,6 +423,12 @@ fn handle_usb<B: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(
                         reset_to_usb_boot(0, 0);
                     } else if last_chars.ends_with(b"output") {
                         *output_all = true;
+                    } else if last_chars.ends_with(b"led") {
+                        if matches!(power_led.is_high(), Ok(true)) {
+                            let _ = power_led.set_low();
+                        } else if matches!(power_led.is_low(), Ok(true)) {
+                            let _ = power_led.set_high();
+                        }
                     }
                 }
             }
@@ -512,7 +532,6 @@ fn check_all_pins<W: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(
         get_state(pins.gpio22.as_input()),
         get_state(pins.gpio26.as_input()),
         get_state(pins.gpio27.as_input()),
-        get_state(pins.gpio28.as_input()),
     ];
     for (ind, (old, new)) in (pin_state.iter_mut().zip(cur_state.iter())).enumerate() {
         if old != new {
@@ -572,4 +591,22 @@ fn check_matrix<W: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(
 
      */
     *old.value = new;
+}
+
+fn check_rotary_enc<W: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>, DT: InputPin, CLK: InputPin>(rotary_encoder: &mut RotaryEncoder<StandardMode, DT, CLK>, serial_port: &mut SerialPort<W, B1, B2>,
+                                                                                                         timer: &mut Timer,) {
+    let _ = rotary_encoder.update();
+    match rotary_encoder.direction() {
+        Direction::None => {}
+        Direction::Clockwise => {
+            let mut s: String<64> = String::new();
+            let _ = s.push_str("Rot+\r\n");
+            serial_write_all(serial_port, s.as_bytes(), timer);
+        }
+        Direction::Anticlockwise => {
+            let mut s: String<64> = String::new();
+            let _ = s.push_str("Rot-\r\n");
+            serial_write_all(serial_port, s.as_bytes(), timer);
+        }
+    }
 }
