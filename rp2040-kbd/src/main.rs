@@ -45,7 +45,7 @@ use embedded_graphics::mono_font::iso_8859_1::{FONT_6X9};
 use embedded_graphics::mono_font::MonoTextStyleBuilder;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::text::{Baseline, Text};
-use embedded_hal::digital::v2::{InputPin, OutputPin};
+use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
 use embedded_hal::prelude::_embedded_hal_blocking_delay_DelayMs;
 use heapless::String;
 use rotary_encoder_embedded::{Direction, RotaryEncoder};
@@ -163,6 +163,8 @@ fn main() -> ! {
         &mut pac.RESETS,
     ));
 
+    let side_check_pin = pins.gpio28.as_input();
+
     let mut read = [0u8; 1024];
     let mut write = [0u8; 2048];
     // Set up the USB Communications Class Device driver
@@ -174,6 +176,7 @@ fn main() -> ! {
     // InputEnabled true
     // Slew rate slow
     // schmitt enabled true
+    /*
     let _ = type_out.write_fmt(format_args!("gpio29: {:?}\r\n", pins.gpio29.get_schmitt_enabled()));
     let _ = type_out.write_fmt(format_args!("gpio27: {:?}\r\n", pins.gpio27.get_schmitt_enabled()));
     let _ = type_out.write_fmt(format_args!("gpio6: {:?}\r\n", pins.gpio6.get_schmitt_enabled()));
@@ -187,6 +190,9 @@ fn main() -> ! {
     let _ = type_out.write_fmt(format_args!("gpio23: {:?}\r\n", pins.gpio23.get_schmitt_enabled()));
     let _ = type_out.write_fmt(format_args!("gpio21: {:?}\r\n", pins.gpio21.get_schmitt_enabled()));
 
+     */
+    let _ = type_out.write_fmt(format_args!("Side: [{}, {}]\r\n", side_check_pin.is_low().unwrap() as u8, side_check_pin.is_high().unwrap() as u8));
+
     let mut btns = ButtonPins {
         rows: (
         pins.gpio29.into_pull_up_input(),
@@ -196,12 +202,12 @@ fn main() -> ! {
         pins.gpio8.into_pull_up_input(),
         ),
         cols: (
-        pins.gpio9.into_pull_down_input(),
-        pins.gpio26.into_pull_down_input(),
-        pins.gpio22.into_pull_down_input(),
-        pins.gpio20.into_pull_down_input(),
-        pins.gpio23.into_pull_down_input(),
-        pins.gpio21.into_pull_down_input(),
+        Some(pins.gpio9.into_pull_up_input()),
+        Some(pins.gpio26.into_pull_up_input()),
+        Some(pins.gpio22.into_pull_up_input()),
+        Some(pins.gpio20.into_pull_up_input()),
+        Some(pins.gpio23.into_pull_up_input()),
+        Some(pins.gpio21.into_pull_up_input()),
         ),
     };
     btns.init();
@@ -257,6 +263,7 @@ fn main() -> ! {
     let mut output_all = false;
     let mut has_dumped = false;
     let mut prev_bank = 0;
+    let mut prev_0 = false;
     loop {
         let now = timer.get_counter();
         if let Some(dur) = now.checked_duration_since(prev) {
@@ -292,7 +299,7 @@ fn main() -> ! {
                 serial_write_all(&mut serial, type_out.as_bytes(), &mut timer);
                 has_dumped = true;
             }
-            check_matrix(&btns, &mut serial, &mut timer);
+            check_matrix(&mut btns, &mut prev_0, &mut serial, &mut timer);
             //check_rotary_enc(&mut rotary_enc, &mut serial, &mut timer);
             /*
             let bank = rp2040_hal::Sio::read_bank0();
@@ -309,7 +316,7 @@ fn main() -> ! {
 }
 
 type RowPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
-type ColPin<Id> = Pin<Id, FunctionSio<SioInput>, PullDown>;
+type ColPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
 // Left side
 struct ButtonPins {
     rows: (
@@ -320,12 +327,12 @@ struct ButtonPins {
         RowPin<Gpio8>,
     ),
     cols: (
-        ColPin<Gpio9>,
-        ColPin<Gpio26>,
-        ColPin<Gpio22>,
-        ColPin<Gpio20>,
-        ColPin<Gpio23>,
-        ColPin<Gpio21>,
+        Option<ColPin<Gpio9>>,
+        Option<ColPin<Gpio26>>,
+        Option<ColPin<Gpio22>>,
+        Option<ColPin<Gpio20>>,
+        Option<ColPin<Gpio23>>,
+        Option<ColPin<Gpio21>>,
     ),
 }
 
@@ -336,64 +343,18 @@ impl ButtonPins {
         self.rows.2.set_input_enable(true);
         self.rows.3.set_input_enable(true);
         self.rows.4.set_input_enable(true);
-        self.cols.0.set_input_enable(true);
-        self.cols.1.set_input_enable(true);
-        self.cols.2.set_input_enable(true);
-        self.cols.3.set_input_enable(true);
-        self.cols.4.set_input_enable(true);
-        self.cols.5.set_input_enable(true);
+        self.cols.0.as_mut().unwrap().set_input_enable(true);
+        self.cols.1.as_mut().unwrap().set_input_enable(true);
+        self.cols.2.as_mut().unwrap().set_input_enable(true);
+        self.cols.3.as_mut().unwrap().set_input_enable(true);
+        self.cols.4.as_mut().unwrap().set_input_enable(true);
+        self.cols.5.as_mut().unwrap().set_input_enable(true);
     }
-    pub fn matrix(&self) -> Matrix {
-        Matrix {
-            rows: [
-                (
-                    self.rows.0.is_low().unwrap(),
-                    self.rows.0.is_high().unwrap(),
-                ),
-                (
-                    self.rows.1.is_low().unwrap(),
-                    self.rows.1.is_high().unwrap(),
-                ),
-                (
-                    self.rows.2.is_low().unwrap(),
-                    self.rows.2.is_high().unwrap(),
-                ),
-                (
-                    self.rows.3.is_low().unwrap(),
-                    self.rows.3.is_high().unwrap(),
-                ),
-                (
-                    self.rows.4.is_low().unwrap(),
-                    self.rows.4.is_high().unwrap(),
-                ),
-            ],
-            cols: [
-                (
-                    self.cols.0.is_low().unwrap(),
-                    self.cols.0.is_high().unwrap(),
-                ),
-                (
-                    self.cols.1.is_low().unwrap(),
-                    self.cols.1.is_high().unwrap(),
-                ),
-                (
-                    self.cols.2.is_low().unwrap(),
-                    self.cols.2.is_high().unwrap(),
-                ),
-                (
-                    self.cols.3.is_low().unwrap(),
-                    self.cols.3.is_high().unwrap(),
-                ),
-                (
-                    self.cols.4.is_low().unwrap(),
-                    self.cols.4.is_high().unwrap(),
-                ),
-                (
-                    self.cols.5.is_low().unwrap(),
-                    self.cols.5.is_high().unwrap(),
-                ),
-            ],
-        }
+    pub fn check(&mut self) -> bool {
+        let mut check = self.cols.1.take().unwrap().into_push_pull_output_in_state(PinState::Low);
+        let res = self.rows.0.is_high().unwrap();
+        self.cols.1 = Some(check.into_pull_up_input());
+        res
     }
 
 }
@@ -484,8 +445,7 @@ struct Matrix {
     rows: [(bool, bool); 5],
     cols: [(bool, bool); 6],
 }
-
-static MATRIX: SpinLockN<Matrix> = SpinLockN::new(Matrix {
+const EMPTY_MATRIX: Matrix = Matrix {
     rows: [
         (false, false),
         (false, false),
@@ -501,7 +461,9 @@ static MATRIX: SpinLockN<Matrix> = SpinLockN::new(Matrix {
         (false, false),
         (false, false),
     ],
-});
+};
+
+static MATRIX: SpinLockN<Matrix> = SpinLockN::new(EMPTY_MATRIX);
 
 fn check_all_pins<W: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(
     pins: &Pins,
@@ -554,43 +516,21 @@ fn get_state<I: PinId>(pin: AsInputPin<I, FunctionNull, PullDown>) -> (bool, boo
 }
 
 fn check_matrix<W: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>>(
-    pins: &ButtonPins,
+    pins: &mut ButtonPins,
+    old: &mut bool,
     serial_port: &mut SerialPort<W, B1, B2>,
     timer: &mut Timer,
 ) {
-    let new = pins.matrix();
-    let old = MATRIX.lock_mutex();
-    //let mut cur_state: String<512> = String::new();
-    for (ind, (old_row, new_row)) in old.value.rows.iter().zip(new.rows.iter()).enumerate() {
-        //let _ = cur_state.write_fmt(format_args!("r{ind}:[{},{}]), ", new_row.0 as u8, new_row.1 as u8));
-        if old_row != new_row {
-            let mut s: String<128> = String::new();
-            let _ = s.write_fmt(format_args!(
-                "Diff on r{}[{},{}]->[{},{}]\r\n",
-                ind, old_row.0 as u8, old_row.1 as u8, new_row.0 as u8, new_row.1 as u8
-            ));
-            serial_write_all(serial_port, s.as_bytes(), timer);
-        }
+    let new = pins.check();
+    if new != *old {
+        let mut s: String<128> = String::new();
+        let _ = s.write_fmt(format_args!(
+            "Diff on r{}[{}]->[{}]\r\n",
+            0, *old as u8, new as u8
+        ));
+        serial_write_all(serial_port, s.as_bytes(), timer);
+        *old = new;
     }
-    for (ind, (old_col, new_col)) in old.value.cols.iter().zip(new.cols.iter()).enumerate() {
-        //let _ = cur_state.write_fmt(format_args!("c{ind}:[{},{}]), ", new_col.0 as u8, new_col.1 as u8));
-        if old_col != new_col {
-            let mut s: String<128> = String::new();
-            let _ = s.write_fmt(format_args!(
-                "Diff on c{}[{},{}]->[{},{}]\r\n",
-                ind, old_col.0 as u8, old_col.1 as u8, new_col.0 as u8, new_col.1 as u8
-            ));
-            serial_write_all(serial_port, s.as_bytes(), timer);
-        }
-    }
-    /*
-    cur_state.pop();
-    cur_state.pop();
-    let _ = cur_state.push_str("\r\n");
-    serial_write_all(serial_port, cur_state.as_bytes(), timer);
-
-     */
-    *old.value = new;
 }
 
 fn check_rotary_enc<W: UsbBus, B1: BorrowMut<[u8]>, B2: BorrowMut<[u8]>, DT: InputPin, CLK: InputPin>(rotary_encoder: &mut RotaryEncoder<StandardMode, DT, CLK>, serial_port: &mut SerialPort<W, B1, B2>,
