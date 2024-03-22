@@ -15,6 +15,7 @@
 mod debugger;
 mod keyboard;
 mod lock;
+mod runtime;
 
 use core::borrow::BorrowMut;
 // The macro for our start-up function
@@ -67,7 +68,7 @@ use ssd1306::mode::DisplayConfig;
 use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
 use ssd1306::size::DisplaySize128x32;
 use ssd1306::Ssd1306;
-use crate::keyboard::Left;
+use crate::keyboard::left::LeftButtons;
 
 type PowerLedPin = Pin<Gpio24, FunctionSio<SioOutput>, PullDown>;
 
@@ -117,7 +118,7 @@ fn main() -> ! {
         pins.gpio1.into_function::<hal::gpio::FunctionUart>(),
     );
 
-    let _uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
+    let uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
             UartConfig::new(115_200.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
@@ -183,7 +184,7 @@ fn main() -> ! {
         side_check_pin.is_low().unwrap() as u8,
         side_check_pin.is_high().unwrap() as u8
     ));
-    let mut left = Left::new(
+    let mut left = LeftButtons::new(
         (
         pins.gpio29.into_pull_up_input(),
         pins.gpio27.into_pull_up_input(),
