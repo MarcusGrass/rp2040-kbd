@@ -1014,7 +1014,6 @@ dependencies = [
  "cortex-m",
  "cortex-m-rt",
  "cortex-m-rtic",
- "critical-section",
  "defmt",
  "defmt-rtt",
  "elite-pi",
