@@ -55,9 +55,11 @@ use ssd1306::Ssd1306;
 use crate::keyboard::left::LeftButtons;
 use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
-use crate::keyboard::uart_serial::UartSerial;
+use crate::keyboard::right::RightButtons;
+use crate::keyboard::uart_serial::SplitSerial;
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::runtime::left::run_left;
+use crate::runtime::right::run_right;
 
 /// Entry point to our bare-metal application.
 ///
@@ -89,7 +91,7 @@ fn main() -> ! {
         .ok()
         .unwrap();
 
-    let mut timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
+    let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
 
     let sio = hal::Sio::new(pac.SIO);
     let mut pins = Pins::new(
@@ -106,13 +108,14 @@ fn main() -> ! {
     );
 
 
+
     let uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
         .enable(
             UartConfig::new(115_200.Hz(), DataBits::Eight, None, StopBits::One),
             clocks.peripheral_clock.freq(),
         )
         .unwrap();
-    let uart = UartSerial::new(uart);
+    let uart = SplitSerial::new(uart);
 
     let sda_pin = pins.gpio2.into_function::<hal::gpio::FunctionI2C>();
     let scl_pin = pins.gpio3.into_function::<hal::gpio::FunctionI2C>();
@@ -149,10 +152,9 @@ fn main() -> ! {
     let power_led_pin = pins.power_led.into_push_pull_output();
     let pl = PowerLed::new(power_led_pin);
     let is_left = side_check_pin.is_high().unwrap();
-
+    let u_ser = UsbSerial::new(&usb_bus);
+    let u_dev = UsbSerialDevice::new(&usb_bus);
     if is_left {
-        let u_ser = UsbSerial::new(&usb_bus);
-        let u_dev = UsbSerialDevice::new(&usb_bus);
         let left = LeftButtons::new(
             (
                 pins.gpio29.into_pull_up_input(),
@@ -171,8 +173,25 @@ fn main() -> ! {
             )
         );
         run_left(u_ser, u_dev, oled, uart, left, pl, timer);
+    } else {
+        let right = RightButtons::new(
+            (
+                pins.gpio29.into_pull_up_input(),
+                pins.gpio4.into_pull_up_input(),
+                pins.gpio20.into_pull_up_input(),
+                pins.gpio23.into_pull_up_input(),
+                pins.gpio21.into_pull_up_input(),
+                ),
+            (
+                Some(pins.gpio22.into_pull_up_input()),
+                Some(pins.gpio5.into_pull_up_input()),
+                Some(pins.gpio6.into_pull_up_input()),
+                Some(pins.gpio7.into_pull_up_input()),
+                Some(pins.gpio8.into_pull_up_input()),
+                Some(pins.gpio9.into_pull_up_input()),
+            )
+        );
+        run_right(u_ser, u_dev, oled, uart, right, pl, timer);
     }
-    loop {
 
-    }
 }

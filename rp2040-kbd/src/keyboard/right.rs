@@ -1,4 +1,4 @@
-use rp2040_hal::gpio::bank0::{Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio4, Gpio9};
+use rp2040_hal::gpio::bank0::{Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9};
 use crate::check_col;
 use crate::keyboard::{ButtonPin, ButtonState, ButtonStateChange, INITIAL_STATE, MatrixState, RowPin};
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
@@ -10,12 +10,12 @@ pub struct RightButtons {
         RowPin; 5
     ],
     cols: (
-        Option<ButtonPin<Gpio9>>,
-        Option<ButtonPin<Gpio26>>,
-        Option<ButtonPin<Gpio22>>,
-        Option<ButtonPin<Gpio20>>,
-        Option<ButtonPin<Gpio23>>,
-        Option<ButtonPin<Gpio21>>,
+            Option<ButtonPin<Gpio22>>,
+            Option<ButtonPin<Gpio5>>,
+            Option<ButtonPin<Gpio6>>,
+            Option<ButtonPin<Gpio7>>,
+            Option<ButtonPin<Gpio8>>,
+            Option<ButtonPin<Gpio9>>,
     ),
 }
 
@@ -29,12 +29,12 @@ impl RightButtons {
             ButtonPin<Gpio21>,
         ),
         cols: (
-            Option<ButtonPin<Gpio9>>,
-            Option<ButtonPin<Gpio26>>,
             Option<ButtonPin<Gpio22>>,
-            Option<ButtonPin<Gpio20>>,
-            Option<ButtonPin<Gpio23>>,
-            Option<ButtonPin<Gpio21>>,
+            Option<ButtonPin<Gpio5>>,
+            Option<ButtonPin<Gpio6>>,
+            Option<ButtonPin<Gpio7>>,
+            Option<ButtonPin<Gpio8>>,
+            Option<ButtonPin<Gpio9>>,
         ),
     ) -> Self {
         Self {
