@@ -1,4 +1,4 @@
-use embedded_hal::digital::v2::{InputPin, PinState};
+use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
 use rp2040_hal::gpio::bank0::{
     Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio6, Gpio7, Gpio8, Gpio9,
 };
@@ -63,25 +63,27 @@ pub type MatrixState = [[ButtonState; NUM_COLS]; NUM_ROWS];
 const INITIAL_STATE: MatrixState = [[ButtonState::Depressed; NUM_COLS]; NUM_ROWS];
 
 macro_rules! check_col {
-    ($slf: expr, $pt: ident, $m_state: expr, $vec: expr) => {
+    ($slf: expr, $pt: tt, $m_state: expr, $vec: expr) => {
         {
-            let mut col = $slf.$pt.take().unwrap();
-            let col0 = col0.into_push_pull_output_in_state(PinState::Low);
+            let mut col = $slf.cols.$pt.take().unwrap();
+            let mut col = col.into_push_pull_output_in_state(PinState::Low);
             for (ind, row) in $slf.rows.iter().enumerate() {
                 let state = if matches!(row.is_low(), Ok(true)) {
                     ButtonState::Pressed
                 } else {
                     ButtonState::Depressed
                 };
-                if state != $slf.prev_matrix[ind][0] {
+                if state != $slf.prev_matrix[ind][$pt] {
                     let _ = $vec.push(ButtonStateChange {
                         row: ind as u8,
-                        col: 0,
+                        col: $pt,
                         new_state: state,
                     });
                 }
-                next_state[ind][0] = state;
+                $m_state[ind][$pt] = state;
             }
+            let _ = col.set_high();
+            $slf.cols.$pt = Some(col.into_pull_up_input());
         }
 
     };
@@ -112,25 +114,15 @@ impl Left {
     }
 
     pub fn scan_matrix(&mut self) -> heapless::Vec<ButtonStateChange, 16> {
-        let mut col0 = self.cols.0.take().unwrap();
         let mut next_state = INITIAL_STATE;
         let mut changes = heapless::Vec::new();
-        let col0 = col0.into_push_pull_output_in_state(PinState::Low);
-        for (ind, row) in self.rows.iter().enumerate() {
-            let state = if matches!(row.is_low(), Ok(true)) {
-                ButtonState::Pressed
-            } else {
-                ButtonState::Depressed
-            };
-            if state != self.prev_matrix[ind][0] {
-                let _ = changes.push(ButtonStateChange {
-                    row: ind as u8,
-                    col: 0,
-                    new_state: state,
-                });
-            }
-            next_state[ind][0] = state;
-        }
+        check_col!(self, 0, next_state, changes);
+        check_col!(self, 1, next_state, changes);
+        check_col!(self, 2, next_state, changes);
+        check_col!(self, 3, next_state, changes);
+        check_col!(self, 4, next_state, changes);
+        check_col!(self, 5, next_state, changes);
+        self.prev_matrix = next_state;
         changes
     }
 

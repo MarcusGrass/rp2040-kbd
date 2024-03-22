@@ -67,6 +67,7 @@ use ssd1306::mode::DisplayConfig;
 use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
 use ssd1306::size::DisplaySize128x32;
 use ssd1306::Ssd1306;
+use crate::keyboard::Left;
 
 type PowerLedPin = Pin<Gpio24, FunctionSio<SioOutput>, PullDown>;
 
@@ -182,25 +183,23 @@ fn main() -> ! {
         side_check_pin.is_low().unwrap() as u8,
         side_check_pin.is_high().unwrap() as u8
     ));
-
-    let mut btns = ButtonPins {
-        rows: (
-            pins.gpio29.into_pull_up_input(),
-            pins.gpio27.into_pull_up_input(),
-            pins.gpio6.into_pull_up_input(),
-            pins.gpio7.into_pull_up_input(),
-            pins.gpio8.into_pull_up_input(),
+    let mut left = Left::new(
+        (
+        pins.gpio29.into_pull_up_input(),
+        pins.gpio27.into_pull_up_input(),
+        pins.gpio6.into_pull_up_input(),
+        pins.gpio7.into_pull_up_input(),
+        pins.gpio8.into_pull_up_input(),
         ),
-        cols: (
-            Some(pins.gpio9.into_pull_up_input()),
-            Some(pins.gpio26.into_pull_up_input()),
-            Some(pins.gpio22.into_pull_up_input()),
-            Some(pins.gpio20.into_pull_up_input()),
-            Some(pins.gpio23.into_pull_up_input()),
-            Some(pins.gpio21.into_pull_up_input()),
-        ),
-    };
-    btns.init();
+        (
+        Some(pins.gpio9.into_pull_up_input()),
+        Some(pins.gpio26.into_pull_up_input()),
+        Some(pins.gpio22.into_pull_up_input()),
+        Some(pins.gpio20.into_pull_up_input()),
+        Some(pins.gpio23.into_pull_up_input()),
+        Some(pins.gpio21.into_pull_up_input()),
+        )
+    );
 
     let mut power_led_pin = pins.power_led.into_push_pull_output();
 
@@ -236,7 +235,12 @@ fn main() -> ! {
                 serial_write_all(&mut serial, type_out.as_bytes(), &mut timer);
                 has_dumped = true;
             }
-            check_matrix(&mut btns, &mut prev_0, &mut serial, &mut timer);
+            for change in left.scan_matrix() {
+                let mut s: String<128> = String::new();
+                let _ = s.write_fmt(format_args!("{change:?}\r\n"));
+                serial_write_all(&mut serial, s.as_bytes(), &mut timer);
+            }
+            //check_matrix(&mut btns, &mut prev_0, &mut serial, &mut timer);
             //check_rotary_enc(&mut rotary_enc, &mut serial, &mut timer);
         }
     }
