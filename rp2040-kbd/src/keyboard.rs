@@ -1,9 +1,22 @@
+//! Common between sides, put everything with the same pinouts and shared hardware
+//! code here
 pub mod left;
 pub mod right;
+pub mod oled;
+pub mod uart_serial;
+pub mod usb_serial;
+pub mod power_led;
 
-use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
-use rp2040_hal::gpio::bank0::{Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9};
-use rp2040_hal::gpio::{DynPinId, FunctionSio, Pin, PinId, PullUp, SioInput};
+use elite_pi::pac::I2C1;
+use embedded_hal::digital::v2::{InputPin, OutputPin};
+use rp2040_hal::gpio::{DynPinId, FunctionI2c, FunctionSio, FunctionUart, Pin, PinId, PullDown, PullUp, SioInput};
+use rp2040_hal::gpio::bank0::{Gpio0, Gpio1, Gpio2, Gpio3};
+use rp2040_hal::pac::UART0;
+use rp2040_hal::uart::{Enabled, UartPeripheral};
+use ssd1306::mode::BufferedGraphicsMode;
+use ssd1306::prelude::I2CInterface;
+use ssd1306::size::DisplaySize128x32;
+use ssd1306::Ssd1306;
 
 type RowPin = Pin<DynPinId, FunctionSio<SioInput>, PullUp>;
 type ButtonPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
