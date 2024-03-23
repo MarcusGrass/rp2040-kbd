@@ -1,25 +1,53 @@
 use core::fmt::Write;
+use embedded_hal::timer::CountDown;
+use embedded_io::Read;
+use heapless::String;
+use nb::block;
+use rp2040_hal::fugit::MicrosDurationU64;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::UsbBus;
 use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::RightButtons;
-use crate::keyboard::uart_serial::{SplitSerial, SplitSerialMessage};
+use crate::keyboard::split_serial::{serial_delay, SplitSerial, SplitSerialMessage, UartRight};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 
 #[inline(never)]
-pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, _oled_handle: OledHandle, mut uart_driver: SplitSerial, mut right_buttons: RightButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
+pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut oled_handle: OledHandle, mut uart_driver: UartRight, mut right_buttons: RightButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut has_dumped = false;
     let mut prev = timer.get_counter();
-    let mut has_got_ping = false;
+    let mut flips = 0u16;
+    let mut total_read = 0u16;
+    let mut total_written = 0u16;
+    let mut errs = 0u16;
+    let mut buf = [0u8; 64];
+    let mut offset = 0;
     loop {
         let now = timer.get_counter();
         if let Some(dur) = now.checked_duration_since(prev) {
             if dur.to_millis() > 200 {
+                oled_handle.clear();
                 prev = now;
+                let mut s: String<5> = String::new();
+
+                if s.write_fmt(format_args!("{flips}")).is_ok() {
+                    let _ = oled_handle.write(0, s.as_str());
+                }
+                let mut s: String<5> = String::new();
+                if s.write_fmt(format_args!("{total_read}")).is_ok() {
+                    let _ = oled_handle.write(18, s.as_str());
+                }
+                let mut s: String<5> = String::new();
+                if s.write_fmt(format_args!("{total_written}")).is_ok() {
+                    let _ = oled_handle.write(36, s.as_str());
+                }
+                let mut s: String<5> = String::new();
+                if s.write_fmt(format_args!("{errs}")).is_ok() {
+                    let _ = oled_handle.write(45, s.as_str());
+                }
             }
         }
         handle_usb(
@@ -39,17 +67,29 @@ pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, _oled_
             }
 
         }
-        if has_got_ping {
-            uart_driver.send_msg(SplitSerialMessage::Pong);
-            let _ = usb_serial.write_str("Sent sent pong\r\n");
-            has_got_ping = false;
-        } else {
-            if let Some(SplitSerialMessage::Ping) = uart_driver.recv() {
-                let _ = usb_serial.write_str("Got ping\r\n");
-                has_got_ping = true;
+        if let Ok(r) = uart_driver.inner.read(&mut buf) {
+            total_read += r as u16;
+            if r == 0 {
+                continue;
             }
+            offset += r;
+            if offset >= buf.len() {
+                offset = 0;
+            } else {
+                let expect = b"ping";
+                if &buf[..expect.len()] == expect {
+                    flips = flips.wrapping_add(1);
+                }
+                offset = 0;
+                if uart_driver.write_all(b"pong") {
+                    total_written = total_written.wrapping_add(b"pong".len() as u16);
+                } else {
+                    errs = errs.wrapping_add(1);
+                }
+            }
+        } else {
+            errs = errs.wrapping_add(1);
         }
-
     }
 }
 

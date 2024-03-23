@@ -58,7 +58,7 @@ pub struct UsbSerialDevice<'a> {
 
 impl<'a> UsbSerialDevice<'a> {
     pub fn new(usb_bus: &'a UsbBusAllocator<UsbBus>) -> Self {
-        let mut inner = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x27dd))
+        let inner = UsbDeviceBuilder::new(&usb_bus, UsbVidPid(0x16c0, 0x27dd))
             .manufacturer("Fake company")
             .product("Serial port")
             .serial_number("TEST")

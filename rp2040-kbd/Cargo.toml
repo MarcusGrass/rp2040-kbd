@@ -6,16 +6,20 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bitbang-hal = {workspace = true}
 cortex-m-rt = { workspace = true, optional = true }
 embedded-hal.workspace = true
 embedded-graphics.workspace = true
+embedded-io.workspace = true
 rp2040-boot2 = { workspace = true, optional = true }
 rp2040-hal.workspace = true
+nb.workspace = true
 elite-pi.workspace = true
 heapless.workspace = true
 usb-device.workspace = true
 usbd-serial.workspace = true
 panic-halt.workspace = true
+pio-uart = {workspace = true}
 ssd1306.workspace = true
 rotary-encoder-embedded.workspace = true
 
@@ -25,7 +29,6 @@ cortex-m-rtic.workspace = true
 embedded-sdmmc.workspace = true
 hd44780-driver.workspace = true
 heapless.workspace = true
-nb.workspace = true
 pio.workspace = true
 pio-proc.workspace = true
 rp2040-hal = { workspace = true, features = [ "defmt" ] }

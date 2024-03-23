@@ -64,15 +64,6 @@ checksum = "f8fe8f5a8a398345e52358e18ff07cc17a568fbca5c6f73873d3a62056309603"
 
 [[package]]
 name = "bit-set"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6e1e6fb1c9e3d6fcdec57216a74eaa03e41f52a22f13a16438251d8e88b89da"
-dependencies = [
- "bit-vec",
-]
-
-[[package]]
-name = "bit-set"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0700ddab506f33b20a03b13996eccd309a48e5ff77d0d95926aa0210fb4e95f1"
@@ -85,6 +76,16 @@ name = "bit-vec"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
+
+[[package]]
+name = "bitbang-hal"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "470e1522d257e4c76245980d27d5d279442cb18955cc6341249b904074033f4a"
+dependencies = [
+ "embedded-hal",
+ "nb 0.1.3",
+]
 
 [[package]]
 name = "bitfield"
@@ -381,6 +382,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "embedded-io"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
+
+[[package]]
 name = "embedded-sdmmc"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -588,7 +595,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0a1cbf952127589f2851ab2046af368fd20645491bb4b376f04b7f94d7a9837b"
 dependencies = [
  "ascii-canvas",
- "bit-set 0.5.3",
+ "bit-set",
  "diff",
  "ena",
  "is-terminal",
@@ -627,27 +634,6 @@ dependencies = [
  "bitflags 2.5.0",
  "libc",
  "redox_syscall",
-]
-
-[[package]]
-name = "libusb"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f990ddd929cbe53de4ecd6cf26e1f4e0c5b9796e4c629d9046570b03738aa53"
-dependencies = [
- "bit-set 0.2.0",
- "libc",
- "libusb-sys",
-]
-
-[[package]]
-name = "libusb-sys"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c53b6582563d64ad3e692f54ef95239c3ea8069e82c9eb70ca948869a7ad767"
-dependencies = [
- "libc",
- "pkg-config",
 ]
 
 [[package]]
@@ -829,10 +815,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "pkg-config"
-version = "0.3.30"
+name = "pio-uart"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d231b230927b5e4ad203db57bbcbee2802f6bce620b1e4a9024a07d94e2907ec"
+checksum = "b8f9e67f6c446d4d227de21755dd4b4c12369b04479af6c40b12017e52254c95"
+dependencies = [
+ "cortex-m",
+ "defmt",
+ "embedded-io",
+ "fugit",
+ "pio",
+ "pio-proc",
+ "rp2040-hal",
+]
 
 [[package]]
 name = "precomputed-hash"
@@ -1011,6 +1006,7 @@ dependencies = [
 name = "rp2040-kbd"
 version = "0.1.0"
 dependencies = [
+ "bitbang-hal",
  "cortex-m",
  "cortex-m-rt",
  "cortex-m-rtic",
@@ -1019,6 +1015,7 @@ dependencies = [
  "elite-pi",
  "embedded-graphics",
  "embedded-hal",
+ "embedded-io",
  "embedded-sdmmc",
  "hd44780-driver",
  "heapless",
@@ -1026,6 +1023,7 @@ dependencies = [
  "panic-halt",
  "pio",
  "pio-proc",
+ "pio-uart",
  "rotary-encoder-embedded",
  "rp2040-boot2",
  "rp2040-hal",
@@ -1319,13 +1317,6 @@ name = "usb-device"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f6cc3adc849b5292b4075fc0d5fdcf2f24866e88e336dd27a8943090a520508"
-
-[[package]]
-name = "usb-tester"
-version = "0.1.0"
-dependencies = [
- "libusb",
-]
 
 [[package]]
 name = "usbd-hid"

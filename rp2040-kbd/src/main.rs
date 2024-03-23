@@ -8,6 +8,10 @@
 //! and not just local-echo!
 //!
 //! See the `Cargo.toml` file for Copyright and license details.
+//!
+#![allow(unused_imports)]
+#![allow(unused)]
+#![allow(dead_code)]
 
 #![no_std]
 #![no_main]
@@ -41,6 +45,7 @@ use core::fmt::Write;
 use embedded_graphics::Drawable;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use embedded_hal::prelude::_embedded_hal_blocking_delay_DelayMs;
+use pio_uart::PioUart;
 use rp2040_hal::fugit::RateExtU32;
 use rp2040_hal::gpio::{
     PinId
@@ -56,7 +61,7 @@ use crate::keyboard::left::LeftButtons;
 use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::RightButtons;
-use crate::keyboard::uart_serial::SplitSerial;
+use crate::keyboard::split_serial::{SplitSerial, UartLeft, UartRight};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::runtime::left::run_left;
 use crate::runtime::right::run_right;
@@ -92,7 +97,6 @@ fn main() -> ! {
         .unwrap();
 
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
-
     let sio = hal::Sio::new(pac.SIO);
     let mut pins = Pins::new(
         pac.IO_BANK0,
@@ -100,22 +104,6 @@ fn main() -> ! {
         sio.gpio_bank0,
         &mut pac.RESETS,
     );
-    let uart_pins = (
-        // UART TX (characters sent from RP2040) on pin 1 (GPIO0)
-        pins.gpio0.into_function::<hal::gpio::FunctionUart>(),
-        // UART RX (characters received by RP2040) on pin 2 (GPIO1)
-        pins.gpio1.into_function::<hal::gpio::FunctionUart>(),
-    );
-
-
-
-    let uart = hal::uart::UartPeripheral::new(pac.UART0, uart_pins, &mut pac.RESETS)
-        .enable(
-            UartConfig::new(115_200.Hz(), DataBits::Eight, None, StopBits::One),
-            clocks.peripheral_clock.freq(),
-        )
-        .unwrap();
-    let uart = SplitSerial::new(uart);
 
     let sda_pin = pins.gpio2.into_function::<hal::gpio::FunctionI2C>();
     let scl_pin = pins.gpio3.into_function::<hal::gpio::FunctionI2C>();
@@ -154,7 +142,18 @@ fn main() -> ! {
     let is_left = side_check_pin.is_high().unwrap();
     let u_ser = UsbSerial::new(&usb_bus);
     let u_dev = UsbSerialDevice::new(&usb_bus);
+
     if is_left {
+        // Left side flips tx/rx, check qmk for proton-c in kyria for reference
+        let uart = PioUart::new(
+            pac.PIO0,
+            pins.gpio0.reconfigure(),
+            pins.gpio1.reconfigure(),
+            &mut pac.RESETS,
+            19200.Hz(),
+            125.MHz()
+        ).enable();
+        let uart = UartLeft::new(uart);
         let left = LeftButtons::new(
             (
                 pins.gpio29.into_pull_up_input(),
@@ -174,6 +173,15 @@ fn main() -> ! {
         );
         run_left(u_ser, u_dev, oled, uart, left, pl, timer);
     } else {
+        let uart = PioUart::new(
+            pac.PIO0,
+            pins.gpio1.reconfigure(),
+            pins.gpio0.reconfigure(),
+            &mut pac.RESETS,
+            19200.Hz(),
+            125.MHz()
+        ).enable();
+        let uart = UartRight::new(uart);
         let right = RightButtons::new(
             (
                 pins.gpio29.into_pull_up_input(),
