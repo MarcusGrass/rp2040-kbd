@@ -15,6 +15,7 @@ use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 
 #[inline(never)]
 pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut oled_handle: OledHandle, mut uart_driver: UartRight, mut right_buttons: RightButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
+    const PING: &[u8] = b"ping";
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut has_dumped = false;
@@ -45,8 +46,21 @@ pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ol
                     let _ = oled_handle.write(36, s.as_str());
                 }
                 let mut s: String<5> = String::new();
+                if s.write_fmt(format_args!("{offset}")).is_ok() {
+                    let _ = oled_handle.write(54, s.as_str());
+                }
+                if offset >= PING.len() {
+                    let mut s: String<5> = String::new();
+                    let start = offset - PING.len();
+                    let end = start + PING.len();
+                    for b in &buf[start..end] {
+                        let _ = s.write_fmt(format_args!("{b}"));
+                    }
+                    let _ = oled_handle.write(72, s.as_str());
+                }
+                let mut s: String<5> = String::new();
                 if s.write_fmt(format_args!("{errs}")).is_ok() {
-                    let _ = oled_handle.write(45, s.as_str());
+                    let _ = oled_handle.write(90, s.as_str());
                 }
             }
         }
@@ -67,7 +81,7 @@ pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ol
             }
 
         }
-        if let Ok(r) = uart_driver.inner.read(&mut buf) {
+        if let Ok(r) = uart_driver.inner.read(&mut buf[offset..]) {
             total_read += r as u16;
             if r == 0 {
                 continue;
@@ -76,16 +90,21 @@ pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ol
             if offset >= buf.len() {
                 offset = 0;
             } else {
-                let expect = b"ping";
-                if &buf[..expect.len()] == expect {
-                    flips = flips.wrapping_add(1);
+                if offset >= PING.len() {
+                    let start = offset - PING.len();
+                    let end = start + PING.len();
+                    if &buf[start..end] == PING {
+                        flips = flips.wrapping_add(1);
+                        if uart_driver.write_all(b"pong") {
+                            total_written = total_written.wrapping_add(b"pong".len() as u16);
+                        } else {
+                            errs = errs.wrapping_add(1);
+                        }
+                        offset = 0;
+                    }
                 }
-                offset = 0;
-                if uart_driver.write_all(b"pong") {
-                    total_written = total_written.wrapping_add(b"pong".len() as u16);
-                } else {
-                    errs = errs.wrapping_add(1);
-                }
+
+
             }
         } else {
             errs = errs.wrapping_add(1);

@@ -1,13 +1,12 @@
-use elite_pi::pac::{PIO0, UART0};
+use elite_pi::pac::{PIO0, PIO1, UART0};
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
-use embedded_hal::serial::{Read};
 use embedded_hal::timer::CountDown;
-use embedded_io::Write;
+use embedded_io::{Read, Write};
 use nb::block;
 use rp2040_hal::fugit::MicrosDurationU64;
 use rp2040_hal::gpio::bank0::{Gpio0, Gpio1, Gpio2};
 use rp2040_hal::gpio::{FunctionSio, FunctionUart, Pin, PullBusKeep, PullDown, PullUp, SioInput, SioOutput};
-use rp2040_hal::pio::Running;
+use rp2040_hal::pio::{Running, SM0};
 use rp2040_hal::Timer;
 use rp2040_hal::uart::{Enabled, UartPeripheral};
 
@@ -31,28 +30,6 @@ pub fn serial_delay(timer: &Timer) {
     let _ = block!(cd.wait());
 }
 
-const HOLD_TIME_MICROS: u64 = 20;
-
-impl SplitSerial {
-    pub fn new(mut pin: Pin<Gpio1, FunctionSio<SioOutput>, PullBusKeep>, timer: Timer) -> Self {
-        let _ = pin.set_high();
-        Self { current: [0u8; 16], current_offset: 0, pin, timer }
-    }
-
-    pub fn read_pin(&mut self) -> bool {
-        matches!(self.pin.is_high(), Ok(true))
-    }
-
-    pub fn set_pin(&mut self) -> bool {
-        self.pin.set_high().is_ok()
-
-    }
-
-    pub fn unset_pin(&mut self) -> bool {
-        self.pin.set_low().is_ok()
-    }
-
-}
 
 
 pub struct UartLeft {
@@ -62,6 +39,28 @@ pub struct UartLeft {
 impl UartLeft {
     pub fn new(inner: pio_uart::PioUart<Gpio0, Gpio1, PIO0, Running>) -> Self {
         Self { inner }
+    }
+
+    pub fn read_exact(&mut self, buf: &mut [u8]) -> bool {
+        if self.inner.flush().is_err() {
+            return false;
+        }
+        let mut b = buf;
+        let mut offset = 0;
+        loop {
+            match self.inner.read(&mut b[offset..]) {
+                Ok(0) => {}
+                Ok(r) => {
+                    offset += r;
+                    if offset >= b.len() {
+                        return true;
+                    }
+                }
+                Err(e) => {
+                    return false;
+                }
+            }
+        }
     }
 
     pub fn write_all(&mut self, mut msg: &[u8]) -> bool {

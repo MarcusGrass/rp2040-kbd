@@ -150,7 +150,7 @@ fn main() -> ! {
             pins.gpio0.reconfigure(),
             pins.gpio1.reconfigure(),
             &mut pac.RESETS,
-            19200.Hz(),
+            115200.Hz(),
             125.MHz()
         ).enable();
         let uart = UartLeft::new(uart);
@@ -178,7 +178,7 @@ fn main() -> ! {
             pins.gpio1.reconfigure(),
             pins.gpio0.reconfigure(),
             &mut pac.RESETS,
-            19200.Hz(),
+            115200.Hz(),
             125.MHz()
         ).enable();
         let uart = UartRight::new(uart);
