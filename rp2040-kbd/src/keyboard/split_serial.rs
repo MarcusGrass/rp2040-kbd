@@ -1,90 +1,52 @@
-use elite_pi::pac::{PIO0, PIO1, UART0};
+use elite_pi::pac::{PIO0, PIO1, RESETS, UART0};
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
 use embedded_hal::timer::CountDown;
 use embedded_io::{Read, Write};
 use nb::block;
+use pio_uart::{install_rx_program, install_tx_program, PioUartRx, PioUartTx, RxProgram, TxProgram};
 use rp2040_hal::fugit::MicrosDurationU64;
 use rp2040_hal::gpio::bank0::{Gpio0, Gpio1, Gpio2};
-use rp2040_hal::gpio::{FunctionSio, FunctionUart, Pin, PullBusKeep, PullDown, PullUp, SioInput, SioOutput};
-use rp2040_hal::pio::{Running, SM0};
-use rp2040_hal::Timer;
+use rp2040_hal::gpio::{FunctionNull, FunctionSio, FunctionUart, Pin, PullBusKeep, PullDown, PullUp, SioInput, SioOutput};
+use rp2040_hal::pio::{PIOExt, Running, SM0, SM1, SM2, SM3, UninitStateMachine};
+use rp2040_hal::{fugit, Timer};
 use rp2040_hal::uart::{Enabled, UartPeripheral};
 
-#[derive(Debug, Copy, Clone)]
-pub enum SplitSerialMessage {
-    Ping,
-    Pong
-}
-
-
-pub struct SplitSerial {
-    current: [u8; 16],
-    current_offset: u8,
-    pin: Pin<Gpio1, FunctionSio<SioOutput>, PullBusKeep>,
-    timer: Timer,
-}
-
-pub fn serial_delay(timer: &Timer) {
-    let mut cd = timer.count_down();
-    cd.start(MicrosDurationU64::micros(16));
-    let _ = block!(cd.wait());
-}
-
-
-
 pub struct UartLeft {
-    pub(crate) inner: pio_uart::PioUart<Gpio0, Gpio1, PIO0, Running>
+    pub(crate) inner: pio_uart::PioUartRx<Gpio1, PIO0, SM0, Running>,
+    _prog: RxProgram<PIO0>,
+    _sm1: UninitStateMachine<(PIO0, SM1)>,
+    _sm2: UninitStateMachine<(PIO0, SM2)>,
+    _sm3: UninitStateMachine<(PIO0, SM3)>,
 }
 
 impl UartLeft {
-    pub fn new(inner: pio_uart::PioUart<Gpio0, Gpio1, PIO0, Running>) -> Self {
-        Self { inner }
+    pub fn new(pin: Pin<Gpio1, FunctionNull, PullDown>, baud: fugit::HertzU32,
+               system_freq: fugit::HertzU32, mut pio: PIO0, resets: &mut RESETS) -> Self {
+        let rx_pin = pin.reconfigure();
+        let (mut pio, sm0, sm1, sm2, sm3) = pio.split(resets);
+        let mut rx_program = install_rx_program(&mut pio).ok().unwrap(); // Should never fail, because no program was loaded yet
+        let rx = PioUartRx::new(rx_pin, sm0, &mut rx_program, baud, system_freq).enable();
+        Self { inner: rx, _prog: rx_program, _sm1: sm1, _sm2: sm2, _sm3: sm3 }
     }
 
-    pub fn read_exact(&mut self, buf: &mut [u8]) -> bool {
-        if self.inner.flush().is_err() {
-            return false;
-        }
-        let mut b = buf;
-        let mut offset = 0;
-        loop {
-            match self.inner.read(&mut b[offset..]) {
-                Ok(0) => {}
-                Ok(r) => {
-                    offset += r;
-                    if offset >= b.len() {
-                        return true;
-                    }
-                }
-                Err(e) => {
-                    return false;
-                }
-            }
-        }
-    }
-
-    pub fn write_all(&mut self, mut msg: &[u8]) -> bool {
-        let mut written = 0;
-        loop {
-            if let Ok(w) = self.inner.write(&msg[written..]) {
-                written += w;
-                if written == msg.len() {
-                    break self.inner.flush().is_ok()
-                }
-            } else {
-                break false
-            }
-        }
-    }
 }
 
 pub struct UartRight {
-    pub(crate) inner: pio_uart::PioUart<Gpio1, Gpio0, PIO0, Running>
+    pub(crate) inner: PioUartTx<Gpio1, PIO0, SM0, Running>,
+    _prog: TxProgram<PIO0>,
+    _sm1: UninitStateMachine<(PIO0, SM1)>,
+    _sm2: UninitStateMachine<(PIO0, SM2)>,
+    _sm3: UninitStateMachine<(PIO0, SM3)>,
 }
 
 impl UartRight {
-    pub fn new(inner: pio_uart::PioUart<Gpio1, Gpio0, PIO0, Running>) -> Self {
-        Self { inner }
+    pub fn new(pin: Pin<Gpio1, FunctionNull, PullDown>, baud: fugit::HertzU32,
+               system_freq: fugit::HertzU32, mut pio: PIO0, resets: &mut RESETS) -> Self {
+        let rx_pin = pin.reconfigure();
+        let (mut pio, sm0, sm1, sm2, sm3) = pio.split(resets);
+        let mut tx_program = install_tx_program(&mut pio).ok().unwrap(); // Should never fail, because no program was loaded yet
+        let rx = PioUartTx::new(rx_pin, sm0, &mut tx_program, baud, system_freq).enable();
+        Self { inner: rx, _prog: tx_program, _sm1: sm1 ,_sm2: sm2 ,_sm3: sm3 }
     }
 
     pub fn write_all(&mut self, mut msg: &[u8]) -> bool {

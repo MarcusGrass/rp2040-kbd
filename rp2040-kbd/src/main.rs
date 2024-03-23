@@ -61,7 +61,7 @@ use crate::keyboard::left::LeftButtons;
 use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::RightButtons;
-use crate::keyboard::split_serial::{SplitSerial, UartLeft, UartRight};
+use crate::keyboard::split_serial::{UartLeft, UartRight};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::runtime::left::run_left;
 use crate::runtime::right::run_right;
@@ -145,15 +145,13 @@ fn main() -> ! {
 
     if is_left {
         // Left side flips tx/rx, check qmk for proton-c in kyria for reference
-        let uart = PioUart::new(
-            pac.PIO0,
-            pins.gpio0.reconfigure(),
-            pins.gpio1.reconfigure(),
-            &mut pac.RESETS,
+        let uart = UartLeft::new(
+            pins.gpio1,
             115200.Hz(),
-            125.MHz()
-        ).enable();
-        let uart = UartLeft::new(uart);
+            125.MHz(),
+            pac.PIO0,
+            &mut pac.RESETS
+        );
         let left = LeftButtons::new(
             (
                 pins.gpio29.into_pull_up_input(),
@@ -173,15 +171,13 @@ fn main() -> ! {
         );
         run_left(u_ser, u_dev, oled, uart, left, pl, timer);
     } else {
-        let uart = PioUart::new(
-            pac.PIO0,
+        let uart = UartRight::new(
             pins.gpio1.reconfigure(),
-            pins.gpio0.reconfigure(),
-            &mut pac.RESETS,
             115200.Hz(),
-            125.MHz()
-        ).enable();
-        let uart = UartRight::new(uart);
+            125.MHz(),
+            pac.PIO0,
+            &mut pac.RESETS,
+        );
         let right = RightButtons::new(
             (
                 pins.gpio29.into_pull_up_input(),

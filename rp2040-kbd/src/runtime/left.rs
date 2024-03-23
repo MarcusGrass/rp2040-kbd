@@ -10,7 +10,7 @@ use usb_device::bus::UsbBus;
 use crate::keyboard::left::LeftButtons;
 use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
-use crate::keyboard::split_serial::{serial_delay, SplitSerial, SplitSerialMessage, UartLeft};
+use crate::keyboard::split_serial::{UartLeft};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 
 #[inline(never)]
@@ -67,51 +67,29 @@ pub fn run_left(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ole
             &mut output_all,
         );
         if output_all {
-            if !has_dumped {
-                let _ = usb_serial.write_str("Left side running\r\n");
-                has_dumped = true;
-            }
-            /*
-            for change in left_buttons.scan_matrix() {
-                let _ = usb_serial.write_fmt(format_args!("{change:?}\r\n"));
-            }
-
-             */
-            if wants_read {
-                if let Ok(r) = uart_driver.inner.read(&mut buf[offset..]) {
-                    read += r as u16;
-                    if r == 0 {
-                        empty_reads += 1;
-                        continue;
-                    }
-                    let _ = usb_serial.write_fmt(format_args!("Read {r} bytes\r\n"));
-                    offset += r;
-                    if offset >= buf.len() {
-                        // Safety reset
-                        offset = 0;
-                    }
-                    let expect = PONG;
-                    if &buf[..expect.len()] == PONG {
-                        wants_read = false;
-                        let _ = usb_serial.write_str("Got pong\r\n");
-                    } else {
-                        err_reads += 1;
-                    }
+            if let Ok(r) = uart_driver.inner.read(&mut buf[offset..]) {
+                read += r as u16;
+                if r == 0 {
+                    empty_reads += 1;
+                    continue;
+                }
+                let _ = usb_serial.write_fmt(format_args!("Read {r} bytes\r\n"));
+                offset += r;
+                if offset >= buf.len() {
+                    // Safety reset
+                    offset = 0;
+                }
+                let expect = PONG;
+                if &buf[..expect.len()] == PONG {
+                    wants_read = false;
+                    let _ = usb_serial.write_str("Got ping\r\n");
+                    flips += 1;
                 } else {
                     err_reads += 1;
                 }
             } else {
-                if uart_driver.write_all(b"ping") {
-                    flips += 1;
-                    wants_read = true;
-                } else {
-                    let _ = usb_serial.write_str("Failed write\r\n");
-                }
-
-
+                err_reads += 1;
             }
-
-
         }
 
     }

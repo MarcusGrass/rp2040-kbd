@@ -10,7 +10,7 @@ use usb_device::bus::UsbBus;
 use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::RightButtons;
-use crate::keyboard::split_serial::{serial_delay, SplitSerial, SplitSerialMessage, UartRight};
+use crate::keyboard::split_serial::{UartRight};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 
 #[inline(never)]
@@ -62,6 +62,12 @@ pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ol
                 if s.write_fmt(format_args!("{errs}")).is_ok() {
                     let _ = oled_handle.write(90, s.as_str());
                 }
+                flips = flips.wrapping_add(1);
+                if uart_driver.write_all(b"pong") {
+                    total_written = total_written.wrapping_add(b"pong".len() as u16);
+                } else {
+                    errs = errs.wrapping_add(1);
+                }
             }
         }
         handle_usb(
@@ -80,34 +86,6 @@ pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ol
                 let _ = usb_serial.write_fmt(format_args!("{change:?}\r\n"));
             }
 
-        }
-        if let Ok(r) = uart_driver.inner.read(&mut buf[offset..]) {
-            total_read += r as u16;
-            if r == 0 {
-                continue;
-            }
-            offset += r;
-            if offset >= buf.len() {
-                offset = 0;
-            } else {
-                if offset >= PING.len() {
-                    let start = offset - PING.len();
-                    let end = start + PING.len();
-                    if &buf[start..end] == PING {
-                        flips = flips.wrapping_add(1);
-                        if uart_driver.write_all(b"pong") {
-                            total_written = total_written.wrapping_add(b"pong".len() as u16);
-                        } else {
-                            errs = errs.wrapping_add(1);
-                        }
-                        offset = 0;
-                    }
-                }
-
-
-            }
-        } else {
-            errs = errs.wrapping_add(1);
         }
     }
 }

@@ -6,6 +6,7 @@ pub mod oled;
 pub mod split_serial;
 pub mod usb_serial;
 pub mod power_led;
+mod sync;
 
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use rp2040_hal::gpio::{DynPinId, FunctionSio, Pin, PinId, PullUp, SioInput};
