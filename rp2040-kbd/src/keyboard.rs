@@ -69,7 +69,7 @@ impl ButtonStateChange {
 
 pub type MatrixState = [[ButtonState; NUM_COLS]; NUM_ROWS];
 
-const INITIAL_STATE: MatrixState = [[ButtonState::Depressed; NUM_COLS]; NUM_ROWS];
+pub(crate) const INITIAL_STATE: MatrixState = [[ButtonState::Depressed; NUM_COLS]; NUM_ROWS];
 
 #[macro_export]
 macro_rules! check_col {

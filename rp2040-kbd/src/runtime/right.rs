@@ -1,3 +1,5 @@
+mod shared;
+
 use core::fmt::Write;
 use embedded_hal::timer::CountDown;
 use embedded_io::Read;
@@ -14,6 +16,7 @@ use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::right::RightButtons;
 use crate::keyboard::split_serial::{UartRight};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
+use crate::runtime::right::shared::{acquire_matrix_scan, try_acquire_matrix_scan};
 
 static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
 
@@ -23,10 +26,8 @@ pub fn run_right<'a>(mc: &'a mut Multicore<'a>, mut usb_serial: UsbSerial, mut u
 
     let cores = mc.cores();
     let c1 = &mut cores[1];
-    let res = c1.spawn(unsafe {&mut CORE_1_STACK_AREA}, move || {
-        loop {}
-    }).unwrap();
     let mut serializer = MessageSerializer::new(uart_driver);
+    c1.spawn(unsafe {&mut CORE_1_STACK_AREA}, move || run_core1(serializer, right_buttons)).unwrap();
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut has_dumped = false;
@@ -41,6 +42,9 @@ pub fn run_right<'a>(mc: &'a mut Multicore<'a>, mut usb_serial: UsbSerial, mut u
     let mut loop_counter = timer.get_counter();
     let mut avg_loop = 0f32;
     let mut num_loops: f32 = 0.0;
+    let mut scan_counter = timer.get_counter();
+    let mut avg_scan = 0f32;
+    let mut num_scans: f32 = 0.0;
     oled_handle.clear();
     loop {
 
@@ -58,21 +62,6 @@ pub fn run_right<'a>(mc: &'a mut Multicore<'a>, mut usb_serial: UsbSerial, mut u
                 has_dumped = true;
             }
         }
-        right_buttons.scan_matrix();
-        if serializer.serialize_matrix_state(&right_buttons.matrix) {
-            matrix_sends = matrix_sends.wrapping_add(1);
-
-        } else if serializer.pump() {
-            pump_failures = pump_failures.wrapping_add(1);
-                // Successfully cleared old data
-            if serializer.serialize_matrix_state(&right_buttons.matrix) {
-                matrix_sends = matrix_sends.wrapping_add(1);
-            } else {
-                // Give up on this one
-                serializer.clear();
-            }
-        }
-        serializer.pump();
         let now = timer.get_counter();
         if let Some(dur) = now.checked_duration_since(prev) {
             if dur.to_millis() > 200 {
@@ -93,6 +82,11 @@ pub fn run_right<'a>(mc: &'a mut Multicore<'a>, mut usb_serial: UsbSerial, mut u
                     oled_handle.clear_line(36);
                     let _ = oled_handle.write(36, time_text.as_str());
                 }
+                let mut time_text: String<5> = String::new();
+                if time_text.write_fmt(format_args!("{avg_scan:.1}")).is_ok() {
+                    oled_handle.clear_line(54);
+                    let _ = oled_handle.write(54, time_text.as_str());
+                }
             }
         }
         if num_loops >= f32::MAX - 1.0 {
@@ -101,11 +95,38 @@ pub fn run_right<'a>(mc: &'a mut Multicore<'a>, mut usb_serial: UsbSerial, mut u
         }
         num_loops += 1.0;
         if let Some(loop_cnt) = now.checked_duration_since(loop_counter) {
-            let time = loop_cnt.to_millis() as f32;
+            let time = loop_cnt.to_micros() as f32;
             avg_loop = avg_loop * ((num_loops - 1.0) / num_loops) + time / num_loops;
             loop_counter = now;
         }
-
+        let Some(ms) = try_acquire_matrix_scan() else {
+            continue;
+        };
+        let count = core::mem::replace(&mut ms.scan.num_scans, 0);
+        drop(ms);
+        if count >= f32::MAX as usize - 2 {
+            num_scans = 0.0;
+            avg_scan = 0.0;
+        } else {
+            let count_f = count as f32;
+            if count_f >= f32::MAX - num_scans - 1.0 {
+                num_scans = 0.0;
+                avg_scan = 0.0;
+            }
+        }
+        let count_f = count as f32;
+        num_scans += count_f;
+        if let Some(scan_timer) = now.checked_duration_since(scan_counter) {
+            let scan_time = scan_timer.to_millis();
+            if scan_time >= f32::MAX as u64 - 1 {
+                scan_counter = timer.get_counter();
+                continue;
+            } else if scan_time == 0 {
+                continue;
+            }
+            let scan_timef = scan_time as f32;
+            avg_scan = scan_timef / num_scans;
+        }
     }
 }
 
@@ -144,5 +165,26 @@ fn handle_usb(
                 }
             }
         }
+    }
+}
+
+fn run_core1(mut serializer: MessageSerializer, mut right_buttons: RightButtons) -> ! {
+    loop {
+        let mut pumped = false;
+        right_buttons.scan_matrix();
+        if serializer.serialize_matrix_state(&right_buttons.matrix) {
+        } else if serializer.pump() {
+            pumped = true;
+            // Successfully cleared old data
+            if serializer.serialize_matrix_state(&right_buttons.matrix) {
+            } else {
+                // Give up on this one
+                serializer.clear();
+            }
+        }
+        if !pumped {
+            pumped = serializer.pump();
+        }
+        acquire_matrix_scan().scan.num_scans += 1;
     }
 }
