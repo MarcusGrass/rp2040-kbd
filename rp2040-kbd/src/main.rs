@@ -20,6 +20,7 @@ mod debugger;
 mod keyboard;
 mod lock;
 mod runtime;
+mod keycodes;
 
 use core::borrow::BorrowMut;
 // The macro for our start-up function
