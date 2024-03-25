@@ -53,6 +53,7 @@ use rp2040_hal::gpio::{
 use rp2040_hal::pio::PIOExt;
 use rp2040_hal::uart::{DataBits, StopBits, UartConfig};
 use rp2040_hal::{Clock};
+use rp2040_hal::multicore::Multicore;
 use ssd1306::mode::DisplayConfig;
 use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
 use ssd1306::size::DisplaySize128x32;
@@ -97,7 +98,7 @@ fn main() -> ! {
         .unwrap();
 
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
-    let sio = hal::Sio::new(pac.SIO);
+    let mut sio = hal::Sio::new(pac.SIO);
     let mut pins = Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
@@ -142,7 +143,7 @@ fn main() -> ! {
     let is_left = side_check_pin.is_high().unwrap();
     let u_ser = UsbSerial::new(&usb_bus);
     let u_dev = UsbSerialDevice::new(&usb_bus);
-
+    let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     if is_left {
         // Left side flips tx/rx, check qmk for proton-c in kyria for reference
         let uart = UartLeft::new(
@@ -195,7 +196,7 @@ fn main() -> ! {
                 Some(pins.gpio9.into_pull_up_input()),
             )
         );
-        run_right(u_ser, u_dev, oled, uart, right, pl, timer);
+        run_right(&mut mc, u_ser, u_dev, oled, uart, right, pl, timer);
     }
 
 }

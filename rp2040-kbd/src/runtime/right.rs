@@ -4,6 +4,7 @@ use embedded_io::Read;
 use heapless::String;
 use nb::block;
 use rp2040_hal::fugit::MicrosDurationU64;
+use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::UsbBus;
@@ -14,9 +15,17 @@ use crate::keyboard::right::RightButtons;
 use crate::keyboard::split_serial::{UartRight};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 
+static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
+
 #[inline(never)]
-pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut oled_handle: OledHandle, uart_driver: UartRight, mut right_buttons: RightButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
+pub fn run_right<'a>(mc: &'a mut Multicore<'a>, mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut oled_handle: OledHandle, uart_driver: UartRight, mut right_buttons: RightButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
     const PING: &[u8] = b"ping";
+
+    let cores = mc.cores();
+    let c1 = &mut cores[1];
+    let res = c1.spawn(unsafe {&mut CORE_1_STACK_AREA}, move || {
+        loop {}
+    }).unwrap();
     let mut serializer = MessageSerializer::new(uart_driver);
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
