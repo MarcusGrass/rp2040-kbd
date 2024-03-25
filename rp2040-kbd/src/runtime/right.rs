@@ -30,8 +30,10 @@ pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ol
     let mut buf = [0u8; 64];
     let mut offset = 0;
     let mut loop_counter = timer.get_counter();
+    let mut avg_loop = 0f32;
+    let mut num_loops: f32 = 0.0;
+    oled_handle.clear();
     loop {
-        let now = timer.get_counter();
 
         handle_usb(
             &mut usb_dev,
@@ -62,21 +64,39 @@ pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ol
             }
         }
         serializer.pump();
+        let now = timer.get_counter();
         if let Some(dur) = now.checked_duration_since(prev) {
             if dur.to_millis() > 200 {
-                oled_handle.clear();
                 prev = now;
                 let mut s: String<5> = String::new();
 
                 if s.write_fmt(format_args!("{matrix_sends}")).is_ok() {
+                    oled_handle.clear_line(0);
                     let _ = oled_handle.write(0, s.as_str());
                 }
                 let mut s: String<5> = String::new();
                 if s.write_fmt(format_args!("{pump_failures}")).is_ok() {
+                    oled_handle.clear_line(18);
                     let _ = oled_handle.write(18, s.as_str());
+                }
+                let mut time_text: String<5> = String::new();
+                if time_text.write_fmt(format_args!("{avg_loop:.1}")).is_ok() {
+                    oled_handle.clear_line(36);
+                    let _ = oled_handle.write(36, time_text.as_str());
                 }
             }
         }
+        if num_loops >= f32::MAX - 1.0 {
+            num_loops = 0.0;
+            avg_loop = 0.0;
+        }
+        num_loops += 1.0;
+        if let Some(loop_cnt) = now.checked_duration_since(loop_counter) {
+            let time = loop_cnt.to_millis() as f32;
+            avg_loop = avg_loop * ((num_loops - 1.0) / num_loops) + time / num_loops;
+            loop_counter = now;
+        }
+
     }
 }
 
