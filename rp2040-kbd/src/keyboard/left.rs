@@ -1,3 +1,5 @@
+pub(crate) mod message_receiver;
+
 use rp2040_hal::gpio::bank0::{Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio6, Gpio7, Gpio8, Gpio9};
 use crate::keyboard::{ButtonPin, ButtonState, ButtonStateChange, INITIAL_STATE, MatrixState, RowPin};
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};

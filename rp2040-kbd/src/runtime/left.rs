@@ -8,6 +8,7 @@ use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::UsbBus;
 use crate::keyboard::left::LeftButtons;
+use crate::keyboard::left::message_receiver::MessageReceiver;
 use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::{UartLeft};
@@ -16,6 +17,7 @@ use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 #[inline(never)]
 pub fn run_left(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut oled_handle: OledHandle, mut uart_driver: UartLeft, mut left_buttons: LeftButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
     const PONG: &[u8] = b"pong";
+    let mut receiver = MessageReceiver::new(uart_driver);
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut has_dumped = false;
@@ -67,28 +69,16 @@ pub fn run_left(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ole
             &mut output_all,
         );
         if output_all {
-            if let Ok(r) = uart_driver.inner.read(&mut buf[offset..]) {
-                read += r as u16;
-                if r == 0 {
-                    empty_reads += 1;
-                    continue;
-                }
-                let _ = usb_serial.write_fmt(format_args!("Read {r} bytes\r\n"));
-                offset += r;
-                if offset >= buf.len() {
-                    // Safety reset
-                    offset = 0;
-                }
-                let expect = PONG;
-                if &buf[..expect.len()] == PONG {
-                    wants_read = false;
-                    let _ = usb_serial.write_str("Got ping\r\n");
-                    flips += 1;
-                } else {
-                    err_reads += 1;
-                }
-            } else {
-                err_reads += 1;
+            if let Some(input) = receiver.try_read() {
+                let _ = usb_serial.write_fmt(format_args!("Got message: {input:?}\r\n"));
+            } else if receiver.cursor != 0 || receiver.total_read != 0 {
+                let _ = usb_serial.write_fmt(format_args!("cursor={}, Buf 0 = {}, bad={}, good={}, unk={}, unk_rb={}, total={}\r\n", receiver.cursor, receiver.buf[0], receiver.bad_matrix, receiver.good_matrix, receiver.unk_msg, receiver.unk_rollback,receiver.total_read));
+            } else if receiver.successful_reads > 0 {
+                let _ = usb_serial.write_fmt(format_args!("reads={}\r\n", receiver.successful_reads));
+            }
+
+            for press in left_buttons.scan_matrix() {
+                let _ = usb_serial.write_fmt(format_args!("Btn: {press:?}\r\n"));
             }
         }
 

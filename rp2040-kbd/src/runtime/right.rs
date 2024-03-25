@@ -9,67 +9,30 @@ use rp2040_hal::Timer;
 use usb_device::bus::UsbBus;
 use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
+use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::right::RightButtons;
 use crate::keyboard::split_serial::{UartRight};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 
 #[inline(never)]
-pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut oled_handle: OledHandle, mut uart_driver: UartRight, mut right_buttons: RightButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
+pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut oled_handle: OledHandle, uart_driver: UartRight, mut right_buttons: RightButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
     const PING: &[u8] = b"ping";
+    let mut serializer = MessageSerializer::new(uart_driver);
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut has_dumped = false;
     let mut prev = timer.get_counter();
-    let mut flips = 0u16;
+    let mut matrix_sends = 0u16;
+    let mut pump_failures = 0u16;
     let mut total_read = 0u16;
     let mut total_written = 0u16;
     let mut errs = 0u16;
     let mut buf = [0u8; 64];
     let mut offset = 0;
+    let mut loop_counter = timer.get_counter();
     loop {
         let now = timer.get_counter();
-        if let Some(dur) = now.checked_duration_since(prev) {
-            if dur.to_millis() > 200 {
-                oled_handle.clear();
-                prev = now;
-                let mut s: String<5> = String::new();
 
-                if s.write_fmt(format_args!("{flips}")).is_ok() {
-                    let _ = oled_handle.write(0, s.as_str());
-                }
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{total_read}")).is_ok() {
-                    let _ = oled_handle.write(18, s.as_str());
-                }
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{total_written}")).is_ok() {
-                    let _ = oled_handle.write(36, s.as_str());
-                }
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{offset}")).is_ok() {
-                    let _ = oled_handle.write(54, s.as_str());
-                }
-                if offset >= PING.len() {
-                    let mut s: String<5> = String::new();
-                    let start = offset - PING.len();
-                    let end = start + PING.len();
-                    for b in &buf[start..end] {
-                        let _ = s.write_fmt(format_args!("{b}"));
-                    }
-                    let _ = oled_handle.write(72, s.as_str());
-                }
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{errs}")).is_ok() {
-                    let _ = oled_handle.write(90, s.as_str());
-                }
-                flips = flips.wrapping_add(1);
-                if uart_driver.write_all(b"pong") {
-                    total_written = total_written.wrapping_add(b"pong".len() as u16);
-                } else {
-                    errs = errs.wrapping_add(1);
-                }
-            }
-        }
         handle_usb(
             &mut usb_dev,
             &mut usb_serial,
@@ -77,15 +40,42 @@ pub fn run_right(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ol
             &mut last_chars,
             &mut output_all,
         );
+
         if output_all {
             if !has_dumped {
                 let _ = usb_serial.write_str("Right side running\r\n");
                 has_dumped = true;
             }
-            for change in right_buttons.scan_matrix() {
-                let _ = usb_serial.write_fmt(format_args!("{change:?}\r\n"));
-            }
+        }
+        right_buttons.scan_matrix();
+        if serializer.serialize_matrix_state(&right_buttons.matrix) {
+            matrix_sends = matrix_sends.wrapping_add(1);
 
+        } else if serializer.pump() {
+            pump_failures = pump_failures.wrapping_add(1);
+                // Successfully cleared old data
+            if serializer.serialize_matrix_state(&right_buttons.matrix) {
+                matrix_sends = matrix_sends.wrapping_add(1);
+            } else {
+                // Give up on this one
+                serializer.clear();
+            }
+        }
+        serializer.pump();
+        if let Some(dur) = now.checked_duration_since(prev) {
+            if dur.to_millis() > 200 {
+                oled_handle.clear();
+                prev = now;
+                let mut s: String<5> = String::new();
+
+                if s.write_fmt(format_args!("{matrix_sends}")).is_ok() {
+                    let _ = oled_handle.write(0, s.as_str());
+                }
+                let mut s: String<5> = String::new();
+                if s.write_fmt(format_args!("{pump_failures}")).is_ok() {
+                    let _ = oled_handle.write(18, s.as_str());
+                }
+            }
         }
     }
 }
