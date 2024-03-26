@@ -4,7 +4,7 @@ use crate::keyboard::{ButtonState, ButtonStateChange, INITIAL_STATE, matrix_ind,
 use crate::keyboard::split_serial::UartLeft;
 use crate::keyboard::sync::{ENCODER_TAG, MATRIX_STATE_TAG, ENCODER_MSG_LEN, MATRIX_STATE_MSG_LEN};
 
-const BUF_SIZE: usize = 512;
+const BUF_SIZE: usize = 64;
 pub(crate) struct MessageReceiver {
     uart: UartLeft,
     pub(crate) buf: [u8; BUF_SIZE],
@@ -85,12 +85,13 @@ impl MessageReceiver {
                         let new = state[ind];
                         if old != new {
                             let _ = self.changes.push(ButtonStateChange::new(row_ind as u8, col_ind as u8, new.into()));
-                            self.matrix.set(ind, new);
                         }
                     }
                 }
+                self.matrix = state;
+                self.buf.copy_within(5..self.cursor, 0);
                 self.good_matrix += 1;
-                self.cursor = 0;
+                self.cursor -= 5;
                 Some(DeserializedMessage::Matrix(&self.matrix))
             }
             ENCODER_TAG => {

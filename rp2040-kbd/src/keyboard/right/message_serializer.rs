@@ -24,16 +24,14 @@ impl MessageSerializer {
     }
 
     pub(crate) fn pump(&mut self) -> bool {
-        if self.needs_flush {
-            self.needs_flush = self.uart.inner.flush().is_err();
-        }
         // Exit if no write necessary
         if self.cursor == 0 {
             return true;
         }
         if let Ok(written) = self.uart.inner.write(&self.buf[..self.cursor]) {
-            self.needs_flush = self.uart.inner.flush().is_err();
-            if written > 0 {
+            if written == self.cursor {
+                self.cursor = 0;
+            } else if written > 0 {
                 self.buf.copy_within(written..self.cursor, 0);
                 self.cursor -= written;
             }
@@ -50,7 +48,7 @@ impl MessageSerializer {
         self.buf[self.cursor] = MATRIX_STATE_TAG;
         self.cursor += 1;
         self.buf[self.cursor..self.cursor + 4].copy_from_slice(&state.data);
-        self.cursor += 1;
+        self.cursor += 4;
         true
     }
 

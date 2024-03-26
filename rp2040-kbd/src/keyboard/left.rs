@@ -85,15 +85,15 @@ impl<const N: usize> KeyboardState<N> {
     }
 
     pub fn update_left(&mut self, new: &MatrixState, usb_serial: &mut UsbSerial) -> bool {
-        Self::update(&mut self.right, new, usb_serial)
+        Self::update(&mut self.right, new, usb_serial, true)
     }
 
     pub fn update_right(&mut self, new: &MatrixState, usb_serial: &mut UsbSerial) -> bool {
-        Self::update(&mut self.right, new, usb_serial)
+        Self::update(&mut self.right, new, usb_serial, false)
     }
 
     #[inline]
-    fn update(side: &mut MatrixState, new: &MatrixState, usb_serial: &mut UsbSerial) -> bool {
+    fn update(side: &mut MatrixState, new: &MatrixState, usb_serial: &mut UsbSerial, left: bool) -> bool {
         let mut any = false;
         for row_ind in 0..NUM_ROWS {
             for col_ind in 0..NUM_COLS {
@@ -101,7 +101,11 @@ impl<const N: usize> KeyboardState<N> {
                 let old_val = side[ind];
                 let new_val = new[ind];
                 if old_val != new_val {
-                    let _ = usb_serial.write_fmt(format_args!("L: R{},C{} -> {}\r\n", row_ind, col_ind, new_val as u8));
+                    if left {
+                        let _ = usb_serial.write_fmt(format_args!("L: R{},C{} -> {}\r\n", row_ind, col_ind, new_val as u8));
+                    } else {
+                        let _ = usb_serial.write_fmt(format_args!("R: R{},C{} -> {}\r\n", row_ind, col_ind, new_val as u8));
+                    }
                     side.set(ind, new_val);
                     any = true;
                 }
