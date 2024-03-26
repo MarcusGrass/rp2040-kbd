@@ -7,6 +7,7 @@ use embedded_io::{Read, Write};
 use heapless::String;
 use nb::block;
 use rp2040_hal::fugit::MicrosDurationU64;
+use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::{UsbBus, UsbBusAllocator};
@@ -16,13 +17,17 @@ use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::{UartLeft};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
+use crate::runtime::right::shared::usb_serial::{acquire_usb, init_usb};
 
+static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
 #[inline(never)]
-pub fn run_left(mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>, mut oled_handle: OledHandle, mut uart_driver: UartLeft, mut left_buttons: LeftButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
+pub fn run_left<'a>(mc: &'a mut Multicore<'a>, mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>, mut oled_handle: OledHandle, mut uart_driver: UartLeft, mut left_buttons: LeftButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
     const PONG: &[u8] = b"pong";
-    let mut usb_serial = UsbSerial::new(&usb_bus);
-    let mut usb_dev = UsbSerialDevice::new(&usb_bus);
+    unsafe {
+        init_usb(usb_bus);
+    }
     let mut receiver = MessageReceiver::new(uart_driver);
+    mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, || run_core1(receiver, left_buttons));
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut has_dumped = false;
@@ -36,7 +41,6 @@ pub fn run_left(mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>, mut oled_
     let mut written = 0u16;
     let mut empty_reads = 0u16;
     let mut err_reads = 0u16;
-    let mut kbd: KeyboardState<0> = KeyboardState::empty();
     loop {
         let now = timer.get_counter();
         /*
@@ -75,38 +79,21 @@ pub fn run_left(mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>, mut oled_
 
          */
         handle_usb(
-            &mut usb_dev,
-            &mut usb_serial,
             &mut power_led_pin,
             &mut last_chars,
             &mut output_all,
         );
-        if output_all {
-            if let Some(input) = receiver.try_read() {
-                match input {
-                    DeserializedMessage::Matrix(m) => {
-                        kbd.update_right(m, &mut usb_serial);
-                    }
-                    DeserializedMessage::Encoder(_) => {}
-                }
-                //let _ = usb_serial.write_fmt(format_args!("Got message: {input:?}\r\n"));
-            }
-
-            for press in left_buttons.scan_matrix() {
-                let _ = usb_serial.write_fmt(format_args!("Btn: {press:?}\r\n"));
-            }
-        }
-
     }
 }
 fn handle_usb(
-    usb_dev: &mut UsbSerialDevice,
-    serial: &mut UsbSerial,
     power_led: &mut PowerLed,
     last_chars: &mut [u8],
     output_all: &mut bool,
-) {
-    if usb_dev.inner.poll(&mut [&mut serial.inner]) {
+) -> Option<()> {
+    let mut usb = acquire_usb();
+    let mut serial = usb.serial?;
+    let mut dev = usb.dev?;
+    if dev.inner.poll(&mut [&mut serial.inner]) {
         let last_chars_len = last_chars.len();
         let mut buf = [0u8; 64];
         match serial.inner.read(&mut buf) {
@@ -123,6 +110,8 @@ fn handle_usb(
                     if last_chars.ends_with(b"boot") {
                         reset_to_usb_boot(0, 0);
                     } else if last_chars.ends_with(b"output") {
+                        *usb.output = true;
+                        let _ = serial.write_str("OUTPUT ON\r\n");
                         *output_all = true;
                     } else if last_chars.ends_with(b"led") {
                         if power_led.is_on() {
@@ -135,4 +124,24 @@ fn handle_usb(
             }
         }
     }
+    Some(())
+}
+
+pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -> ! {
+    let mut kbd = KeyboardState::empty();
+    loop {
+        let mut any_change = false;
+        if let Some(input) = receiver.try_read() {
+            match input {
+                DeserializedMessage::Matrix(m) => {
+                    any_change = kbd.update_right(m);
+                }
+                DeserializedMessage::Encoder(_) => {}
+            }
+        }
+        if left_buttons.scan_matrix() {
+
+        }
+    }
+
 }

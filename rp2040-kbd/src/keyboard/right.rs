@@ -57,17 +57,6 @@ impl RightButtons {
             check_col_no_store!(self, 3, next_state) ||
             check_col_no_store!(self, 4, next_state) ||
             check_col_no_store!(self, 5, next_state) {
-            for row_ind in 0..NUM_ROWS {
-                for col_ind in 0..NUM_COLS {
-                    let ind = matrix_ind(row_ind, col_ind);
-                    let old = self.matrix[ind];
-                    let new = next_state[ind];
-                    if old != new {
-                        let mut usb = acquire_usb();
-                        usb.write_fmt(format_args!("R: R{}, C{} -> {}\r\n", row_ind, col_ind, new as u8));
-                    }
-                }
-            }
             self.matrix = next_state;
             true
         } else {

@@ -6,6 +6,7 @@ use crate::keyboard::{ButtonPin, ButtonState, ButtonStateChange, INITIAL_STATE, 
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
 use usbd_hid::descriptor::KeyboardReport;
 use crate::keyboard::usb_serial::UsbSerial;
+use crate::runtime::right::shared::usb_serial::acquire_usb;
 
 pub struct LeftButtons {
     matrix: MatrixState,
@@ -47,30 +48,32 @@ impl LeftButtons {
         }
     }
 
-    pub fn scan_matrix(&mut self) -> heapless::Vec<ButtonStateChange, 16> {
+    pub fn scan_matrix(&mut self) -> bool {
         let mut next_state = INITIAL_STATE;
-        let mut changes = heapless::Vec::new();
-        crate::check_col_no_store!(self, 0, next_state);
-        crate::check_col_no_store!(self, 1, next_state);
-        crate::check_col_no_store!(self, 2, next_state);
-        crate::check_col_no_store!(self, 3, next_state);
-        crate::check_col_no_store!(self, 4, next_state);
+        if crate::check_col_no_store!(self, 0, next_state) ||
+        crate::check_col_no_store!(self, 1, next_state) ||
+        crate::check_col_no_store!(self, 2, next_state) ||
+        crate::check_col_no_store!(self, 3, next_state) ||
+        crate::check_col_no_store!(self, 4, next_state) ||
         // Todo: Row 4 gets weird, may be because it has fewer buttons, may be wrongly mapped
-        crate::check_col_no_store!(self, 5, next_state);
-        self.matrix = next_state;
-        changes
+        crate::check_col_no_store!(self, 5, next_state) {
+            self.matrix = next_state;
+            true
+        } else {
+            false
+        }
     }
 }
 
 #[derive(Debug)]
-pub struct KeyboardState<const N: usize> {
+pub struct KeyboardState {
     left: MatrixState,
     right: MatrixState,
     hid_state: KeyboardReport,
 
 }
 
-impl<const N: usize> KeyboardState<N> {
+impl KeyboardState {
     pub const fn empty() -> Self {
         Self {
             left: INITIAL_STATE,
@@ -84,16 +87,16 @@ impl<const N: usize> KeyboardState<N> {
         }
     }
 
-    pub fn update_left(&mut self, new: &MatrixState, usb_serial: &mut UsbSerial) -> bool {
-        Self::update(&mut self.right, new, usb_serial, true)
+    pub fn update_left(&mut self, new: &MatrixState) -> bool {
+        Self::update(&mut self.right, new, true)
     }
 
-    pub fn update_right(&mut self, new: &MatrixState, usb_serial: &mut UsbSerial) -> bool {
-        Self::update(&mut self.right, new, usb_serial, false)
+    pub fn update_right(&mut self, new: &MatrixState) -> bool {
+        Self::update(&mut self.right, new, false)
     }
 
     #[inline]
-    fn update(side: &mut MatrixState, new: &MatrixState, usb_serial: &mut UsbSerial, left: bool) -> bool {
+    fn update(side: &mut MatrixState, new: &MatrixState, left: bool) -> bool {
         let mut any = false;
         for row_ind in 0..NUM_ROWS {
             for col_ind in 0..NUM_COLS {
@@ -102,9 +105,9 @@ impl<const N: usize> KeyboardState<N> {
                 let new_val = new[ind];
                 if old_val != new_val {
                     if left {
-                        let _ = usb_serial.write_fmt(format_args!("L: R{},C{} -> {}\r\n", row_ind, col_ind, new_val as u8));
+                        let _ = acquire_usb().write_fmt(format_args!("L: R{},C{} -> {}\r\n", row_ind, col_ind, new_val as u8));
                     } else {
-                        let _ = usb_serial.write_fmt(format_args!("R: R{},C{} -> {}\r\n", row_ind, col_ind, new_val as u8));
+                        let _ = acquire_usb().write_fmt(format_args!("R: R{},C{} -> {}\r\n", row_ind, col_ind, new_val as u8));
                     }
                     side.set(ind, new_val);
                     any = true;

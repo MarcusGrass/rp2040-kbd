@@ -22,7 +22,7 @@ pub(crate) mod debugger;
 pub(crate) mod keyboard;
 pub(crate) mod lock;
 pub(crate) mod runtime;
-pub(crate) mod keycodes;
+mod hid;
 
 use core::borrow::BorrowMut;
 // The macro for our start-up function
@@ -43,31 +43,26 @@ use elite_pi::hal::pac;
 use elite_pi::hal;
 
 // USB Device support
-use usb_device::{class_prelude::*};
+use usb_device::class_prelude::*;
 
 use core::fmt::Write;
 use embedded_graphics::Drawable;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use embedded_hal::prelude::_embedded_hal_blocking_delay_DelayMs;
-use pio_uart::PioUart;
 use rp2040_hal::fugit::RateExtU32;
-use rp2040_hal::gpio::{
-    PinId
-};
+use rp2040_hal::gpio::PinId;
 use rp2040_hal::pio::PIOExt;
-use rp2040_hal::uart::{DataBits, StopBits, UartConfig};
-use rp2040_hal::{Clock};
+use rp2040_hal::Clock;
 use rp2040_hal::multicore::Multicore;
 use ssd1306::mode::DisplayConfig;
 use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
 use ssd1306::size::DisplaySize128x32;
 use ssd1306::Ssd1306;
 use crate::keyboard::left::LeftButtons;
-use crate::keyboard::oled::{OledHandle};
+use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::RightButtons;
 use crate::keyboard::split_serial::{UartLeft, UartRight};
-use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::runtime::left::run_left;
 use crate::runtime::right::run_right;
 
@@ -173,7 +168,7 @@ fn main() -> ! {
                 Some(pins.gpio21.into_pull_up_input()),
             )
         );
-        run_left(usb_bus, oled, uart, left, pl, timer);
+        run_left(&mut mc, usb_bus, oled, uart, left, pl, timer);
     } else {
         let uart = UartRight::new(
             pins.gpio1.reconfigure(),

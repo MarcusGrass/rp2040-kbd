@@ -9,10 +9,12 @@ pub mod power_led;
 mod sync;
 mod layer;
 
+use core::fmt::Write;
 use bitvec::array::BitArray;
 use bitvec::order::Lsb0;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use rp2040_hal::gpio::{DynPinId, FunctionSio, Pin, PinId, PullUp, SioInput};
+use crate::runtime::right::shared::usb_serial::acquire_usb;
 
 type RowPin = Pin<DynPinId, FunctionSio<SioInput>, PullUp>;
 type ButtonPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
@@ -108,6 +110,7 @@ macro_rules! check_col_no_store {
                 let ind = matrix_ind(row_ind, $pt);
                 let state = matches!($slf.rows[row_ind].is_low(), Ok(true));
                 if state != $slf.matrix[ind] {
+                    let _ = acquire_usb().write_fmt(format_args!("R{}, C{} -> {}\r\n", row_ind, $pt, state as u8));
                     changed = true;
                 }
                 $m_state.set(ind, state);
