@@ -1,3 +1,5 @@
+pub mod usb_serial;
+
 use core::marker::PhantomData;
 use rp2040_hal::sio::Spinlock0;
 use crate::keyboard::{INITIAL_STATE, MatrixState};

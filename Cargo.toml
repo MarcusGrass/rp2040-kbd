@@ -4,7 +4,7 @@ members = [ "rp2040-kbd"]
 
 [workspace.dependencies]
 arrayvec = { version = "0.7.4", default-features = false }
-bitbang-hal = "0.3.2"
+bitvec = { version = "1.0.1", default-features = false }
 cortex-m = "0.7.7"
 cortex-m-rt = "0.7.3"
 cortex-m-rtic = "1.1.4"

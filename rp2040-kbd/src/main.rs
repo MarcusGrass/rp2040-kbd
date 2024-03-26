@@ -13,14 +13,16 @@
 #![allow(unused)]
 #![allow(dead_code)]
 
-#![no_std]
+#![cfg_attr(not(test), no_std)]
+//#![no_std]
+
 #![no_main]
 
-mod debugger;
-mod keyboard;
-mod lock;
-mod runtime;
-mod keycodes;
+pub(crate) mod debugger;
+pub(crate) mod keyboard;
+pub(crate) mod lock;
+pub(crate) mod runtime;
+pub(crate) mod keycodes;
 
 use core::borrow::BorrowMut;
 // The macro for our start-up function
@@ -28,6 +30,7 @@ use elite_pi::{entry, Pins};
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
+#[cfg(not(test))]
 #[allow(unused_imports)]
 use panic_halt as _;
 
@@ -142,8 +145,6 @@ fn main() -> ! {
     let power_led_pin = pins.power_led.into_push_pull_output();
     let pl = PowerLed::new(power_led_pin);
     let is_left = side_check_pin.is_high().unwrap();
-    let u_ser = UsbSerial::new(&usb_bus);
-    let u_dev = UsbSerialDevice::new(&usb_bus);
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     if is_left {
         // Left side flips tx/rx, check qmk for proton-c in kyria for reference
@@ -171,7 +172,7 @@ fn main() -> ! {
                 Some(pins.gpio21.into_pull_up_input()),
             )
         );
-        run_left(u_ser, u_dev, oled, uart, left, pl, timer);
+        run_left(usb_bus, oled, uart, left, pl, timer);
     } else {
         let uart = UartRight::new(
             pins.gpio1.reconfigure(),
@@ -197,7 +198,7 @@ fn main() -> ! {
                 Some(pins.gpio9.into_pull_up_input()),
             )
         );
-        run_right(&mut mc, u_ser, u_dev, oled, uart, right, pl, timer);
+        run_right(&mut mc, usb_bus, oled, uart, right, pl, timer);
     }
 
 }

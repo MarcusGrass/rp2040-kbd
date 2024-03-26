@@ -1,3 +1,6 @@
+mod usb;
+mod shared;
+
 use core::fmt::Write as _;
 use embedded_hal::timer::CountDown;
 use embedded_io::{Read, Write};
@@ -6,17 +9,19 @@ use nb::block;
 use rp2040_hal::fugit::MicrosDurationU64;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
-use usb_device::bus::UsbBus;
-use crate::keyboard::left::LeftButtons;
-use crate::keyboard::left::message_receiver::MessageReceiver;
+use usb_device::bus::{UsbBus, UsbBusAllocator};
+use crate::keyboard::left::{KeyboardState, LeftButtons};
+use crate::keyboard::left::message_receiver::{DeserializedMessage, MessageReceiver};
 use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::{UartLeft};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 
 #[inline(never)]
-pub fn run_left(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut oled_handle: OledHandle, mut uart_driver: UartLeft, mut left_buttons: LeftButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
+pub fn run_left(mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>, mut oled_handle: OledHandle, mut uart_driver: UartLeft, mut left_buttons: LeftButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
     const PONG: &[u8] = b"pong";
+    let mut usb_serial = UsbSerial::new(&usb_bus);
+    let mut usb_dev = UsbSerialDevice::new(&usb_bus);
     let mut receiver = MessageReceiver::new(uart_driver);
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
@@ -31,6 +36,7 @@ pub fn run_left(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ole
     let mut written = 0u16;
     let mut empty_reads = 0u16;
     let mut err_reads = 0u16;
+    let mut kbd: KeyboardState<0> = KeyboardState::empty();
     loop {
         let now = timer.get_counter();
         if let Some(dur) = now.checked_duration_since(prev) {
@@ -70,11 +76,13 @@ pub fn run_left(mut usb_serial: UsbSerial, mut usb_dev: UsbSerialDevice, mut ole
         );
         if output_all {
             if let Some(input) = receiver.try_read() {
-                let _ = usb_serial.write_fmt(format_args!("Got message: {input:?}\r\n"));
-            } else if receiver.cursor != 0 || receiver.total_read != 0 {
-                let _ = usb_serial.write_fmt(format_args!("cursor={}, Buf 0 = {}, bad={}, good={}, unk={}, unk_rb={}, total={}\r\n", receiver.cursor, receiver.buf[0], receiver.bad_matrix, receiver.good_matrix, receiver.unk_msg, receiver.unk_rollback,receiver.total_read));
-            } else if receiver.successful_reads > 0 {
-                let _ = usb_serial.write_fmt(format_args!("reads={}\r\n", receiver.successful_reads));
+                match input {
+                    DeserializedMessage::Matrix(m) => {
+                        kbd.update_right(m, &mut usb_serial);
+                    }
+                    DeserializedMessage::Encoder(_) => {}
+                }
+                //let _ = usb_serial.write_fmt(format_args!("Got message: {input:?}\r\n"));
             }
 
             for press in left_buttons.scan_matrix() {

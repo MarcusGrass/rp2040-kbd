@@ -6,8 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bitbang-hal = {workspace = true}
+bitvec = {workspace = true, default-features = false}
 cortex-m-rt = { workspace = true, optional = true }
+critical-section.workspace = true
 embedded-hal.workspace = true
 embedded-graphics.workspace = true
 embedded-io.workspace = true
@@ -17,6 +18,7 @@ nb.workspace = true
 elite-pi.workspace = true
 heapless.workspace = true
 usb-device.workspace = true
+usbd-hid.workspace = true
 usbd-serial.workspace = true
 panic-halt.workspace = true
 pio-uart = {workspace = true}

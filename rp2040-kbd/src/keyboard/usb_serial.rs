@@ -52,6 +52,8 @@ fn serial_write_all<W: usb_device::bus::UsbBus, B1: BorrowMut<[u8]>, B2: BorrowM
     }
 }
 
+
+
 pub struct UsbSerialDevice<'a> {
     pub(crate) inner: UsbDevice<'a, UsbBus>,
 }

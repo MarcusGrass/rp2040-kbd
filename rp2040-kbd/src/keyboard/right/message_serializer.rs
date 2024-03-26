@@ -49,12 +49,8 @@ impl MessageSerializer {
         }
         self.buf[self.cursor] = MATRIX_STATE_TAG;
         self.cursor += 1;
-        for row in state {
-            for col in row {
-                self.buf[self.cursor] = *col as u8;
-                self.cursor += 1;
-            }
-        }
+        self.buf[self.cursor..self.cursor + 4].copy_from_slice(&state.data);
+        self.cursor += 1;
         true
     }
 

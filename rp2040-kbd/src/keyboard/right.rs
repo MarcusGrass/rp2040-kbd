@@ -1,10 +1,13 @@
 pub(crate) mod message_serializer;
 
+use core::fmt::Write;
 use rp2040_hal::gpio::bank0::{Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8, Gpio9};
-use crate::{check_col, check_col_no_store};
-use crate::keyboard::{ButtonPin, ButtonState, ButtonStateChange, INITIAL_STATE, MatrixState, RowPin};
+use crate::{check_col_no_store};
+use crate::keyboard::{ButtonPin, ButtonState, ButtonStateChange, INITIAL_STATE, MatrixState, NUM_COLS, NUM_ROWS, RowPin, matrix_ind};
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
 use rp2040_hal::gpio::{FunctionSio, Pin, PullUp, SioInput};
+use crate::keyboard::usb_serial::UsbSerial;
+use crate::runtime::right::shared::usb_serial::acquire_usb;
 
 pub struct RightButtons {
     pub(crate) matrix: MatrixState,
@@ -54,6 +57,17 @@ impl RightButtons {
             check_col_no_store!(self, 3, next_state) ||
             check_col_no_store!(self, 4, next_state) ||
             check_col_no_store!(self, 5, next_state) {
+            for row_ind in 0..NUM_ROWS {
+                for col_ind in 0..NUM_COLS {
+                    let ind = matrix_ind(row_ind, col_ind);
+                    let old = self.matrix[ind];
+                    let new = next_state[ind];
+                    if old != new {
+                        let mut usb = acquire_usb();
+                        usb.write_fmt(format_args!("R: R{}, C{} -> {}\r\n", row_ind, col_ind, new as u8));
+                    }
+                }
+            }
             self.matrix = next_state;
             true
         } else {

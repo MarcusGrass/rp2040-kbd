@@ -1,6 +1,6 @@
 use embedded_io::Read;
 use pio_uart::PioSerialError;
-use crate::keyboard::{ButtonState, ButtonStateChange, INITIAL_STATE, MatrixState, NUM_COLS, NUM_ROWS};
+use crate::keyboard::{ButtonState, ButtonStateChange, INITIAL_STATE, matrix_ind, MatrixState, NUM_COLS, NUM_ROWS};
 use crate::keyboard::split_serial::UartLeft;
 use crate::keyboard::sync::{ENCODER_TAG, MATRIX_STATE_TAG, ENCODER_MSG_LEN, MATRIX_STATE_MSG_LEN};
 
@@ -37,8 +37,8 @@ impl EncoderDirection {
 }
 
 #[derive(Copy, Clone, Debug)]
-pub(crate) enum DeserializedMessage {
-    Matrix,
+pub(crate) enum DeserializedMessage<'a> {
+    Matrix(&'a MatrixState),
     Encoder(EncoderDirection),
 }
 impl MessageReceiver {
@@ -76,26 +76,22 @@ impl MessageReceiver {
                 if self.cursor < MATRIX_STATE_MSG_LEN {
                     return None;
                 }
-                let mut offset = 0;
-                for i in 0..NUM_COLS as u8 {
-                    for j in 0..NUM_ROWS as u8 {
-                        offset += 1;
-                        if let Some(btn) = ButtonState::try_from_u8(self.buf[offset]) {
-                            if self.matrix[j as usize][i as usize] != btn {
-                                let _ = self.changes.push(ButtonStateChange::new(j, i, btn));
-                                self.matrix[j as usize][i as usize] = btn;
-                            }
-                        } else {
-                            // Just ditch the state, it's broken
-                            self.bad_matrix += 1;
-                            self.cursor = 0;
-                            return None;
+                let target: [u8; 4] = self.buf[1..5].try_into().unwrap();
+                let state: MatrixState = MatrixState::new(target);
+                for row_ind in 0..NUM_ROWS {
+                    for col_ind in 0..NUM_COLS {
+                        let ind = matrix_ind(row_ind, col_ind);
+                        let old = self.matrix[ind];
+                        let new = state[ind];
+                        if old != new {
+                            let _ = self.changes.push(ButtonStateChange::new(row_ind as u8, col_ind as u8, new.into()));
+                            self.matrix.set(ind, new);
                         }
                     }
                 }
                 self.good_matrix += 1;
                 self.cursor = 0;
-                Some(DeserializedMessage::Matrix)
+                Some(DeserializedMessage::Matrix(&self.matrix))
             }
             ENCODER_TAG => {
                 if self.cursor < ENCODER_MSG_LEN {

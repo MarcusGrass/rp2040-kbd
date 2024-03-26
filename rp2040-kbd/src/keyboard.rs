@@ -7,7 +7,10 @@ pub mod split_serial;
 pub mod usb_serial;
 pub mod power_led;
 mod sync;
+mod layer;
 
+use bitvec::array::BitArray;
+use bitvec::order::Lsb0;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use rp2040_hal::gpio::{DynPinId, FunctionSio, Pin, PinId, PullUp, SioInput};
 
@@ -17,6 +20,10 @@ type ButtonPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
 pub const NUM_COLS: usize = 6;
 pub const NUM_ROWS: usize = 5;
 
+#[inline]
+pub const fn matrix_ind(row_ind: usize, col_ind: usize) -> usize {
+    row_ind * NUM_COLS + col_ind
+}
 #[derive(Debug, Copy, Clone)]
 pub enum KeyboardRow {
     One,
@@ -43,6 +50,16 @@ pub enum ButtonState {
     Pressed = 1,
 }
 
+impl From<bool> for ButtonState {
+    #[inline]
+    fn from(value: bool) -> Self {
+        match value {
+            true => Self::Pressed,
+            false => Self::Depressed,
+        }
+    }
+}
+
 impl ButtonState {
     #[inline]
     pub(crate) fn try_from_u8(val: u8) -> Option<Self> {
@@ -50,6 +67,14 @@ impl ButtonState {
             0 => Some(Self::Depressed),
             1 => Some(Self::Pressed),
             _ => None
+        }
+    }
+
+    #[inline]
+    pub(crate) fn into_bool(self) -> bool {
+        match self {
+            ButtonState::Depressed => false,
+            ButtonState::Pressed => true,
         }
     }
 }
@@ -67,37 +92,9 @@ impl ButtonStateChange {
     }
 }
 
-pub type MatrixState = [[ButtonState; NUM_COLS]; NUM_ROWS];
+pub type MatrixState = BitArray<[u8; 4], Lsb0>;
 
-pub(crate) const INITIAL_STATE: MatrixState = [[ButtonState::Depressed; NUM_COLS]; NUM_ROWS];
-
-#[macro_export]
-macro_rules! check_col {
-    ($slf: expr, $pt: tt, $m_state: expr, $vec: expr) => {
-        {
-            let mut col = $slf.cols.$pt.take().unwrap();
-            let mut col = col.into_push_pull_output_in_state(PinState::Low);
-            for (ind, row) in $slf.rows.iter().enumerate() {
-                let state = if matches!(row.is_low(), Ok(true)) {
-                    ButtonState::Pressed
-                } else {
-                    ButtonState::Depressed
-                };
-                if state != $slf.prev_matrix[ind][$pt] {
-                    let _ = $vec.push(ButtonStateChange {
-                        row: ind as u8,
-                        col: $pt,
-                        new_state: state,
-                    });
-                }
-                $m_state[ind][$pt] = state;
-            }
-            let _ = col.set_high();
-            $slf.cols.$pt = Some(col.into_pull_up_input());
-        }
-
-    };
-}
+pub(crate) const INITIAL_STATE: MatrixState = BitArray::ZERO;
 
 #[macro_export]
 macro_rules! check_col_no_store {
@@ -105,17 +102,15 @@ macro_rules! check_col_no_store {
         {
             let mut col = $slf.cols.$pt.take().unwrap();
             let mut col = col.into_push_pull_output_in_state(PinState::Low);
+            // Todo: Remove this redundant wait
             let mut changed = false;
-            for (ind, row) in $slf.rows.iter().enumerate() {
-                let state = if matches!(row.is_low(), Ok(true)) {
-                    ButtonState::Pressed
-                } else {
-                    ButtonState::Depressed
-                };
-                if state != $slf.matrix[ind][$pt] {
+            for row_ind in 0..NUM_ROWS {
+                let ind = matrix_ind(row_ind, $pt);
+                let state = matches!($slf.rows[row_ind].is_low(), Ok(true));
+                if state != $slf.matrix[ind] {
                     changed = true;
                 }
-                $m_state[ind][$pt] = state;
+                $m_state.set(ind, state);
             }
             let _ = col.set_high();
             $slf.cols.$pt = Some(col.into_pull_up_input());
