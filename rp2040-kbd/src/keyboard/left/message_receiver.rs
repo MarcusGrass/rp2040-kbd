@@ -6,15 +6,15 @@ use crate::keyboard::sync::{ENCODER_TAG, MATRIX_STATE_TAG, ENCODER_MSG_LEN, MATR
 
 const BUF_SIZE: usize = 64;
 pub(crate) struct MessageReceiver {
-    uart: UartLeft,
+    pub(crate) uart: UartLeft,
     pub(crate) buf: [u8; BUF_SIZE],
     pub(crate) cursor: usize,
-    pub(crate) total_read: usize,
-    pub(crate) successful_reads: usize,
-    pub(crate) unk_msg: usize,
-    pub(crate) bad_matrix: usize,
-    pub(crate) good_matrix: usize,
-    pub(crate) unk_rollback: usize,
+    pub(crate) total_read: u16,
+    pub(crate) successful_reads: u16,
+    pub(crate) unk_msg: u16,
+    pub(crate) bad_matrix: u16,
+    pub(crate) good_matrix: u16,
+    pub(crate) unk_rollback: u16,
     matrix: MatrixState,
     changes: heapless::Vec<ButtonStateChange, 16>,
 }
@@ -56,7 +56,7 @@ impl MessageReceiver {
         };
         match res {
             Ok(r) => {
-                self.total_read += r;
+                self.total_read += r as u16;
                 if r == 0 {
                     return None;
                 }
@@ -107,7 +107,7 @@ impl MessageReceiver {
                 None
             }
             _unk => {
-                self.unk_rollback += 1;
+                /*
                 let mut valid_at = None;
                 for i in 0..self.cursor {
                     if let Some(next) = self.buf.get(i) {
@@ -126,8 +126,14 @@ impl MessageReceiver {
                     self.buf.copy_within(ind_of_valid..self.cursor, 0);
                     // Move up cursor as much
                     self.cursor -= ind_of_valid;
-                    return self.try_message();
+                    self.unk_rollback += 1;
+                } else {
+                    self.cursor = 0;
+                    self.unk_msg += 1;
                 }
+
+
+                 */
                 self.cursor = 0;
                 self.unk_msg += 1;
                 None

@@ -146,11 +146,12 @@ fn main() -> ! {
     let pl = PowerLed::new(power_led_pin);
     let is_left = side_check_pin.is_high().unwrap();
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
+    let uart_baud = 115200.Hz();
     if is_left {
         // Left side flips tx/rx, check qmk for proton-c in kyria for reference
         let uart = UartLeft::new(
             pins.gpio1,
-            115200.Hz(),
+            uart_baud,
             125.MHz(),
             pac.PIO0,
             &mut pac.RESETS
@@ -176,7 +177,7 @@ fn main() -> ! {
     } else {
         let uart = UartRight::new(
             pins.gpio1.reconfigure(),
-            115200.Hz(),
+            uart_baud,
             125.MHz(),
             pac.PIO0,
             &mut pac.RESETS,

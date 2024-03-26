@@ -39,3 +39,6 @@ usb-device = "0.2.9"
 usbd-hid = "0.5.2"
 usbd-serial = "0.1.1"
 ws2812-pio = "0.7.0"
+
+[patch.crates-io]
+pio-uart = { path = "../pio-uart"}

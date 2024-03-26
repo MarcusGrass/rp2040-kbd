@@ -825,8 +825,6 @@ dependencies = [
 [[package]]
 name = "pio-uart"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8f9e67f6c446d4d227de21755dd4b4c12369b04479af6c40b12017e52254c95"
 dependencies = [
  "cortex-m",
  "defmt",

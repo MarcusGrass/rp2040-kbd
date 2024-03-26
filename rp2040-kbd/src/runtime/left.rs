@@ -39,34 +39,41 @@ pub fn run_left(mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>, mut oled_
     let mut kbd: KeyboardState<0> = KeyboardState::empty();
     loop {
         let now = timer.get_counter();
+        /*
         if let Some(dur) = now.checked_duration_since(prev) {
             if dur.to_millis() > 1000 && output_all {
                 oled_handle.clear();
                 let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{flips}")).is_ok() {
+                if s.write_fmt(format_args!("{}", receiver.good_matrix)).is_ok() {
                     oled_handle.write(0, s.as_str());
                 }
                 let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{read}")).is_ok() {
+                if s.write_fmt(format_args!("{}", receiver.successful_reads)).is_ok() {
                     oled_handle.write(18, s.as_str());
                 }
                 let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{empty_reads}")).is_ok() {
+                if s.write_fmt(format_args!("{}", receiver.total_read)).is_ok() {
                     oled_handle.write(36, s.as_str());
                 }
                 let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{err_reads}")).is_ok() {
+                if s.write_fmt(format_args!("{}", receiver.bad_matrix)).is_ok() {
                     oled_handle.write(54, s.as_str());
                 }
                 let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{}", offset as u16)).is_ok() {
+                if s.write_fmt(format_args!("{}", receiver.unk_msg)).is_ok() {
                     oled_handle.write(74, s.as_str());
+                }
+                let mut s: String<5> = String::new();
+                if s.write_fmt(format_args!("{}", receiver.unk_rollback)).is_ok() {
+                    oled_handle.write(92, s.as_str());
                 }
                 wants_read = false;
                 prev = now;
 
             }
         }
+
+         */
         handle_usb(
             &mut usb_dev,
             &mut usb_serial,

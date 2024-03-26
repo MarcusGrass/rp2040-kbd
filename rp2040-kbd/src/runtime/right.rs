@@ -188,22 +188,9 @@ fn handle_usb(
 
 fn run_core1(mut serializer: MessageSerializer, mut right_buttons: RightButtons, mut timer: Timer) -> ! {
     loop {
-
         let mut pumped = false;
         right_buttons.scan_matrix();
-        if serializer.serialize_matrix_state(&right_buttons.matrix) {
-        } else if serializer.pump() {
-            pumped = true;
-            // Successfully cleared old data
-            if serializer.serialize_matrix_state(&right_buttons.matrix) {
-            } else {
-                // Give up on this one
-                serializer.clear();
-            }
-        }
-        if !pumped {
-            pumped = serializer.pump();
-        }
+        serializer.serialize_matrix_state(&right_buttons.matrix);
         acquire_matrix_scan().scan.num_scans += 1;
     }
 }
