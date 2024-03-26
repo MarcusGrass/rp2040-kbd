@@ -186,11 +186,17 @@ fn handle_usb(
     }
 }
 
+
 fn run_core1(mut serializer: MessageSerializer, mut right_buttons: RightButtons, mut timer: Timer) -> ! {
+    const SEND_AT_LEAST_MICROS: u64 = 1000;
+    let mut last_send = timer.count_down();
+    last_send.start(MicrosDurationU64::micros(SEND_AT_LEAST_MICROS));
     loop {
         let mut pumped = false;
-        right_buttons.scan_matrix();
-        serializer.serialize_matrix_state(&right_buttons.matrix);
+        if right_buttons.scan_matrix() || last_send.wait().is_ok() {
+            serializer.serialize_matrix_state(&right_buttons.matrix);
+            last_send.start(MicrosDurationU64::micros(SEND_AT_LEAST_MICROS));
+        }
         acquire_matrix_scan().scan.num_scans += 1;
     }
 }
