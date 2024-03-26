@@ -50,14 +50,12 @@ impl RightButtons {
     }
 
     pub fn scan_matrix(&mut self) -> bool {
-        let mut next_state = INITIAL_STATE;
-        if check_col_no_store!(self, 0, next_state) ||
-            check_col_no_store!(self, 1, next_state) ||
-            check_col_no_store!(self, 2, next_state) ||
-            check_col_no_store!(self, 3, next_state) ||
-            check_col_no_store!(self, 4, next_state) ||
-            check_col_no_store!(self, 5, next_state) {
-            self.matrix = next_state;
+        if check_col_no_store!(self, 0) ||
+            check_col_no_store!(self, 1) ||
+            check_col_no_store!(self, 2) ||
+            check_col_no_store!(self, 3) ||
+            check_col_no_store!(self, 4) ||
+            check_col_no_store!(self, 5) {
             true
         } else {
             false

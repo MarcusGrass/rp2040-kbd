@@ -49,15 +49,13 @@ impl LeftButtons {
     }
 
     pub fn scan_matrix(&mut self) -> bool {
-        let mut next_state = INITIAL_STATE;
-        if crate::check_col_no_store!(self, 0, next_state) ||
-        crate::check_col_no_store!(self, 1, next_state) ||
-        crate::check_col_no_store!(self, 2, next_state) ||
-        crate::check_col_no_store!(self, 3, next_state) ||
-        crate::check_col_no_store!(self, 4, next_state) ||
+        if crate::check_col_no_store!(self, 0) ||
+        crate::check_col_no_store!(self, 1) ||
+        crate::check_col_no_store!(self, 2) ||
+        crate::check_col_no_store!(self, 3) ||
+        crate::check_col_no_store!(self, 4) ||
         // Todo: Row 4 gets weird, may be because it has fewer buttons, may be wrongly mapped
-        crate::check_col_no_store!(self, 5, next_state) {
-            self.matrix = next_state;
+        crate::check_col_no_store!(self, 5) {
             true
         } else {
             false

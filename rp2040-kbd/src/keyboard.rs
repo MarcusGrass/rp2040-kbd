@@ -100,7 +100,7 @@ pub(crate) const INITIAL_STATE: MatrixState = BitArray::ZERO;
 
 #[macro_export]
 macro_rules! check_col_no_store {
-    ($slf: expr, $pt: tt, $m_state: expr) => {
+    ($slf: expr, $pt: tt) => {
         {
             let mut col = $slf.cols.$pt.take().unwrap();
             let mut col = col.into_push_pull_output_in_state(PinState::Low);
@@ -113,7 +113,7 @@ macro_rules! check_col_no_store {
                     let _ = acquire_usb().write_fmt(format_args!("R{}, C{} -> {}\r\n", row_ind, $pt, state as u8));
                     changed = true;
                 }
-                $m_state.set(ind, state);
+                $slf.matrix.set(ind, state);
             }
             let _ = col.set_high();
             $slf.cols.$pt = Some(col.into_pull_up_input());
