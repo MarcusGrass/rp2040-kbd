@@ -11,12 +11,14 @@ use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::{UsbBus, UsbBusAllocator};
+use usbd_hid::descriptor::KeyboardReport;
 use crate::keyboard::left::{KeyboardState, LeftButtons};
 use crate::keyboard::left::message_receiver::{DeserializedMessage, MessageReceiver};
 use crate::keyboard::oled::{OledHandle};
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::{UartLeft};
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
+use crate::keymap::Layers;
 use crate::runtime::right::shared::usb_serial::{acquire_usb, init_usb};
 
 static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
@@ -128,6 +130,12 @@ fn handle_usb(
 }
 
 pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -> ! {
+    const DEFAULT_KBD: KeyboardReport = KeyboardReport {
+        modifier: 0,
+        reserved: 0,
+        leds: 0,
+        keycodes: [0u8; 6],
+    };
     let mut kbd = KeyboardState::empty();
     loop {
         let mut any_change = false;
@@ -140,7 +148,11 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
             }
         }
         if left_buttons.scan_matrix() {
-
+            any_change = true;
+        }
+        let next_layer = Layers::DvorakAnsi.report(&left_buttons.matrix, &kbd.right);
+        if next_layer.report.keycodes != DEFAULT_KBD.keycodes || next_layer.report.modifier != DEFAULT_KBD.modifier {
+            let _ = acquire_usb().write_fmt(format_args!("Report: {:?}\r\n", next_layer));
         }
     }
 

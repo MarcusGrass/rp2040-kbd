@@ -9,7 +9,7 @@ use crate::keyboard::usb_serial::UsbSerial;
 use crate::runtime::right::shared::usb_serial::acquire_usb;
 
 pub struct LeftButtons {
-    matrix: MatrixState,
+    pub matrix: MatrixState,
     rows: [
         RowPin; 5
     ],
@@ -65,8 +65,8 @@ impl LeftButtons {
 
 #[derive(Debug)]
 pub struct KeyboardState {
-    left: MatrixState,
-    right: MatrixState,
+    pub(crate) left: MatrixState,
+    pub(crate) right: MatrixState,
     hid_state: KeyboardReport,
 
 }

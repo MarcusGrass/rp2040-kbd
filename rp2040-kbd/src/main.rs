@@ -23,6 +23,7 @@ pub(crate) mod keyboard;
 pub(crate) mod lock;
 pub(crate) mod runtime;
 mod hid;
+mod keymap;
 
 use core::borrow::BorrowMut;
 // The macro for our start-up function
