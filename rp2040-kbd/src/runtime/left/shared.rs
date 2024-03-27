@@ -1,4 +1,4 @@
-use elite_pi::hal;
+use liatris::hal;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::device::UsbDevice;
 

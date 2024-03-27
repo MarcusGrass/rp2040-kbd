@@ -331,17 +331,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11157ac094ffbdde99aa67b23417ebdd801842852b500e395a45a9c0aac03e4a"
 
 [[package]]
-name = "elite-pi"
-version = "0.1.0"
-dependencies = [
- "cortex-m-rt",
- "fugit",
- "rp2040-boot2",
- "rp2040-hal",
- "usb-device",
-]
-
-[[package]]
 name = "embedded-dma"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -625,6 +614,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d3c48237b9604c5a4702de6b824e02006c3214327564636aef27c1028a8fa0ed"
 dependencies = [
  "regex",
+]
+
+[[package]]
+name = "liatris"
+version = "0.1.0"
+dependencies = [
+ "cortex-m-rt",
+ "fugit",
+ "rp2040-boot2",
+ "rp2040-hal",
+ "usb-device",
 ]
 
 [[package]]
@@ -1025,13 +1025,13 @@ dependencies = [
  "critical-section",
  "defmt",
  "defmt-rtt",
- "elite-pi",
  "embedded-graphics",
  "embedded-hal",
  "embedded-io",
  "embedded-sdmmc",
  "hd44780-driver",
  "heapless",
+ "liatris",
  "nb 1.1.0",
  "panic-halt",
  "pio",

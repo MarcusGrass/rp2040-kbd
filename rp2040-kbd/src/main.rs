@@ -25,7 +25,7 @@ pub(crate) mod runtime;
 
 use core::borrow::BorrowMut;
 // The macro for our start-up function
-use elite_pi::{entry, Pins};
+use liatris::{entry, Pins};
 
 // Ensure we halt the program on panic (if we don't mention this crate it won't
 // be linked)
@@ -35,11 +35,11 @@ use panic_halt as _;
 
 // A shorter alias for the Peripheral Access Crate, which provides low-level
 // register access
-use elite_pi::hal::pac;
+use liatris::hal::pac;
 
 // A shorter alias for the Hardware Abstraction Layer, which provides
 // higher-level drivers.
-use elite_pi::hal;
+use liatris::hal;
 
 // USB Device support
 use usb_device::class_prelude::*;
@@ -84,7 +84,7 @@ fn main() -> ! {
     //
     // The default is to generate a 125 MHz system clock
     let clocks = hal::clocks::init_clocks_and_plls(
-        elite_pi::XOSC_CRYSTAL_FREQ,
+        liatris::XOSC_CRYSTAL_FREQ,
         pac.XOSC,
         pac.CLOCKS,
         pac.PLL_SYS,

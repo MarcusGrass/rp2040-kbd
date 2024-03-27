@@ -3,7 +3,7 @@ use crate::keyboard::{MatrixState, INITIAL_STATE};
 use core::cell::OnceCell;
 use core::fmt::Write;
 use core::marker::PhantomData;
-use elite_pi::hal;
+use liatris::hal;
 use rp2040_hal::sio::Spinlock15;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::device::UsbDevice;

@@ -1,4 +1,4 @@
-use elite_pi::pac::{I2C1, UART0};
+use liatris::pac::{I2C1, UART0};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::Point;
 use embedded_graphics::mono_font::iso_8859_2::FONT_6X9;

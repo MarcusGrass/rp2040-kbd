@@ -7,7 +7,7 @@ use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::runtime::shared::usb::{acquire_usb, init_usb};
 use crate::runtime::shared::{acquire_matrix_scan, try_acquire_matrix_scan};
 use core::fmt::Write;
-use elite_pi::hal;
+use liatris::hal;
 use embedded_hal::timer::CountDown;
 use embedded_io::Read;
 use heapless::String;
