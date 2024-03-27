@@ -1,6 +1,6 @@
-use usbd_hid::descriptor::KeyboardReport;
 use crate::hid::keycodes::{KeyCode, Modifier};
 use crate::keyboard::{matrix_ind, MatrixState, NUM_COLS, NUM_ROWS};
+use usbd_hid::descriptor::KeyboardReport;
 
 #[derive(Debug, Copy, Clone)]
 pub enum Layers {
@@ -16,44 +16,36 @@ pub struct LayerResult {
 impl Layers {
     pub fn report(self, left: &MatrixState, right: &MatrixState) -> LayerResult {
         match self {
-            Layers::DvorakAnsi => {
-                dvorak_se_to_report(left, right)
-            }
+            Layers::DvorakAnsi => dvorak_se_to_report(left, right),
         }
     }
 }
 
 // Make sure that the index calculation is const
 macro_rules! at_ind {
-    ($side: expr, $row: expr, $col: expr, $do: expr) => {
-        {
-            const IND: usize = matrix_ind($row, $col);
-            if $side[IND] {
-                $do
-            }
+    ($side: expr, $row: expr, $col: expr, $do: expr) => {{
+        const IND: usize = matrix_ind($row, $col);
+        if $side[IND] {
+            $do
         }
-    };
+    }};
 }
 
 macro_rules! at_ind_keycode {
-    ($side: expr, $row: expr, $col: expr, $keycodes: expr, $code_ind: expr, $kc: expr) => {
-        {
-            at_ind!($side, $row, $col, {
-                $keycodes[$code_ind] = $kc.0;
-                $code_ind += 1;
-            })
-        }
-    };
+    ($side: expr, $row: expr, $col: expr, $keycodes: expr, $code_ind: expr, $kc: expr) => {{
+        at_ind!($side, $row, $col, {
+            $keycodes[$code_ind] = $kc.0;
+            $code_ind += 1;
+        })
+    }};
 }
 
 macro_rules! at_ind_mod {
-    ($side: expr, $row: expr, $col: expr, $mods: expr, $mod_kc: expr) => {
-        {
-            at_ind!($side, $row, $col, {
-                $mods |= $mod_kc.0;
-            })
-        }
-    };
+    ($side: expr, $row: expr, $col: expr, $mods: expr, $mod_kc: expr) => {{
+        at_ind!($side, $row, $col, {
+            $mods |= $mod_kc.0;
+        })
+    }};
 }
 
 fn dvorak_se_to_report(left: &MatrixState, right: &MatrixState) -> LayerResult {
@@ -123,11 +115,10 @@ fn dvorak_se_to_report(left: &MatrixState, right: &MatrixState) -> LayerResult {
     LayerResult {
         next_layer: None,
         report: KeyboardReport {
-        modifier: mods,
-        reserved: 0,
-        leds: 0,
-        keycodes,
+            modifier: mods,
+            reserved: 0,
+            leds: 0,
+            keycodes,
+        },
     }
-    }
-
 }

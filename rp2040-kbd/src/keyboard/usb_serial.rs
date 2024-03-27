@@ -1,10 +1,10 @@
 use core::borrow::BorrowMut;
 use core::fmt::Write;
-use usb_device::{class_prelude::*, prelude::*};
 use rp2040_hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::device::{UsbDevice, UsbDeviceBuilder, UsbVidPid};
 use usb_device::UsbError;
+use usb_device::{class_prelude::*, prelude::*};
 use usbd_serial::SerialPort;
 
 pub struct UsbSerial<'a> {
@@ -51,8 +51,6 @@ fn serial_write_all<W: usb_device::bus::UsbBus, B1: BorrowMut<[u8]>, B2: BorrowM
         }
     }
 }
-
-
 
 pub struct UsbSerialDevice<'a> {
     pub(crate) inner: UsbDevice<'a, UsbBus>,

@@ -1,3 +1,5 @@
+use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
+use crate::keyboard::{MatrixState, INITIAL_STATE};
 use core::cell::OnceCell;
 use core::fmt::Write;
 use core::marker::PhantomData;
@@ -5,8 +7,6 @@ use elite_pi::hal;
 use rp2040_hal::sio::Spinlock15;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::device::UsbDevice;
-use crate::keyboard::{INITIAL_STATE, MatrixState};
-use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 
 static mut USB_BUS: Option<UsbBusAllocator<hal::usb::UsbBus>> = None;
 
@@ -28,9 +28,9 @@ pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
 pub fn acquire_usb<'a>() -> UsbGuard<'a> {
     let lock = Spinlock15::claim();
     UsbGuard {
-        serial: unsafe {USB_SERIAL.as_mut()},
-        dev: unsafe {USB_DEVICE.as_mut()},
-        output: unsafe {&mut USB_OUTPUT},
+        serial: unsafe { USB_SERIAL.as_mut() },
+        dev: unsafe { USB_DEVICE.as_mut() },
+        output: unsafe { &mut USB_OUTPUT },
         _lock: lock,
         _pd: Default::default(),
     }
@@ -57,5 +57,3 @@ impl<'a> Write for UsbGuard<'a> {
         }
     }
 }
-
-

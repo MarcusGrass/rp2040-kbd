@@ -58,7 +58,8 @@ impl KeyCode {
     pub const KC_GRAV: Self = Self(0x35); //Grave Accent and Tilde2 Sel 1 3 3 3 4/101/104
     pub const KC_COMM: Self = Self(0x36); //, and <2 Sel 53 3 3 3 4/101/104
     pub const KC_DOT: Self = Self(0x37); //. and >2 Sel 54 3 3 3 4/101/104
-    pub const KC_SLS: Self = Self(0x38); /// and ?2 Sel 55 3 3 3 4/101/104
+    pub const KC_SLS: Self = Self(0x38);
+    /// and ?2 Sel 55 3 3 3 4/101/104
     pub const KC_CAPS: Self = Self(0x39); //Caps Lock6 Sel 30 3 3 3 4/101/104
     pub const KC_F1: Self = Self(0x3A); //F1 Sel 112 3 3 3 4/101/104
     pub const KC_F2: Self = Self(0x3B); //F2 Sel 113 3 3 3 4/101/104
@@ -86,7 +87,8 @@ impl KeyCode {
     pub const KC_DARR: Self = Self(0x51); //DownArrow7 Sel 84 3 3 3 4/101/104
     pub const KC_UARR: Self = Self(0x52); //UpArrow7 Sel 83 3 3 3 4/101/104
     pub const KP_NUML: Self = Self(0x53); //Num Lock and Clear6 Sel 90 3 3 3 4/101/104
-    pub const KP_7: Self = Self(0x54); ///7 Sel 95 3 3 3 4/101/104
+    pub const KP_7: Self = Self(0x54);
+    ///7 Sel 95 3 3 3 4/101/104
     pub const KP_ASTR: Self = Self(0x55); //* Sel 100 3 3 3 4/101/104
     pub const KP_MINS: Self = Self(0x56); //- Sel 105 3 3 3 4/101/104
     pub const KP_PLUS: Self = Self(0x57); //+ Sel 106 3 3 3 4/101/104
@@ -190,7 +192,7 @@ impl KeyCode {
     pub const KP_PERCENTAGE: Self = Self(0xC4); //% Sel
     pub const KP_LEFT_ANGLE_BRACKET: Self = Self(0xC5); //< Sel
     pub const KP_RIGHT_ANGLE_BRACKET: Self = Self(0xC6); //> Sel
-    pub const KP_AMPERSAND: Self = Self(0xC7);//& Sel
+    pub const KP_AMPERSAND: Self = Self(0xC7); //& Sel
     pub const KP_DOUBLE_AMPERSAND: Self = Self(0xC8); //&& Sel
     pub const KP_PIPE: Self = Self(0xC9); //| Sel
     pub const KP_DOUBLE_PIPE: Self = Self(0xCA); //|| Sel
@@ -215,7 +217,6 @@ impl KeyCode {
     pub const KP_HEXADECIMAL: Self = Self(0xDD); //Hexadecimal Sel
 }
 
-
 #[repr(transparent)]
 #[derive(Copy, Clone, Debug)]
 pub struct Modifier(pub u8);
@@ -230,4 +231,3 @@ impl Modifier {
     pub const KC_RALT: Self = Self(0xE6); //RightAlt DV 62 3 3 3 101/104
     pub const KC_RGUI: Self = Self(0xE7); //Right GUI11,34 DV 128 3 3 3 104
 }
-

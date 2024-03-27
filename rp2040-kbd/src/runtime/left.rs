@@ -1,6 +1,14 @@
-mod usb;
 mod shared;
+mod usb;
 
+use crate::keyboard::left::message_receiver::{DeserializedMessage, MessageReceiver};
+use crate::keyboard::left::{KeyboardState, LeftButtons};
+use crate::keyboard::oled::OledHandle;
+use crate::keyboard::power_led::PowerLed;
+use crate::keyboard::split_serial::UartLeft;
+use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
+use crate::keymap::Layers;
+use crate::runtime::right::shared::usb_serial::{acquire_usb, init_usb};
 use core::fmt::Write as _;
 use embedded_hal::timer::CountDown;
 use embedded_io::{Read, Write};
@@ -12,24 +20,26 @@ use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::{UsbBus, UsbBusAllocator};
 use usbd_hid::descriptor::KeyboardReport;
-use crate::keyboard::left::{KeyboardState, LeftButtons};
-use crate::keyboard::left::message_receiver::{DeserializedMessage, MessageReceiver};
-use crate::keyboard::oled::{OledHandle};
-use crate::keyboard::power_led::PowerLed;
-use crate::keyboard::split_serial::{UartLeft};
-use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
-use crate::keymap::Layers;
-use crate::runtime::right::shared::usb_serial::{acquire_usb, init_usb};
 
 static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
 #[inline(never)]
-pub fn run_left<'a>(mc: &'a mut Multicore<'a>, mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>, mut oled_handle: OledHandle, mut uart_driver: UartLeft, mut left_buttons: LeftButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
+pub fn run_left<'a>(
+    mc: &'a mut Multicore<'a>,
+    mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>,
+    mut oled_handle: OledHandle,
+    mut uart_driver: UartLeft,
+    mut left_buttons: LeftButtons,
+    mut power_led_pin: PowerLed,
+    timer: Timer,
+) -> ! {
     const PONG: &[u8] = b"pong";
     unsafe {
         init_usb(usb_bus);
     }
     let mut receiver = MessageReceiver::new(uart_driver);
-    mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, || run_core1(receiver, left_buttons));
+    mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, || {
+        run_core1(receiver, left_buttons)
+    });
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut has_dumped = false;
@@ -80,11 +90,7 @@ pub fn run_left<'a>(mc: &'a mut Multicore<'a>, mut usb_bus: UsbBusAllocator<rp20
         }
 
          */
-        handle_usb(
-            &mut power_led_pin,
-            &mut last_chars,
-            &mut output_all,
-        );
+        handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
     }
 }
 fn handle_usb(
@@ -151,9 +157,10 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
             any_change = true;
         }
         let next_layer = Layers::DvorakAnsi.report(&left_buttons.matrix, &kbd.right);
-        if next_layer.report.keycodes != DEFAULT_KBD.keycodes || next_layer.report.modifier != DEFAULT_KBD.modifier {
+        if next_layer.report.keycodes != DEFAULT_KBD.keycodes
+            || next_layer.report.modifier != DEFAULT_KBD.modifier
+        {
             let _ = acquire_usb().write_fmt(format_args!("Report: {:?}\r\n", next_layer));
         }
     }
-
 }

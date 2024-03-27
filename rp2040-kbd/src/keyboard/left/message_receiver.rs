@@ -1,8 +1,10 @@
+use crate::keyboard::split_serial::UartLeft;
+use crate::keyboard::sync::{ENCODER_MSG_LEN, ENCODER_TAG, MATRIX_STATE_MSG_LEN, MATRIX_STATE_TAG};
+use crate::keyboard::{
+    matrix_ind, ButtonState, ButtonStateChange, MatrixState, INITIAL_STATE, NUM_COLS, NUM_ROWS,
+};
 use embedded_io::Read;
 use pio_uart::PioSerialError;
-use crate::keyboard::{ButtonState, ButtonStateChange, INITIAL_STATE, matrix_ind, MatrixState, NUM_COLS, NUM_ROWS};
-use crate::keyboard::split_serial::UartLeft;
-use crate::keyboard::sync::{ENCODER_TAG, MATRIX_STATE_TAG, ENCODER_MSG_LEN, MATRIX_STATE_MSG_LEN};
 
 const BUF_SIZE: usize = 64;
 pub(crate) struct MessageReceiver {
@@ -43,8 +45,19 @@ pub(crate) enum DeserializedMessage<'a> {
 }
 impl MessageReceiver {
     pub fn new(uart: UartLeft) -> Self {
-
-        Self { uart, buf: [0u8; BUF_SIZE], cursor: 0, changes: heapless::Vec::new(), matrix: INITIAL_STATE, total_read: 0, successful_reads: 0, unk_msg: 0, bad_matrix: 0, good_matrix: 0, unk_rollback: 0 }
+        Self {
+            uart,
+            buf: [0u8; BUF_SIZE],
+            cursor: 0,
+            changes: heapless::Vec::new(),
+            matrix: INITIAL_STATE,
+            total_read: 0,
+            successful_reads: 0,
+            unk_msg: 0,
+            bad_matrix: 0,
+            good_matrix: 0,
+            unk_rollback: 0,
+        }
     }
 
     pub(crate) fn try_read(&mut self) -> Option<DeserializedMessage> {
@@ -64,9 +77,7 @@ impl MessageReceiver {
                 self.cursor += r;
                 self.try_message()
             }
-            Err(_) => {
-                None
-            }
+            Err(_) => None,
         }
     }
 
@@ -84,7 +95,11 @@ impl MessageReceiver {
                         let old = self.matrix[ind];
                         let new = state[ind];
                         if old != new {
-                            let _ = self.changes.push(ButtonStateChange::new(row_ind as u8, col_ind as u8, new.into()));
+                            let _ = self.changes.push(ButtonStateChange::new(
+                                row_ind as u8,
+                                col_ind as u8,
+                                new.into(),
+                            ));
                         }
                     }
                 }

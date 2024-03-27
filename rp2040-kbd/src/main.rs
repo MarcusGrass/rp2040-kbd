@@ -12,18 +12,16 @@
 #![allow(unused_imports)]
 #![allow(unused)]
 #![allow(dead_code)]
-
 #![cfg_attr(not(test), no_std)]
 //#![no_std]
-
 #![no_main]
 
 pub(crate) mod debugger;
+mod hid;
 pub(crate) mod keyboard;
+mod keymap;
 pub(crate) mod lock;
 pub(crate) mod runtime;
-mod hid;
-mod keymap;
 
 use core::borrow::BorrowMut;
 // The macro for our start-up function
@@ -46,19 +44,6 @@ use elite_pi::hal;
 // USB Device support
 use usb_device::class_prelude::*;
 
-use core::fmt::Write;
-use embedded_graphics::Drawable;
-use embedded_hal::digital::v2::{InputPin, OutputPin};
-use embedded_hal::prelude::_embedded_hal_blocking_delay_DelayMs;
-use rp2040_hal::fugit::RateExtU32;
-use rp2040_hal::gpio::PinId;
-use rp2040_hal::pio::PIOExt;
-use rp2040_hal::Clock;
-use rp2040_hal::multicore::Multicore;
-use ssd1306::mode::DisplayConfig;
-use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
-use ssd1306::size::DisplaySize128x32;
-use ssd1306::Ssd1306;
 use crate::keyboard::left::LeftButtons;
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
@@ -66,6 +51,19 @@ use crate::keyboard::right::RightButtons;
 use crate::keyboard::split_serial::{UartLeft, UartRight};
 use crate::runtime::left::run_left;
 use crate::runtime::right::run_right;
+use core::fmt::Write;
+use embedded_graphics::Drawable;
+use embedded_hal::digital::v2::{InputPin, OutputPin};
+use embedded_hal::prelude::_embedded_hal_blocking_delay_DelayMs;
+use rp2040_hal::fugit::RateExtU32;
+use rp2040_hal::gpio::PinId;
+use rp2040_hal::multicore::Multicore;
+use rp2040_hal::pio::PIOExt;
+use rp2040_hal::Clock;
+use ssd1306::mode::DisplayConfig;
+use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
+use ssd1306::size::DisplaySize128x32;
+use ssd1306::Ssd1306;
 
 /// Entry point to our bare-metal application.
 ///
@@ -94,8 +92,8 @@ fn main() -> ! {
         &mut pac.RESETS,
         &mut watchdog,
     )
-        .ok()
-        .unwrap();
+    .ok()
+    .unwrap();
 
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut sio = hal::Sio::new(pac.SIO);
@@ -126,7 +124,6 @@ fn main() -> ! {
     let _ = display.flush();
     let oled = OledHandle::new(display);
 
-
     // Set up the USB driver
     let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
         pac.USBCTRL_REGS,
@@ -145,13 +142,7 @@ fn main() -> ! {
     let uart_baud = 115200.Hz();
     if is_left {
         // Left side flips tx/rx, check qmk for proton-c in kyria for reference
-        let uart = UartLeft::new(
-            pins.gpio1,
-            uart_baud,
-            125.MHz(),
-            pac.PIO0,
-            &mut pac.RESETS
-        );
+        let uart = UartLeft::new(pins.gpio1, uart_baud, 125.MHz(), pac.PIO0, &mut pac.RESETS);
         let left = LeftButtons::new(
             (
                 pins.gpio29.into_pull_up_input(),
@@ -167,7 +158,7 @@ fn main() -> ! {
                 Some(pins.gpio20.into_pull_up_input()),
                 Some(pins.gpio23.into_pull_up_input()),
                 Some(pins.gpio21.into_pull_up_input()),
-            )
+            ),
         );
         run_left(&mut mc, usb_bus, oled, uart, left, pl, timer);
     } else {
@@ -185,7 +176,7 @@ fn main() -> ! {
                 pins.gpio20.into_pull_up_input(),
                 pins.gpio23.into_pull_up_input(),
                 pins.gpio21.into_pull_up_input(),
-                ),
+            ),
             (
                 Some(pins.gpio22.into_pull_up_input()),
                 Some(pins.gpio5.into_pull_up_input()),
@@ -193,9 +184,8 @@ fn main() -> ! {
                 Some(pins.gpio7.into_pull_up_input()),
                 Some(pins.gpio8.into_pull_up_input()),
                 Some(pins.gpio9.into_pull_up_input()),
-            )
+            ),
         );
         run_right(&mut mc, usb_bus, oled, uart, right, pl, timer);
     }
-
 }

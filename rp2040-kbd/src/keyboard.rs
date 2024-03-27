@@ -1,20 +1,20 @@
 //! Common between sides, put everything with the same pinouts and shared hardware
 //! code here
-pub mod left;
-pub mod right;
-pub mod oled;
-pub mod split_serial;
-pub mod usb_serial;
-pub mod power_led;
-mod sync;
 mod layer;
+pub mod left;
+pub mod oled;
+pub mod power_led;
+pub mod right;
+pub mod split_serial;
+mod sync;
+pub mod usb_serial;
 
-use core::fmt::Write;
+use crate::runtime::right::shared::usb_serial::acquire_usb;
 use bitvec::array::BitArray;
 use bitvec::order::Lsb0;
+use core::fmt::Write;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use rp2040_hal::gpio::{DynPinId, FunctionSio, Pin, PinId, PullUp, SioInput};
-use crate::runtime::right::shared::usb_serial::acquire_usb;
 
 type RowPin = Pin<DynPinId, FunctionSio<SioInput>, PullUp>;
 type ButtonPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
@@ -68,7 +68,7 @@ impl ButtonState {
         match val {
             0 => Some(Self::Depressed),
             1 => Some(Self::Pressed),
-            _ => None
+            _ => None,
         }
     }
 
@@ -90,7 +90,11 @@ pub struct ButtonStateChange {
 
 impl ButtonStateChange {
     pub fn new(row: u8, col: u8, new_state: ButtonState) -> Self {
-        Self { row, col, new_state }
+        Self {
+            row,
+            col,
+            new_state,
+        }
     }
 }
 
@@ -100,25 +104,25 @@ pub(crate) const INITIAL_STATE: MatrixState = BitArray::ZERO;
 
 #[macro_export]
 macro_rules! check_col_no_store {
-    ($slf: expr, $pt: tt) => {
-        {
-            let mut col = $slf.cols.$pt.take().unwrap();
-            let mut col = col.into_push_pull_output_in_state(PinState::Low);
-            // Todo: Remove this redundant wait
-            let mut changed = false;
-            for row_ind in 0..NUM_ROWS {
-                let ind = matrix_ind(row_ind, $pt);
-                let state = matches!($slf.rows[row_ind].is_low(), Ok(true));
-                if state != $slf.matrix[ind] {
-                    let _ = acquire_usb().write_fmt(format_args!("R{}, C{} -> {}\r\n", row_ind, $pt, state as u8));
-                    changed = true;
-                }
-                $slf.matrix.set(ind, state);
+    ($slf: expr, $pt: tt) => {{
+        let mut col = $slf.cols.$pt.take().unwrap();
+        let mut col = col.into_push_pull_output_in_state(PinState::Low);
+        // Todo: Remove this redundant wait
+        let mut changed = false;
+        for row_ind in 0..NUM_ROWS {
+            let ind = matrix_ind(row_ind, $pt);
+            let state = matches!($slf.rows[row_ind].is_low(), Ok(true));
+            if state != $slf.matrix[ind] {
+                let _ = acquire_usb().write_fmt(format_args!(
+                    "R{}, C{} -> {}\r\n",
+                    row_ind, $pt, state as u8
+                ));
+                changed = true;
             }
-            let _ = col.set_high();
-            $slf.cols.$pt = Some(col.into_pull_up_input());
-            changed
+            $slf.matrix.set(ind, state);
         }
-
-    };
+        let _ = col.set_high();
+        $slf.cols.$pt = Some(col.into_pull_up_input());
+        changed
+    }};
 }

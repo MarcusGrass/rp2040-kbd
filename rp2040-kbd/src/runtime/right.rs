@@ -1,5 +1,13 @@
 pub(crate) mod shared;
 
+use crate::keyboard::oled::OledHandle;
+use crate::keyboard::power_led::PowerLed;
+use crate::keyboard::right::message_serializer::MessageSerializer;
+use crate::keyboard::right::RightButtons;
+use crate::keyboard::split_serial::UartRight;
+use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
+use crate::runtime::right::shared::usb_serial::{acquire_usb, init_usb};
+use crate::runtime::right::shared::{acquire_matrix_scan, try_acquire_matrix_scan};
 use core::fmt::Write;
 use elite_pi::hal;
 use embedded_hal::timer::CountDown;
@@ -12,30 +20,33 @@ use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::{UsbBus, UsbBusAllocator};
 use usb_device::device::UsbDevice;
-use crate::keyboard::oled::{OledHandle};
-use crate::keyboard::power_led::PowerLed;
-use crate::keyboard::right::message_serializer::MessageSerializer;
-use crate::keyboard::right::RightButtons;
-use crate::keyboard::split_serial::{UartRight};
-use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
-use crate::runtime::right::shared::{acquire_matrix_scan, try_acquire_matrix_scan};
-use crate::runtime::right::shared::usb_serial::{acquire_usb, init_usb};
 
 static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
 
 #[inline(never)]
-pub fn run_right<'a>(mc: &'a mut Multicore<'a>, mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>, mut oled_handle: OledHandle, uart_driver: UartRight, mut right_buttons: RightButtons, mut power_led_pin: PowerLed, timer: Timer) -> !{
+pub fn run_right<'a>(
+    mc: &'a mut Multicore<'a>,
+    mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>,
+    mut oled_handle: OledHandle,
+    uart_driver: UartRight,
+    mut right_buttons: RightButtons,
+    mut power_led_pin: PowerLed,
+    timer: Timer,
+) -> ! {
     const PING: &[u8] = b"ping";
     oled_handle.clear();
     oled_handle.clear_line(72);
     let _ = oled_handle.write(72, "0");
-    unsafe {init_usb(usb_bus)};
+    unsafe { init_usb(usb_bus) };
     oled_handle.clear_line(0);
     let _ = oled_handle.write(72, "1");
     let cores = mc.cores();
     let c1 = &mut cores[1];
     let mut serializer = MessageSerializer::new(uart_driver);
-    c1.spawn(unsafe {&mut CORE_1_STACK_AREA}, move || run_core1(serializer, right_buttons, timer)).unwrap();
+    c1.spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
+        run_core1(serializer, right_buttons, timer)
+    })
+    .unwrap();
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut has_dumped = false;
@@ -56,11 +67,7 @@ pub fn run_right<'a>(mc: &'a mut Multicore<'a>, mut usb_bus: UsbBusAllocator<rp2
     oled_handle.clear_line(72);
     let _ = oled_handle.write(72, "2");
     loop {
-        handle_usb(
-            &mut power_led_pin,
-            &mut last_chars,
-            &mut output_all,
-        );
+        handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
 
         if output_all {
             if !has_dumped {
@@ -147,13 +154,15 @@ pub fn run_right<'a>(mc: &'a mut Multicore<'a>, mut usb_bus: UsbBusAllocator<rp2
     }
 }
 
-fn handle_usb(
-    power_led: &mut PowerLed,
-    last_chars: &mut [u8],
-    output_all: &mut bool,
-) {
+fn handle_usb(power_led: &mut PowerLed, last_chars: &mut [u8], output_all: &mut bool) {
     let mut usb = acquire_usb();
-    if usb.dev.as_mut().unwrap().inner.poll(&mut [&mut usb.serial.as_mut().unwrap().inner]) {
+    if usb
+        .dev
+        .as_mut()
+        .unwrap()
+        .inner
+        .poll(&mut [&mut usb.serial.as_mut().unwrap().inner])
+    {
         let last_chars_len = last_chars.len();
         let mut buf = [0u8; 64];
         match usb.serial.as_mut().unwrap().inner.read(&mut buf) {
@@ -186,8 +195,11 @@ fn handle_usb(
     }
 }
 
-
-fn run_core1(mut serializer: MessageSerializer, mut right_buttons: RightButtons, mut timer: Timer) -> ! {
+fn run_core1(
+    mut serializer: MessageSerializer,
+    mut right_buttons: RightButtons,
+    mut timer: Timer,
+) -> ! {
     const SEND_AT_LEAST_MICROS: u64 = 1000;
     let mut last_send = timer.count_down();
     last_send.start(MicrosDurationU64::micros(SEND_AT_LEAST_MICROS));

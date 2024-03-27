@@ -1,18 +1,21 @@
 pub(crate) mod message_receiver;
 
-use core::fmt::Write;
-use rp2040_hal::gpio::bank0::{Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio6, Gpio7, Gpio8, Gpio9};
-use crate::keyboard::{ButtonPin, ButtonState, ButtonStateChange, INITIAL_STATE, MatrixState, NUM_COLS, NUM_ROWS, RowPin, matrix_ind};
-use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
-use usbd_hid::descriptor::KeyboardReport;
 use crate::keyboard::usb_serial::UsbSerial;
+use crate::keyboard::{
+    matrix_ind, ButtonPin, ButtonState, ButtonStateChange, MatrixState, RowPin, INITIAL_STATE,
+    NUM_COLS, NUM_ROWS,
+};
 use crate::runtime::right::shared::usb_serial::acquire_usb;
+use core::fmt::Write;
+use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
+use rp2040_hal::gpio::bank0::{
+    Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio6, Gpio7, Gpio8, Gpio9,
+};
+use usbd_hid::descriptor::KeyboardReport;
 
 pub struct LeftButtons {
     pub matrix: MatrixState,
-    rows: [
-        RowPin; 5
-    ],
+    rows: [RowPin; 5],
     cols: (
         Option<ButtonPin<Gpio9>>,
         Option<ButtonPin<Gpio26>>,
@@ -43,7 +46,13 @@ impl LeftButtons {
     ) -> Self {
         Self {
             matrix: INITIAL_STATE,
-            rows: [rows.0.into_dyn_pin(), rows.1.into_dyn_pin(), rows.2.into_dyn_pin(), rows.3.into_dyn_pin(), rows.4.into_dyn_pin()],
+            rows: [
+                rows.0.into_dyn_pin(),
+                rows.1.into_dyn_pin(),
+                rows.2.into_dyn_pin(),
+                rows.3.into_dyn_pin(),
+                rows.4.into_dyn_pin(),
+            ],
             cols,
         }
     }
@@ -55,7 +64,8 @@ impl LeftButtons {
         crate::check_col_no_store!(self, 3) ||
         crate::check_col_no_store!(self, 4) ||
         // Todo: Row 4 gets weird, may be because it has fewer buttons, may be wrongly mapped
-        crate::check_col_no_store!(self, 5) {
+        crate::check_col_no_store!(self, 5)
+        {
             true
         } else {
             false
@@ -68,7 +78,6 @@ pub struct KeyboardState {
     pub(crate) left: MatrixState,
     pub(crate) right: MatrixState,
     hid_state: KeyboardReport,
-
 }
 
 impl KeyboardState {
@@ -103,9 +112,15 @@ impl KeyboardState {
                 let new_val = new[ind];
                 if old_val != new_val {
                     if left {
-                        let _ = acquire_usb().write_fmt(format_args!("L: R{},C{} -> {}\r\n", row_ind, col_ind, new_val as u8));
+                        let _ = acquire_usb().write_fmt(format_args!(
+                            "L: R{},C{} -> {}\r\n",
+                            row_ind, col_ind, new_val as u8
+                        ));
                     } else {
-                        let _ = acquire_usb().write_fmt(format_args!("R: R{},C{} -> {}\r\n", row_ind, col_ind, new_val as u8));
+                        let _ = acquire_usb().write_fmt(format_args!(
+                            "R: R{},C{} -> {}\r\n",
+                            row_ind, col_ind, new_val as u8
+                        ));
                     }
                     side.set(ind, new_val);
                     any = true;
@@ -114,5 +129,4 @@ impl KeyboardState {
         }
         any
     }
-
 }
