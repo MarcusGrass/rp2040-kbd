@@ -8,11 +8,13 @@ use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::keymap::Layers;
-use crate::runtime::shared::usb::{acquire_usb, init_usb};
+use crate::runtime::shared::usb::{acquire_usb, init_usb, push_hid_report, usb_hid_interrupt_poll};
 use core::fmt::Write as _;
 use embedded_hal::timer::CountDown;
 use embedded_io::{Read, Write};
 use heapless::String;
+use liatris::pac::{interrupt, Peripherals};
+use liatris::pac::Interrupt::USBCTRL_IRQ;
 use nb::block;
 use rp2040_hal::fugit::MicrosDurationU64;
 use rp2040_hal::multicore::Multicore;
@@ -142,6 +144,10 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
         leds: 0,
         keycodes: [0u8; 6],
     };
+    // Handle interrupt on this same core
+    unsafe {
+        liatris::hal::pac::NVIC::unmask(USBCTRL_IRQ);
+    }
     let mut kbd = KeyboardState::empty();
     loop {
         let mut any_change = false;
@@ -157,10 +163,24 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
             any_change = true;
         }
         let next_layer = Layers::DvorakAnsi.report(&left_buttons.matrix, &kbd.right);
-        if next_layer.report.keycodes != DEFAULT_KBD.keycodes
-            || next_layer.report.modifier != DEFAULT_KBD.modifier
+        #[cfg(feature = "hiddev")]
         {
-            let _ = acquire_usb().write_fmt(format_args!("Report: {:?}\r\n", next_layer));
+            push_hid_report(next_layer.report);
         }
+        #[cfg(feature = "serial")]
+        {
+            if next_layer.report.keycodes != DEFAULT_KBD.keycodes
+                || next_layer.report.modifier != DEFAULT_KBD.modifier
+            {
+                let _ = acquire_usb().write_fmt(format_args!("Report: {:?}\r\n", next_layer));
+            }
+        }
+
     }
+}
+
+#[allow(non_snake_case)]
+#[interrupt]
+unsafe fn USBCTRL_IRQ() {
+    usb_hid_interrupt_poll()
 }

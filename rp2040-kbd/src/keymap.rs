@@ -1,3 +1,4 @@
+use rp2040_hal::rom_data::reset_to_usb_boot;
 use crate::hid::keycodes::{KeyCode, Modifier};
 use crate::keyboard::{matrix_ind, MatrixState, NUM_COLS, NUM_ROWS};
 use usbd_hid::descriptor::KeyboardReport;
@@ -79,6 +80,10 @@ fn dvorak_se_to_report(left: &MatrixState, right: &MatrixState) -> LayerResult {
     at_ind_keycode!(left, 3, 3, keycodes, code_ind, KeyCode::KC_J);
     at_ind_keycode!(left, 3, 4, keycodes, code_ind, KeyCode::KC_K);
     at_ind_keycode!(left, 3, 5, keycodes, code_ind, KeyCode::KC_SPC);
+
+    at_ind!(left, 4, 4, {
+        reset_to_usb_boot(0, 0)
+    });
 
     at_ind_keycode!(right, 0, 0, keycodes, code_ind, KeyCode::KC_DEL);
     at_ind_keycode!(right, 0, 1, keycodes, code_ind, KeyCode::KC_L);

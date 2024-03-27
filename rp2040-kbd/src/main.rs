@@ -65,6 +65,9 @@ use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
 use ssd1306::size::DisplaySize128x32;
 use ssd1306::Ssd1306;
 
+#[cfg(all(feature = "serial", feature = "hiddev"))]
+const _ILLEGAL_FEATURES: () = assert!(false, "Cant run as both serial and hiddev");
+
 /// Entry point to our bare-metal application.
 ///
 /// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
