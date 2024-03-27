@@ -43,7 +43,7 @@ defmt-rtt.workspace = true
 
 [features]
 # This is the set of features we enable by default
-default = ["boot2", "rt", "critical-section-impl", "rom-func-cache"]
+default = ["boot2", "rt", "critical-section-impl", "rom-func-cache", "serial"]
 
 # critical section that is safe for multicore use
 critical-section-impl = ["rp2040-hal/critical-section-impl"]
@@ -66,3 +66,7 @@ disable-intrinsics = ["rp2040-hal/disable-intrinsics"]
 
 # This enables ROM functions for f64 math that were not present in the earliest RP2040s
 rom-v2-intrinsics = ["rp2040-hal/rom-v2-intrinsics"]
+
+serial = []
+
+hiddev = []

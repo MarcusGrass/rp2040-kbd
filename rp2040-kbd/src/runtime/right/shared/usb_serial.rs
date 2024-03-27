@@ -16,15 +16,19 @@ static mut USB_SERIAL: Option<UsbSerial> = None;
 
 static mut USB_OUTPUT: bool = false;
 
+#[cfg(feature = "serial")]
 pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
-    unsafe {
-        USB_BUS = Some(allocator);
-        // Ordering here is extremely important, serial before device.
-        USB_SERIAL = Some(UsbSerial::new(USB_BUS.as_ref().unwrap()));
-        USB_DEVICE = Some(UsbSerialDevice::new(USB_BUS.as_ref().unwrap()));
-    }
+    USB_BUS = Some(allocator);
+    // Ordering here is extremely important, serial before device.
+    USB_SERIAL = Some(UsbSerial::new(USB_BUS.as_ref().unwrap()));
+    USB_DEVICE = Some(UsbSerialDevice::new(USB_BUS.as_ref().unwrap()));
 }
 
+#[cfg(not(feature = "serial"))]
+#[inline(always)]
+pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {}
+
+#[cfg(feature = "serial")]
 pub fn acquire_usb<'a>() -> UsbGuard<'a> {
     let lock = Spinlock15::claim();
     UsbGuard {
@@ -32,15 +36,37 @@ pub fn acquire_usb<'a>() -> UsbGuard<'a> {
         dev: unsafe { USB_DEVICE.as_mut() },
         output: unsafe { &mut USB_OUTPUT },
         _lock: lock,
-        _pd: Default::default(),
+        _pd: PhantomData::default()
     }
 }
 
+#[cfg(not(feature = "serial"))]
+#[inline(always)]
+pub fn acquire_usb<'a>() -> crate::runtime::right::shared::usb_serial::UsbGuard<'a> {
+    UsbGuard {
+        serial: None,
+        dev: None,
+        output: None,
+        _pd: PhantomData::default()
+
+    }
+}
+
+#[cfg(feature = "serial")]
 pub struct UsbGuard<'a> {
     pub serial: Option<&'a mut UsbSerial<'static>>,
     pub dev: Option<&'a mut UsbSerialDevice<'static>>,
     pub output: &'a mut bool,
     _lock: Spinlock15,
+    _pd: PhantomData<&'a ()>,
+}
+
+#[cfg(not(feature = "serial"))]
+#[cfg(feature = "serial")]
+pub struct UsbGuard<'a> {
+    pub serial: Option<&'a mut UsbSerial<'static>>,
+    pub dev: Option<&'a mut UsbSerialDevice<'static>>,
+    pub output: &'a mut bool,
     _pd: PhantomData<&'a ()>,
 }
 
