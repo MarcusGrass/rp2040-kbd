@@ -1,13 +1,11 @@
-pub(crate) mod shared;
-
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::right::RightButtons;
 use crate::keyboard::split_serial::UartRight;
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
-use crate::runtime::right::shared::usb_serial::{acquire_usb, init_usb};
-use crate::runtime::right::shared::{acquire_matrix_scan, try_acquire_matrix_scan};
+use crate::runtime::shared::usb::{acquire_usb, init_usb};
+use crate::runtime::shared::{acquire_matrix_scan, try_acquire_matrix_scan};
 use core::fmt::Write;
 use elite_pi::hal;
 use embedded_hal::timer::CountDown;

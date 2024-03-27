@@ -9,7 +9,7 @@ pub mod split_serial;
 mod sync;
 pub mod usb_serial;
 
-use crate::runtime::right::shared::usb_serial::acquire_usb;
+use crate::runtime::shared::usb::acquire_usb;
 use bitvec::array::BitArray;
 use bitvec::order::Lsb0;
 use core::fmt::Write;

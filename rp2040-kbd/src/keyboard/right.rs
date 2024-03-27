@@ -6,7 +6,7 @@ use crate::keyboard::{
     matrix_ind, ButtonPin, ButtonState, ButtonStateChange, MatrixState, RowPin, INITIAL_STATE,
     NUM_COLS, NUM_ROWS,
 };
-use crate::runtime::right::shared::usb_serial::acquire_usb;
+use crate::runtime::shared::usb::acquire_usb;
 use core::fmt::Write;
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
 use rp2040_hal::gpio::bank0::{

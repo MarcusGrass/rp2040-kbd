@@ -8,7 +8,7 @@ use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::keymap::Layers;
-use crate::runtime::right::shared::usb_serial::{acquire_usb, init_usb};
+use crate::runtime::shared::usb::{acquire_usb, init_usb};
 use core::fmt::Write as _;
 use embedded_hal::timer::CountDown;
 use embedded_io::{Read, Write};

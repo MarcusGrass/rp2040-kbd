@@ -1,4 +1,4 @@
-pub mod usb_serial;
+pub mod usb;
 
 use crate::keyboard::{MatrixState, INITIAL_STATE};
 use core::marker::PhantomData;
