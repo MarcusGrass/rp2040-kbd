@@ -1,6 +1,6 @@
 use crate::keyboard::split_serial::UartRight;
 use crate::keyboard::sync::{ENCODER_MSG_LEN, ENCODER_TAG, MATRIX_STATE_MSG_LEN, MATRIX_STATE_TAG};
-use crate::keyboard::{MatrixState, NUM_COLS, NUM_ROWS};
+use crate::keyboard::{MatrixState, MatrixUpdate, NUM_COLS, NUM_ROWS};
 use embedded_io::Write;
 
 const BUF_SIZE: usize = 32;
@@ -9,25 +9,14 @@ pub(crate) struct MessageSerializer {
 }
 
 impl MessageSerializer {
-    pub(crate) fn serialize_matrix_state(&mut self, state: &MatrixState) -> bool {
+    #[inline]
+    pub(crate) fn serialize_matrix_state(&mut self, update: &MatrixUpdate) -> bool {
         self.uart
             .inner
-            .write_raw(&[
-                MATRIX_STATE_TAG,
-                state.data[0],
-                state.data[1],
-                state.data[2],
-                state.data[3],
-            ])
+            .write_raw(update.as_slice())
             .is_ok()
     }
 
-    pub(crate) fn serialize_rotary_encoder(&mut self, clockwise: bool) -> bool {
-        self.uart
-            .inner
-            .write_raw(&[ENCODER_TAG, clockwise as u8])
-            .is_ok()
-    }
     pub fn new(uart: UartRight) -> Self {
         Self { uart }
     }

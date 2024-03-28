@@ -144,20 +144,17 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
         leds: 0,
         keycodes: [0u8; 6],
     };
+
     // Handle interrupt on this same core
+    #[cfg(feature = "hiddev")]
     unsafe {
         liatris::hal::pac::NVIC::unmask(USBCTRL_IRQ);
     }
     let mut kbd = KeyboardState::empty();
     loop {
         let mut any_change = false;
-        if let Some(input) = receiver.try_read() {
-            match input {
-                DeserializedMessage::Matrix(m) => {
-                    any_change = kbd.update_right(m);
-                }
-                DeserializedMessage::Encoder(_) => {}
-            }
+        if let Some(update) = receiver.try_read() {
+            any_change = kbd.update_right(update);
         }
         if left_buttons.scan_matrix() {
             any_change = true;
@@ -169,18 +166,22 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
         }
         #[cfg(feature = "serial")]
         {
+            /*
             if next_layer.report.keycodes != DEFAULT_KBD.keycodes
                 || next_layer.report.modifier != DEFAULT_KBD.modifier
             {
                 let _ = acquire_usb().write_fmt(format_args!("Report: {:?}\r\n", next_layer));
             }
+
+             */
         }
 
     }
 }
 
-#[allow(non_snake_case)]
 #[interrupt]
+#[allow(non_snake_case)]
+#[cfg(feature = "hiddev")]
 unsafe fn USBCTRL_IRQ() {
     usb_hid_interrupt_poll()
 }

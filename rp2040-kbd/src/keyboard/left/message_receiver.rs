@@ -1,12 +1,10 @@
 use crate::keyboard::split_serial::UartLeft;
 use crate::keyboard::sync::{ENCODER_MSG_LEN, ENCODER_TAG, MATRIX_STATE_MSG_LEN, MATRIX_STATE_TAG};
-use crate::keyboard::{
-    matrix_ind, ButtonState, ButtonStateChange, MatrixState, INITIAL_STATE, NUM_COLS, NUM_ROWS,
-};
+use crate::keyboard::{matrix_ind, ButtonState, ButtonStateChange, MatrixState, INITIAL_STATE, NUM_COLS, NUM_ROWS, MatrixUpdate};
 use embedded_io::Read;
 use pio_uart::PioSerialError;
 
-const BUF_SIZE: usize = 64;
+const BUF_SIZE: usize = 16;
 pub(crate) struct MessageReceiver {
     pub(crate) uart: UartLeft,
     pub(crate) buf: [u8; BUF_SIZE],
@@ -24,8 +22,8 @@ pub(crate) struct MessageReceiver {
 #[repr(u8)]
 #[derive(Copy, Clone, Debug)]
 pub(crate) enum EncoderDirection {
-    Clockwise,
-    CounterClockwise,
+    Clockwise = 0,
+    CounterClockwise = 1,
 }
 
 impl EncoderDirection {
@@ -34,6 +32,13 @@ impl EncoderDirection {
             0 => Some(Self::Clockwise),
             1 => Some(Self::CounterClockwise),
             _ => None,
+        }
+    }
+
+    #[inline]
+    pub fn into_bool(self) -> bool {
+        unsafe {
+            core::mem::transmute(self)
         }
     }
 }
@@ -60,99 +65,10 @@ impl MessageReceiver {
         }
     }
 
-    pub(crate) fn try_read(&mut self) -> Option<DeserializedMessage> {
-        let res = if let Some(left) = self.buf.get_mut(self.cursor..) {
-            self.uart.inner.read(left)
-        } else {
-            self.cursor = 0;
-            return None;
-        };
-        match res {
-            Ok(r) => {
-                self.total_read += r as u16;
-                if r == 0 {
-                    return None;
-                }
-                self.successful_reads += 1;
-                self.cursor += r;
-                self.try_message()
-            }
-            Err(_) => None,
-        }
+    #[inline]
+    pub(crate) fn try_read(&mut self) -> Option<MatrixUpdate> {
+        self.uart.inner.read_one()
+            .map(MatrixUpdate::from_byte)
     }
 
-    fn try_message(&mut self) -> Option<DeserializedMessage> {
-        match self.buf[0] {
-            MATRIX_STATE_TAG => {
-                if self.cursor < MATRIX_STATE_MSG_LEN {
-                    return None;
-                }
-                let target: [u8; 4] = self.buf[1..5].try_into().unwrap();
-                let state: MatrixState = MatrixState::new(target);
-                for row_ind in 0..NUM_ROWS {
-                    for col_ind in 0..NUM_COLS {
-                        let ind = matrix_ind(row_ind, col_ind);
-                        let old = self.matrix[ind];
-                        let new = state[ind];
-                        if old != new {
-                            let _ = self.changes.push(ButtonStateChange::new(
-                                row_ind as u8,
-                                col_ind as u8,
-                                new.into(),
-                            ));
-                        }
-                    }
-                }
-                self.matrix = state;
-                self.buf.copy_within(5..self.cursor, 0);
-                self.good_matrix += 1;
-                self.cursor -= 5;
-                Some(DeserializedMessage::Matrix(&self.matrix))
-            }
-            ENCODER_TAG => {
-                if self.cursor < ENCODER_MSG_LEN {
-                    return None;
-                }
-
-                if let Some(direction) = EncoderDirection::try_from_byte(self.buf[1]) {
-                    self.cursor = 0;
-                    return Some(DeserializedMessage::Encoder(direction));
-                }
-                self.cursor = 0;
-                None
-            }
-            _unk => {
-                /*
-                let mut valid_at = None;
-                for i in 0..self.cursor {
-                    if let Some(next) = self.buf.get(i) {
-                        match *next {
-                            MATRIX_STATE_TAG | ENCODER_TAG => {
-                                valid_at = Some(i);
-                                break;
-                            },
-                            _ => {}
-                        }
-                    } else {
-                        break;
-                    }
-                }
-                if let Some(ind_of_valid) = valid_at {
-                    self.buf.copy_within(ind_of_valid..self.cursor, 0);
-                    // Move up cursor as much
-                    self.cursor -= ind_of_valid;
-                    self.unk_rollback += 1;
-                } else {
-                    self.cursor = 0;
-                    self.unk_msg += 1;
-                }
-
-
-                 */
-                self.cursor = 0;
-                self.unk_msg += 1;
-                None
-            }
-        }
-    }
 }

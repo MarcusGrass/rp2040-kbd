@@ -202,11 +202,7 @@ fn run_core1(
     let mut last_send = timer.count_down();
     last_send.start(MicrosDurationU64::micros(SEND_AT_LEAST_MICROS));
     loop {
-        let mut pumped = false;
-        if right_buttons.scan_matrix() || last_send.wait().is_ok() {
-            serializer.serialize_matrix_state(&right_buttons.matrix);
-            last_send.start(MicrosDurationU64::micros(SEND_AT_LEAST_MICROS));
-        }
+        right_buttons.scan_matrix(&mut serializer);
         acquire_matrix_scan().scan.num_scans += 1;
     }
 }

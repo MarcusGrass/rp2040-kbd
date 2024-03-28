@@ -1,6 +1,6 @@
 pub(crate) mod message_serializer;
 
-use crate::check_col_no_store;
+use crate::{check_col_no_store, check_col_push_evt};
 use crate::keyboard::usb_serial::UsbSerial;
 use crate::keyboard::{
     matrix_ind, ButtonPin, ButtonState, ButtonStateChange, MatrixState, RowPin, INITIAL_STATE,
@@ -14,6 +14,7 @@ use rp2040_hal::gpio::bank0::{
     Gpio9,
 };
 use rp2040_hal::gpio::{FunctionSio, Pin, PullUp, SioInput};
+use crate::keyboard::right::message_serializer::MessageSerializer;
 
 pub struct RightButtons {
     pub(crate) matrix: MatrixState,
@@ -59,13 +60,13 @@ impl RightButtons {
         }
     }
 
-    pub fn scan_matrix(&mut self) -> bool {
-        if check_col_no_store!(self, 0)
-            || check_col_no_store!(self, 1)
-            || check_col_no_store!(self, 2)
-            || check_col_no_store!(self, 3)
-            || check_col_no_store!(self, 4)
-            || check_col_no_store!(self, 5)
+    pub fn scan_matrix(&mut self, serializer: &mut MessageSerializer) -> bool {
+        if check_col_push_evt!(self, 0, serializer, None)
+            || check_col_push_evt!(self, 1, serializer, None)
+            || check_col_push_evt!(self, 2, serializer, None)
+            || check_col_push_evt!(self, 3, serializer, None)
+            || check_col_push_evt!(self, 4, serializer, None)
+            || check_col_push_evt!(self, 5, serializer, None)
         {
             true
         } else {

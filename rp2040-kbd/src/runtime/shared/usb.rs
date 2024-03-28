@@ -8,6 +8,7 @@ use rp2040_hal::sio::{Spinlock14, Spinlock15};
 use rp2040_hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::device::{UsbDevice, UsbDeviceBuilder, UsbVidPid};
+use usb_device::UsbError;
 use usbd_hid::descriptor::{KeyboardReport, MouseReport, SerializedDescriptor};
 use usbd_hid::hid_class::HIDClass;
 
@@ -97,14 +98,24 @@ pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
         .build()
     );
 }
-pub fn push_hid_report(keyboard_report: KeyboardReport) {
+
+#[cfg(feature = "hiddev")]
+pub fn push_hid_report(keyboard_report: KeyboardReport) -> bool {
     critical_section::with(|_| unsafe {
         Spinlock14::claim();
-        USB_HID.as_mut().map(|hid| hid.push_input(&keyboard_report))
-    });
+        matches!(USB_HID.as_mut().map(|hid| hid.push_input(&keyboard_report)), Some(Err(UsbError::WouldBlock)))
+    })
 }
 
+#[inline(always)]
+pub fn push_hid_report(keyboard_report: KeyboardReport) -> bool {
+    true
+}
+
+
+
 #[inline]
+#[cfg(feature = "hiddev")]
 pub fn usb_hid_interrupt_poll() {
     Spinlock14::claim();
     unsafe {
@@ -112,4 +123,8 @@ pub fn usb_hid_interrupt_poll() {
             dev.poll(&mut [hid]);
         }
     }
+}
+#[inline(always)]
+#[cfg(feature = "serial")]
+pub fn usb_hid_interrupt_poll() {
 }

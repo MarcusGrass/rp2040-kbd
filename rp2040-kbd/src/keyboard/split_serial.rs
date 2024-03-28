@@ -74,18 +74,4 @@ impl UartRight {
             _sm3: sm3,
         }
     }
-
-    pub fn write_all(&mut self, mut msg: &[u8]) -> bool {
-        let mut written = 0;
-        loop {
-            if let Ok(w) = self.inner.write(&msg[written..]) {
-                written += w;
-                if written == msg.len() {
-                    break self.inner.flush().is_ok();
-                }
-            } else {
-                break false;
-            }
-        }
-    }
 }
