@@ -156,6 +156,7 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
         if let Some(update) = receiver.try_read() {
             any_change = kbd.update_right(update);
         }
+
         if left_buttons.scan_matrix() {
             any_change = true;
         }
