@@ -222,12 +222,12 @@ impl KeyCode {
 pub struct Modifier(pub u8);
 
 impl Modifier {
-    pub const KC_LCTRL: Self = Self(0xE0); //LeftControl DV 58 3 3 3 4/101/104
-    pub const KC_LSHIFT: Self = Self(0xE1); //LeftShift DV 44 3 3 3 4/101/104
-    pub const KC_LALT: Self = Self(0xE2); //LeftAlt DV 60 3 3 3 4/101/104
-    pub const KC_LGUI: Self = Self(0xE3); //Left GUI11,33 DV 127 3 3 3 104
-    pub const KC_RCRTL: Self = Self(0xE4); //RightControl DV 64 3 3 3 101/104
-    pub const KC_RSHIFT: Self = Self(0xE5); //RightShift DV 57 3 3 3 4/101/104
-    pub const KC_RALT: Self = Self(0xE6); //RightAlt DV 62 3 3 3 101/104
-    pub const KC_RGUI: Self = Self(0xE7); //Right GUI11,34 DV 128 3 3 3 104
+    pub const KC_LCTRL: Self = Self(0b0000_0001); //LeftControl DV 58 3 3 3 4/101/104
+    pub const KC_LSHIFT: Self = Self(0b0000_0010); //LeftShift DV 44 3 3 3 4/101/104
+    pub const KC_LALT: Self = Self(0b0000_0100); //LeftAlt DV 60 3 3 3 4/101/104
+    pub const KC_LGUI: Self = Self(0b0000_1000); //Left GUI11,33 DV 127 3 3 3 104
+    pub const KC_RCRTL: Self = Self(0b0001_0000); //RightControl DV 64 3 3 3 101/104
+    pub const KC_RSHIFT: Self = Self(0b0010_0000); //RightShift DV 57 3 3 3 4/101/104
+    pub const KC_RALT: Self = Self(0b0100_0000); //RightAlt DV 62 3 3 3 101/104
+    pub const KC_RGUI: Self = Self(0b1000_0000); //Right GUI11,34 DV 128 3 3 3 104
 }
