@@ -6,31 +6,31 @@ impl KeyCode {
     //Keyboard = 0x01; //ErrorRollOver1 Sel N/A 3 3 3 4/101/104
     //Keyboard = 0x02; //POSTFail1 Sel N/A 3 3 3 4/101/104
     //Keyboard = 0x03; //ErrorUndefined1 Sel N/A 3 3 3 4/101/104
-    pub const KC_A: Self = Self(0x04); //a and A2 Sel 31 3 3 3 4/101/104
+    pub const A: Self = Self(0x04); //a and A2 Sel 31 3 3 3 4/101/104
     pub const KC_B: Self = Self(0x05); //b and B Sel 50 3 3 3 4/101/104
     pub const KC_C: Self = Self(0x06); //c and C2 Sel 48 3 3 3 4/101/104
     pub const KC_D: Self = Self(0x07); //d and D Sel 33 3 3 3 4/101/104
-    pub const KC_E: Self = Self(0x08); //e and E Sel 19 3 3 3 4/101/104
+    pub const E: Self = Self(0x08); //e and E Sel 19 3 3 3 4/101/104
     pub const KC_F: Self = Self(0x09); //f and F Sel 34 3 3 3 4/101/104
     pub const KC_G: Self = Self(0x0A); //g and G Sel 35 3 3 3 4/101/104
     pub const KC_H: Self = Self(0x0B); //h and H Sel 36 3 3 3 4/101/104
-    pub const KC_I: Self = Self(0x0C); //i and I Sel 24 3 3 3 4/101/104
-    pub const KC_J: Self = Self(0x0D); //j and J Sel 37 3 3 3 4/101/104
-    pub const KC_K: Self = Self(0x0E); //k and K Sel 38 3 3 3 4/101/104
+    pub const I: Self = Self(0x0C); //i and I Sel 24 3 3 3 4/101/104
+    pub const J: Self = Self(0x0D); //j and J Sel 37 3 3 3 4/101/104
+    pub const K: Self = Self(0x0E); //k and K Sel 38 3 3 3 4/101/104
     pub const KC_L: Self = Self(0x0F); //l and L Sel 39 3 3 3 4/101/104
     pub const KC_M: Self = Self(0x10); //m and M2 Sel 52 3 3 3 4/101/104
     pub const KC_N: Self = Self(0x11); //n and N Sel 51 3 3 3 4/101/104
-    pub const KC_O: Self = Self(0x12); //o and O2 Sel 25 3 3 3 4/101/104
-    pub const KC_P: Self = Self(0x13); //p and P2 Sel 26 3 3 3 4/101/104
-    pub const KC_Q: Self = Self(0x14); //q and Q2 Sel 17 3 3 3 4/101/104
+    pub const O: Self = Self(0x12); //o and O2 Sel 25 3 3 3 4/101/104
+    pub const P: Self = Self(0x13); //p and P2 Sel 26 3 3 3 4/101/104
+    pub const Q: Self = Self(0x14); //q and Q2 Sel 17 3 3 3 4/101/104
     pub const KC_R: Self = Self(0x15); //r and R Sel 20 3 3 3 4/101/104
     pub const KC_S: Self = Self(0x16); //s and S Sel 32 3 3 3 4/101/104
     pub const KC_T: Self = Self(0x17); //t and T Sel 21 3 3 3 4/101/104
-    pub const KC_U: Self = Self(0x18); //u and U Sel 23 3 3 3 4/101/104
+    pub const U: Self = Self(0x18); //u and U Sel 23 3 3 3 4/101/104
     pub const KC_V: Self = Self(0x19); //v and V Sel 49 3 3 3 4/101/104
     pub const KC_W: Self = Self(0x1A); //w and W2 Sel 18 3 3 3 4/101/104
-    pub const KC_X: Self = Self(0x1B); //x and X2 Sel 47 3 3 3 4/101/104
-    pub const KC_Y: Self = Self(0x1C); //y and Y2 Sel 22 3 3 3 4/101/104
+    pub const X: Self = Self(0x1B); //x and X2 Sel 47 3 3 3 4/101/104
+    pub const Y: Self = Self(0x1C); //y and Y2 Sel 22 3 3 3 4/101/104
     pub const KC_Z: Self = Self(0x1D); //z and Z2 Sel 46 3 3 3 4/101/104
     pub const KC_1: Self = Self(0x1E); //1 and !2 Sel 2 3 3 3 4/101/104
     pub const N2: Self = Self(0x1F); //2 and @2 Sel 3 3 3 3 4/101/104
@@ -43,7 +43,7 @@ impl KeyCode {
     pub const KC_9: Self = Self(0x26); //9 and (2 Sel 10 3 3 3 4/101/104
     pub const KC_0: Self = Self(0x27); //0 and )2 Sel 11 3 3 3 4/101/104
     pub const KC_RET: Self = Self(0x28); //Return (ENTER)3 Sel 43 3 3 3 4/101/104
-    pub const KC_ESC: Self = Self(0x29); //ESCAPE Sel 110 3 3 3 4/101/104
+    pub const ESCAPE: Self = Self(0x29); //ESCAPE Sel 110 3 3 3 4/101/104
     pub const KC_DEL: Self = Self(0x2A); //DELETE (Backspace)4 Sel 15 3 3 3 4/101/104
     pub const KC_TAB: Self = Self(0x2B); //Tab Sel 16 3 3 3 4/101/104
     pub const KC_SPC: Self = Self(0x2C); //Spacebar Sel 61 3 3 3 4/101/104
@@ -53,7 +53,7 @@ impl KeyCode {
     pub const KC_RBRC: Self = Self(0x30); //] and }2 Sel 28 3 3 3 4/101/104
     pub const BACKSLASH: Self = Self(0x31); //\and | Sel 29 3 3 3 4/101/104
     pub const KC_PND: Self = Self(0x32); //Non-US # and ˜5 Sel 42 3 3 3 4/101/104
-    pub const KC_SEMC: Self = Self(0x33); //; and :2 Sel 40 3 3 3 4/101/104
+    pub const SEMICOLON: Self = Self(0x33); //; and :2 Sel 40 3 3 3 4/101/104
     pub const KC_QUOT: Self = Self(0x34); //‘ and “2 Sel 41 3 3 3 4/101/104
     pub const KC_GRAV: Self = Self(0x35); //Grave Accent and Tilde2 Sel 1 3 3 3 4/101/104
     pub const COMMA: Self = Self(0x36); //, and <2 Sel 53 3 3 3 4/101/104
@@ -222,10 +222,10 @@ impl KeyCode {
 pub struct Modifier(pub u8);
 
 impl Modifier {
-    pub const KC_LCTRL: Self = Self(0b0000_0001); //LeftControl DV 58 3 3 3 4/101/104
+    pub const LEFT_CONTROL: Self = Self(0b0000_0001); //LeftControl DV 58 3 3 3 4/101/104
     pub const LEFT_SHIFT: Self = Self(0b0000_0010); //LeftShift DV 44 3 3 3 4/101/104
-    pub const KC_LALT: Self = Self(0b0000_0100); //LeftAlt DV 60 3 3 3 4/101/104
-    pub const KC_LGUI: Self = Self(0b0000_1000); //Left GUI11,33 DV 127 3 3 3 104
+    pub const LEFT_ALT: Self = Self(0b0000_0100); //LeftAlt DV 60 3 3 3 4/101/104
+    pub const LEFT_GUI: Self = Self(0b0000_1000); //Left GUI11,33 DV 127 3 3 3 104
     pub const KC_RCRTL: Self = Self(0b0001_0000); //RightControl DV 64 3 3 3 101/104
     pub const KC_RSHIFT: Self = Self(0b0010_0000); //RightShift DV 57 3 3 3 4/101/104
     pub const KC_RALT: Self = Self(0b0100_0000); //RightAlt DV 62 3 3 3 101/104
