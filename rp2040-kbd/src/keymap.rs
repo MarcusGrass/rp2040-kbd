@@ -99,7 +99,7 @@ fn dvorak_se_to_report(left: &MatrixState, right: &MatrixState) -> LayerResult {
         reset_to_usb_boot(0, 0)
     });
 
-    at_ind_keycode!(right, 0, 0, keycodes, code_ind, KeyCode::KC_DEL);
+    at_ind_keycode!(right, 0, 0, keycodes, code_ind, KeyCode::BACKSPACE);
     at_ind_keycode!(right, 0, 1, keycodes, code_ind, KeyCode::KC_L);
     at_ind_keycode!(right, 0, 2, keycodes, code_ind, KeyCode::KC_R);
     at_ind_keycode!(right, 0, 3, keycodes, code_ind, KeyCode::KC_C);
@@ -884,4 +884,131 @@ impl KeyboardButton for LeftRow4Col5 {
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N5);
         self.0 = pressed;
     }
+}
+
+
+// Right side, goes from right to left
+
+impl KeyboardButton for RightRow0Col0 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::BACKSPACE);
+        self.0 = pressed;
+    }
+}
+
+impl KeyboardButton for RightRow0Col1 {
+
+}
+
+impl KeyboardButton for RightRow0Col2 {
+
+}
+
+impl KeyboardButton for RightRow0Col3 {
+
+}
+
+impl KeyboardButton for RightRow0Col4 {
+
+}
+
+impl KeyboardButton for RightRow0Col5 {
+
+}
+
+impl KeyboardButton for RightRow1Col0 {
+
+}
+
+impl KeyboardButton for RightRow1Col1 {
+
+}
+
+impl KeyboardButton for RightRow1Col2 {
+
+}
+
+impl KeyboardButton for RightRow1Col3 {
+
+}
+
+impl KeyboardButton for RightRow1Col4 {
+
+}
+
+impl KeyboardButton for RightRow1Col5 {
+
+}
+
+impl KeyboardButton for RightRow2Col0 {
+
+}
+
+impl KeyboardButton for RightRow2Col1 {
+
+}
+
+impl KeyboardButton for RightRow2Col2 {
+
+}
+
+impl KeyboardButton for RightRow2Col3 {
+
+}
+
+impl KeyboardButton for RightRow2Col4 {
+
+}
+
+impl KeyboardButton for RightRow2Col5 {
+
+}
+
+impl KeyboardButton for RightRow3Col0 {
+
+}
+
+impl KeyboardButton for RightRow3Col1 {
+
+}
+
+impl KeyboardButton for RightRow3Col2 {
+
+}
+
+impl KeyboardButton for RightRow3Col3 {
+
+}
+
+impl KeyboardButton for RightRow3Col4 {
+
+}
+
+impl KeyboardButton for RightRow3Col5 {
+
+}
+
+impl KeyboardButton for RightRow4Col0 {
+
+}
+
+impl KeyboardButton for RightRow4Col1 {
+
+}
+
+impl KeyboardButton for RightRow4Col2 {
+
+}
+
+impl KeyboardButton for RightRow4Col3 {
+
+}
+
+impl KeyboardButton for RightRow4Col4 {
+
+}
+
+impl KeyboardButton for RightRow4Col5 {
+
 }
