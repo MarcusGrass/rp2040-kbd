@@ -230,4 +230,6 @@ impl Modifier {
     pub const KC_RSHIFT: Self = Self(0b0010_0000); //RightShift DV 57 3 3 3 4/101/104
     pub const RIGHT_ALT: Self = Self(0b0100_0000); //RightAlt DV 62 3 3 3 101/104
     pub const KC_RGUI: Self = Self(0b1000_0000); //Right GUI11,34 DV 128 3 3 3 104
+
+    pub const ANY_SHIFT: Self = Self(Self::KC_RSHIFT.0 | Self::LEFT_SHIFT.0);
 }
