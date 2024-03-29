@@ -7,7 +7,7 @@ use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
-use crate::keymap::Layers;
+use crate::keymap::{KeyboardReportState, KeymapLayer};
 use crate::runtime::shared::usb::{acquire_usb, init_usb, push_hid_report, usb_hid_interrupt_poll};
 use core::fmt::Write as _;
 use embedded_hal::timer::CountDown;
@@ -151,7 +151,10 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
         liatris::hal::pac::NVIC::unmask(USBCTRL_IRQ);
     }
     let mut kbd = KeyboardState::empty();
+    let mut kbd = crate::keymap::KeyboardState::new();
+    let mut report_state = KeyboardReportState::new();
     loop {
+        /*
         let mut any_change = false;
         if let Some(update) = receiver.try_read() {
             any_change = kbd.update_right(update);
@@ -160,10 +163,13 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
         if left_buttons.scan_matrix() {
             any_change = true;
         }
-        let next_layer = Layers::DvorakAnsi.report(&left_buttons.matrix, &kbd.right);
+        let next_layer = KeymapLayer::DvorakAnsi.report(&left_buttons.matrix, &kbd.right);
+
+         */
         #[cfg(feature = "hiddev")]
         {
-            push_hid_report(next_layer.report);
+            kbd.scan_left(&mut left_buttons, &mut report_state);
+            push_hid_report(report_state.report());
         }
         #[cfg(feature = "serial")]
         {

@@ -21,9 +21,11 @@ usb-device.workspace = true
 usbd-hid.workspace = true
 usbd-serial.workspace = true
 panic-halt.workspace = true
+paste = { workspace = true }
 pio-uart = {workspace = true}
 ssd1306.workspace = true
 rotary-encoder-embedded.workspace = true
+rustc-hash = { workspace = true }
 
 [dev-dependencies]
 cortex-m.workspace = true

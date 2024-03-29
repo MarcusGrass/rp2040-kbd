@@ -1,23 +1,37 @@
+use core::hash::BuildHasherDefault;
+use heapless::IndexMap;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use crate::hid::keycodes::{KeyCode, Modifier};
 use crate::keyboard::{matrix_ind, MatrixState, NUM_COLS, NUM_ROWS};
 use usbd_hid::descriptor::KeyboardReport;
+use paste::paste;
+use crate::keyboard::left::LeftButtons;
+use rp2040_hal::gpio::PinState;
+use embedded_hal::digital::v2::{InputPin, OutputPin};
+
 
 #[derive(Debug, Copy, Clone)]
-pub enum Layers {
+pub enum KeymapLayer {
     DvorakAnsi,
+    DvorakSe,
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct LayerResult {
-    pub next_layer: Option<Layers>,
+    pub next_layer: Option<KeymapLayer>,
     pub report: KeyboardReport,
 }
 
-impl Layers {
+impl KeymapLayer {
     pub fn report(self, left: &MatrixState, right: &MatrixState) -> LayerResult {
-        match self {
-            Layers::DvorakAnsi => dvorak_se_to_report(left, right),
+        LayerResult {
+            next_layer: None,
+            report: KeyboardReport {
+                modifier: 0,
+                reserved: 0,
+                leds: 0,
+                keycodes: [0u8; 6],
+            },
         }
     }
 }
@@ -55,7 +69,7 @@ fn dvorak_se_to_report(left: &MatrixState, right: &MatrixState) -> LayerResult {
     let mut keycodes = [0u8; 6];
     at_ind_keycode!(left, 0, 0, keycodes, code_ind, KeyCode::KC_TAB);
     at_ind_keycode!(left, 0, 1, keycodes, code_ind, KeyCode::KC_QUOT);
-    at_ind_keycode!(left, 0, 2, keycodes, code_ind, KeyCode::KC_COMM);
+    at_ind_keycode!(left, 0, 2, keycodes, code_ind, KeyCode::COMMA);
     at_ind_keycode!(left, 0, 3, keycodes, code_ind, KeyCode::KC_DOT);
     at_ind_keycode!(left, 0, 4, keycodes, code_ind, KeyCode::KC_P);
     at_ind_keycode!(left, 0, 5, keycodes, code_ind, KeyCode::KC_Y);
@@ -67,7 +81,7 @@ fn dvorak_se_to_report(left: &MatrixState, right: &MatrixState) -> LayerResult {
     at_ind_keycode!(left, 1, 4, keycodes, code_ind, KeyCode::KC_U);
     at_ind_keycode!(left, 1, 5, keycodes, code_ind, KeyCode::KC_I);
 
-    at_ind_mod!(left, 2, 0, mods, Modifier::KC_LSHIFT);
+    at_ind_mod!(left, 2, 0, mods, Modifier::LEFT_SHIFT);
     at_ind_keycode!(left, 2, 1, keycodes, code_ind, KeyCode::KC_SEMC);
     at_ind_keycode!(left, 2, 2, keycodes, code_ind, KeyCode::KC_Q);
     at_ind_keycode!(left, 2, 3, keycodes, code_ind, KeyCode::KC_J);
@@ -99,7 +113,7 @@ fn dvorak_se_to_report(left: &MatrixState, right: &MatrixState) -> LayerResult {
     at_ind_keycode!(right, 1, 4, keycodes, code_ind, KeyCode::KC_H);
     at_ind_keycode!(right, 1, 5, keycodes, code_ind, KeyCode::KC_D);
 
-    at_ind_mod!(right, 2, 0, mods, Modifier::KC_LSHIFT);
+    at_ind_mod!(right, 2, 0, mods, Modifier::LEFT_SHIFT);
     at_ind_keycode!(right, 2, 1, keycodes, code_ind, KeyCode::KC_Z);
     at_ind_keycode!(right, 2, 2, keycodes, code_ind, KeyCode::KC_V);
     at_ind_keycode!(right, 2, 3, keycodes, code_ind, KeyCode::KC_W);
@@ -126,4 +140,542 @@ fn dvorak_se_to_report(left: &MatrixState, right: &MatrixState) -> LayerResult {
             keycodes,
         },
     }
+}
+
+struct OccupiedSlot {
+    code: KeyCode,
+    dest: usize,
+}
+
+pub struct KeyboardReportState {
+    inner_report: KeyboardReport,
+    active_layer: KeymapLayer,
+    cursor: usize,
+    jank: JankState,
+}
+
+struct JankState {
+    pressing_double_quote: bool,
+    pressing_single_quote: bool,
+    pressing_left_bracket: bool,
+    pressing_comma: bool,
+}
+
+impl KeyboardReportState {
+
+    pub fn new() -> Self {
+        Self {
+            inner_report: KeyboardReport {
+                modifier: 0,
+                reserved: 0,
+                leds: 0,
+                keycodes: [0u8; 6],
+            },
+            active_layer: KeymapLayer::DvorakSe,
+            cursor: 0,
+            jank: JankState {
+                pressing_double_quote: false,
+                pressing_single_quote: false,
+                pressing_left_bracket: false,
+                pressing_comma: false,
+            },
+        }
+    }
+
+    pub fn report(&self) -> &KeyboardReport {
+        &self.inner_report
+    }
+
+    #[inline]
+    fn push_key(&mut self, key_code: KeyCode) {
+        // Generally not many keys are held at once, only 6 long as well,
+        // so iterating this is very inexpensive
+        for byte in &mut self.inner_report.keycodes {
+            if *byte == 0 {
+                *byte = key_code.0;
+            }
+        }
+    }
+
+    fn pop_key(&mut self, key_code: KeyCode) {
+        let mut needs_sort = false;
+        let mut found = None;
+        for (ind, byte) in self.inner_report.keycodes.iter_mut().enumerate() {
+            if *byte == key_code.0 {
+                *byte = 0;
+                found = Some(ind);
+            } else if found.is_some() {
+                needs_sort = true;
+            }
+        }
+        if needs_sort {
+            if let Some(empty_ind) = found {
+                for i in empty_ind + 1..self.inner_report.keycodes.len() {
+                    // Just swap the empty to the right as long as necessary, sort isn't stable
+                    // on slices yet
+                    if self.inner_report.keycodes[i] != 0 {
+                        self.inner_report.keycodes.swap(i - 1, i);
+                    }
+                }
+            }
+        }
+    }
+
+
+    #[inline]
+    fn push_modifier(&mut self, modifier: Modifier) {
+        self.inner_report.modifier |= modifier.0
+    }
+
+    #[inline]
+    fn pop_modifier(&mut self, modifier: Modifier) {
+        self.inner_report.modifier &= !modifier.0
+    }
+
+    #[inline]
+    fn has_modifier(&self, modifier: Modifier) -> bool {
+        self.inner_report.modifier & modifier.0 != 0
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct LeftSide;
+
+#[derive(Copy, Clone, Debug)]
+pub struct RightSide;
+
+pub trait KeyboardSide {}
+
+impl KeyboardSide for LeftSide {}
+impl KeyboardSide for RightSide {}
+
+pub trait KeyboardPosition {}
+
+pub trait StateChangeHandler<S, R, C> where S: KeyboardSide {
+}
+
+pub trait KeyboardButton {
+    #[inline(always)]
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+
+    }
+}
+
+macro_rules! keyboard_key {
+    ($($side: ident, $row: expr, $col: expr),*,) => {
+        paste! {
+            $(
+                #[repr(transparent)]
+                #[derive(Copy, Clone, Default)]
+                pub struct [<$side Row $row Col $col>](bool);
+                impl [<$side Row $row Col $col>] {
+                    pub const ROW: u8 = $row;
+                    pub const COL: u8 = $col;
+                    pub const MATRIX_IND: usize = $crate::keyboard::matrix_ind($row, $col);
+                }
+            )*
+        }
+        paste! {
+            pub struct KeyboardState {
+                $(
+                    [<$side:snake _ row $row _ col $col>]: [<$side Row $row Col $col>],
+                )*
+            }
+
+            impl KeyboardState {
+                pub const fn new() -> Self {
+                    Self {
+                        $(
+                            [<$side:snake _ row $row _ col $col>]: [<$side Row $row Col $col>](false),
+                        )*
+                    }
+                }
+            }
+        }
+    };
+}
+
+pub trait ReadKeyPins {
+    // Could clean up the codegen so that the right-side doesn't get invoked ever,
+    // hopefully the compiler will just remove this entirely on those cases
+    #[inline(always)]
+    fn read_left_pins(&mut self, left_buttons: &mut LeftButtons) {
+
+    }
+}
+
+keyboard_key!(
+    Left, 0, 0,
+    Left, 0, 1,
+    Left, 0, 2,
+    Left, 0, 3,
+    Left, 0, 4,
+    Left, 0, 5,
+
+    Left, 1, 0,
+    Left, 1, 1,
+    Left, 1, 2,
+    Left, 1, 3,
+    Left, 1, 4,
+    Left, 1, 5,
+
+    Left, 2, 0,
+    Left, 2, 1,
+    Left, 2, 2,
+    Left, 2, 3,
+    Left, 2, 4,
+    Left, 2, 5,
+
+    Left, 3, 0,
+    Left, 3, 1,
+    Left, 3, 2,
+    Left, 3, 3,
+    Left, 3, 4,
+    Left, 3, 5,
+
+    Left, 4, 0,
+    Left, 4, 1,
+    Left, 4, 2,
+    Left, 4, 3,
+    Left, 4, 4,
+    Left, 4, 5,
+
+    Right, 0, 0,
+    Right, 0, 1,
+    Right, 0, 2,
+    Right, 0, 3,
+    Right, 0, 4,
+    Right, 0, 5,
+
+    Right, 1, 0,
+    Right, 1, 1,
+    Right, 1, 2,
+    Right, 1, 3,
+    Right, 1, 4,
+    Right, 1, 5,
+
+    Right, 2, 0,
+    Right, 2, 1,
+    Right, 2, 2,
+    Right, 2, 3,
+    Right, 2, 4,
+    Right, 2, 5,
+
+    Right, 3, 0,
+    Right, 3, 1,
+    Right, 3, 2,
+    Right, 3, 3,
+    Right, 3, 4,
+    Right, 3, 5,
+
+    Right, 4, 0,
+    Right, 4, 1,
+    Right, 4, 2,
+    Right, 4, 3,
+    Right, 4, 4,
+    Right, 4, 5,
+);
+
+macro_rules! pressed_push_pop {
+    ($state: expr, $pressed: expr, $kc: expr) => {
+        {
+            if $pressed {
+                $state.push_key($kc);
+            } else {
+                $state.pop_key($kc);
+            }
+        }
+    };
+}
+
+macro_rules! bail_if_same {
+    ($slf: expr, $pressed: expr) => {
+        if $slf.0 == $pressed {
+            return;
+        }
+    };
+}
+
+macro_rules! impl_read_pin_col {
+    ($($arg: expr, $structure: expr, $row: tt,)*, $col: tt) => {
+        paste! {
+            pub fn [<read_col _ $col _pins>]($($arg: &mut $structure,)* left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState) {
+                let mut col = left_buttons.cols.$col.take().unwrap();
+                let mut col = col.into_push_pull_output_in_state(PinState::Low);
+                $(
+                    $arg.update_state(matches!(left_buttons.rows[$row].is_low(), Ok(true)), keyboard_report_state);
+                )*
+                let _ = col.set_high();
+                left_buttons.cols.$col = Some(col.into_pull_up_input());
+            }
+
+        }
+
+    };
+}
+
+// Column pin gets toggled, more efficient to check all rows for each col at once
+impl_read_pin_col!(
+    l00, LeftRow0Col0, 0,
+    l01, LeftRow1Col0, 1,
+    l02, LeftRow2Col0, 2,
+    l03, LeftRow3Col0, 3,
+    l04, LeftRow4Col0, 4,
+    ,0
+);
+
+impl_read_pin_col!(
+    l00, LeftRow0Col1, 0,
+    l01, LeftRow1Col1, 1,
+    l02, LeftRow2Col1, 2,
+    l03, LeftRow3Col1, 3,
+    l04, LeftRow4Col1, 4,
+    ,1
+);
+
+impl_read_pin_col!(
+    l00, LeftRow0Col2, 0,
+    l01, LeftRow1Col2, 1,
+    l02, LeftRow2Col2, 2,
+    l03, LeftRow3Col2, 3,
+    l04, LeftRow4Col2, 4,
+    ,2
+);
+
+impl_read_pin_col!(
+    l00, LeftRow0Col3, 0,
+    l01, LeftRow1Col3, 1,
+    l02, LeftRow2Col3, 2,
+    l03, LeftRow3Col3, 3,
+    l04, LeftRow4Col3, 4,
+    ,3
+);
+
+impl_read_pin_col!(
+    l00, LeftRow0Col4, 0,
+    l01, LeftRow1Col4, 1,
+    l02, LeftRow2Col4, 2,
+    l03, LeftRow3Col4, 3,
+    l04, LeftRow4Col4, 4,
+    ,4
+);
+
+// Last row only has 5 pins
+impl_read_pin_col!(
+    l00, LeftRow0Col5, 0,
+    l01, LeftRow1Col5, 1,
+    l02, LeftRow2Col5, 2,
+    l03, LeftRow3Col5, 3,
+    ,5
+);
+
+impl KeyboardState {
+    pub fn scan_left(&mut self, left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState) {
+        read_col_0_pins(&mut self.left_row0_col0, &mut self.left_row1_col0, &mut self.left_row2_col0, &mut self.left_row3_col0, &mut self.left_row4_col0, left_buttons, keyboard_report_state);
+        read_col_1_pins(&mut self.left_row0_col1, &mut self.left_row1_col1, &mut self.left_row2_col1, &mut self.left_row3_col1, &mut self.left_row4_col1, left_buttons, keyboard_report_state);
+        read_col_2_pins(&mut self.left_row0_col2, &mut self.left_row1_col2, &mut self.left_row2_col2, &mut self.left_row3_col2, &mut self.left_row4_col2, left_buttons, keyboard_report_state);
+        read_col_3_pins(&mut self.left_row0_col3, &mut self.left_row1_col3, &mut self.left_row2_col3, &mut self.left_row3_col3, &mut self.left_row4_col3, left_buttons, keyboard_report_state);
+        read_col_4_pins(&mut self.left_row0_col4, &mut self.left_row1_col4, &mut self.left_row2_col4, &mut self.left_row3_col4, &mut self.left_row4_col4, left_buttons, keyboard_report_state);
+        read_col_5_pins(&mut self.left_row0_col5, &mut self.left_row1_col5, &mut self.left_row2_col5, &mut self.left_row3_col5, left_buttons, keyboard_report_state);
+    }
+}
+impl KeyboardButton for LeftRow0Col0 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        match keyboard_report_state.active_layer {
+            KeymapLayer::DvorakAnsi |
+            KeymapLayer::DvorakSe => {
+                pressed_push_pop!(keyboard_report_state, pressed, KeyCode::KC_TAB);
+                self.0 = pressed;
+            }
+        }
+    }
+}
+
+impl KeyboardButton for LeftRow0Col1 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        match keyboard_report_state.active_layer {
+            KeymapLayer::DvorakAnsi => {
+                pressed_push_pop!(keyboard_report_state, pressed, KeyCode::COMMA);
+            }
+            KeymapLayer::DvorakSe => {
+                if pressed {
+                    if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
+                        // Shifted, `SHIFT + 2` -> "
+                        keyboard_report_state.jank.pressing_double_quote = true;
+                        keyboard_report_state.push_key(KeyCode::N2);
+                    } else {
+                        // Not shifted, \ -> '
+                        keyboard_report_state.jank.pressing_single_quote = true;
+                        keyboard_report_state.push_key(KeyCode::BACKSLASH);
+                    }
+                } else {
+                    if keyboard_report_state.jank.pressing_double_quote {
+                        keyboard_report_state.pop_key(KeyCode::N2);
+                        keyboard_report_state.jank.pressing_double_quote = false;
+                    }
+                    if keyboard_report_state.jank.pressing_single_quote {
+                        keyboard_report_state.jank.pressing_single_quote = false;
+                        keyboard_report_state.pop_key(KeyCode::BACKSLASH);
+                    }
+                }
+            }
+        }
+        self.0 = pressed;
+    }
+}
+
+impl KeyboardButton for LeftRow0Col2 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        match keyboard_report_state.active_layer {
+            KeymapLayer::DvorakAnsi => {
+                pressed_push_pop!(keyboard_report_state, pressed, KeyCode::COMMA);
+            }
+            KeymapLayer::DvorakSe => {
+                if pressed {
+                    if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
+                        // Need to remove shift for this key to go out, not putting it
+                        // back after though for reasons that I don't remember and may be a bug
+                        keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
+                        keyboard_report_state.push_key(KeyCode::NON_US_BACKSLASH);
+                        keyboard_report_state.jank.pressing_left_bracket = true;
+                    } else {
+                        keyboard_report_state.push_key(KeyCode::COMMA);
+                        keyboard_report_state.jank.pressing_comma = true;
+                    }
+                } else {
+                    if (keyboard_report_state.jank.pressing_left_bracket) {
+                        keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
+                        keyboard_report_state.jank.pressing_left_bracket = false;
+                    }
+                    if (keyboard_report_state.jank.pressing_comma) {
+                        keyboard_report_state.pop_key(KeyCode::COMMA);
+                        keyboard_report_state.jank.pressing_comma = false;
+                    }
+                }
+            }
+        }
+        self.0 = pressed;
+    }
+}
+
+impl KeyboardButton for LeftRow0Col3 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        match keyboard_report_state.active_layer {
+            KeymapLayer::DvorakAnsi => {}
+            KeymapLayer::DvorakSe => {
+                if pressed {
+                    if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
+
+                    }
+                }
+            }
+        }
+    }
+}
+
+impl KeyboardButton for LeftRow0Col4 {
+
+}
+impl KeyboardButton for LeftRow0Col5 {
+
+}
+
+impl KeyboardButton for LeftRow1Col0 {
+
+}
+
+impl KeyboardButton for LeftRow1Col1 {
+
+}
+impl KeyboardButton for LeftRow1Col2 {
+
+}
+
+impl KeyboardButton for LeftRow1Col3 {
+
+}
+impl KeyboardButton for LeftRow1Col4 {
+
+}
+
+impl KeyboardButton for LeftRow1Col5 {
+
+}
+
+impl KeyboardButton for LeftRow2Col0 {
+
+}
+
+impl KeyboardButton for LeftRow2Col1 {
+
+}
+
+impl KeyboardButton for LeftRow2Col2 {
+
+}
+
+impl KeyboardButton for LeftRow2Col3 {
+
+}
+
+impl KeyboardButton for LeftRow2Col4 {
+
+}
+
+impl KeyboardButton for LeftRow2Col5 {
+
+}
+
+impl KeyboardButton for LeftRow3Col0 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        if pressed {
+            reset_to_usb_boot(0, 0);
+        }
+        self.0 = true;
+    }
+}
+
+impl KeyboardButton for LeftRow3Col1 {
+
+}
+
+impl KeyboardButton for LeftRow3Col2 {
+
+}
+
+impl KeyboardButton for LeftRow3Col3 {
+
+}
+
+impl KeyboardButton for LeftRow3Col4 {
+
+}
+
+impl KeyboardButton for LeftRow3Col5 {
+
+}
+
+impl KeyboardButton for LeftRow4Col0 {
+
+}
+
+impl KeyboardButton for LeftRow4Col1 {
+
+}
+
+impl KeyboardButton for LeftRow4Col2 {
+
+}
+
+impl KeyboardButton for LeftRow4Col3 {
+
+}
+
+impl KeyboardButton for LeftRow4Col4 {
+
 }

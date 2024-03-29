@@ -100,10 +100,10 @@ pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
 }
 
 #[cfg(feature = "hiddev")]
-pub fn push_hid_report(keyboard_report: KeyboardReport) -> bool {
+pub fn push_hid_report(keyboard_report: &KeyboardReport) -> bool {
     critical_section::with(|_| unsafe {
         Spinlock14::claim();
-        matches!(USB_HID.as_mut().map(|hid| hid.push_input(&keyboard_report)), Some(Err(UsbError::WouldBlock)))
+        matches!(USB_HID.as_mut().map(|hid| hid.push_input(keyboard_report)), Some(Err(UsbError::WouldBlock)))
     })
 }
 

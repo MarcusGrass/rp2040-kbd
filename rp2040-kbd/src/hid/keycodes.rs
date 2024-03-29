@@ -1,5 +1,5 @@
 #[repr(transparent)]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct KeyCode(pub u8);
 
 impl KeyCode {
@@ -33,7 +33,7 @@ impl KeyCode {
     pub const KC_Y: Self = Self(0x1C); //y and Y2 Sel 22 3 3 3 4/101/104
     pub const KC_Z: Self = Self(0x1D); //z and Z2 Sel 46 3 3 3 4/101/104
     pub const KC_1: Self = Self(0x1E); //1 and !2 Sel 2 3 3 3 4/101/104
-    pub const KC_2: Self = Self(0x1F); //2 and @2 Sel 3 3 3 3 4/101/104
+    pub const N2: Self = Self(0x1F); //2 and @2 Sel 3 3 3 3 4/101/104
     pub const KC_3: Self = Self(0x20); //3 and #2 Sel 4 3 3 3 4/101/104
     pub const KC_4: Self = Self(0x21); //4 and $2 Sel 5 3 3 3 4/101/104
     pub const KC_5: Self = Self(0x22); //5 and %2 Sel 6 3 3 3 4/101/104
@@ -51,12 +51,12 @@ impl KeyCode {
     pub const KC_EQ: Self = Self(0x2E); //= and +2 Sel 13 3 3 3 4/101/104
     pub const KC_LBRC: Self = Self(0x2F); //[ and {2 Sel 27 3 3 3 4/101/104
     pub const KC_RBRC: Self = Self(0x30); //] and }2 Sel 28 3 3 3 4/101/104
-    pub const KC_BSLS: Self = Self(0x31); //\and | Sel 29 3 3 3 4/101/104
+    pub const BACKSLASH: Self = Self(0x31); //\and | Sel 29 3 3 3 4/101/104
     pub const KC_PND: Self = Self(0x32); //Non-US # and ˜5 Sel 42 3 3 3 4/101/104
     pub const KC_SEMC: Self = Self(0x33); //; and :2 Sel 40 3 3 3 4/101/104
     pub const KC_QUOT: Self = Self(0x34); //‘ and “2 Sel 41 3 3 3 4/101/104
     pub const KC_GRAV: Self = Self(0x35); //Grave Accent and Tilde2 Sel 1 3 3 3 4/101/104
-    pub const KC_COMM: Self = Self(0x36); //, and <2 Sel 53 3 3 3 4/101/104
+    pub const COMMA: Self = Self(0x36); //, and <2 Sel 53 3 3 3 4/101/104
     pub const KC_DOT: Self = Self(0x37); //. and >2 Sel 54 3 3 3 4/101/104
     pub const KC_SLS: Self = Self(0x38);
     /// and ?2 Sel 55 3 3 3 4/101/104
@@ -104,7 +104,7 @@ impl KeyCode {
     pub const KP_9: Self = Self(0x61); //9 and PageUp Sel 101 3 3 3 4/101/104
     pub const KP_0: Self = Self(0x62); //0 and Insert Sel 99 3 3 3 4/101/104
     pub const KP_DOT: Self = Self(0x63); //. and Delete Sel 104 3 3 3 4/101/104
-    pub const KC_BSL2: Self = Self(0x64); //Non-US \and |9,10 Sel 45 3 3 3 4/101/104
+    pub const NON_US_BACKSLASH: Self = Self(0x64); //Non-US \and |9,10 Sel 45 3 3 3 4/101/104
     pub const KC_AP11: Self = Self(0x65); //Application11 Sel 129 3 3 104
     pub const KC_POW1: Self = Self(0x66); //Power1 Sel 3 3
     pub const KP_EQ: Self = Self(0x67); //= Sel 3
@@ -223,7 +223,7 @@ pub struct Modifier(pub u8);
 
 impl Modifier {
     pub const KC_LCTRL: Self = Self(0b0000_0001); //LeftControl DV 58 3 3 3 4/101/104
-    pub const KC_LSHIFT: Self = Self(0b0000_0010); //LeftShift DV 44 3 3 3 4/101/104
+    pub const LEFT_SHIFT: Self = Self(0b0000_0010); //LeftShift DV 44 3 3 3 4/101/104
     pub const KC_LALT: Self = Self(0b0000_0100); //LeftAlt DV 60 3 3 3 4/101/104
     pub const KC_LGUI: Self = Self(0b0000_1000); //Left GUI11,33 DV 127 3 3 3 104
     pub const KC_RCRTL: Self = Self(0b0001_0000); //RightControl DV 64 3 3 3 101/104

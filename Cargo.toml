@@ -24,11 +24,13 @@ i2c-pio = "0.7.0"
 nb = "1.1"
 panic-halt= "0.2.0"
 panic-probe = "0.3.1"
+paste = "1.0.14"
 pio = "0.2.1"
 pio-proc = "0.2.2"
 pio-uart = "0.2.1"
 liatris = {path = "../rp-hal-boards/boards/liatris"}
 rotary-encoder-embedded = "0.2.0"
+rustc-hash = { version = "1.1.0", default-features = false }
 rp2040-boot2 = "0.3.0"
 rp2040-hal = "0.9.0"
 st7789 = "0.6.1"

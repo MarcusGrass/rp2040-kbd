@@ -12,8 +12,8 @@ use usbd_hid::descriptor::KeyboardReport;
 
 pub struct LeftButtons {
     pub matrix: MatrixState,
-    rows: [RowPin; 5],
-    cols: (
+    pub rows: [RowPin; 5],
+    pub cols: (
         Option<ButtonPin<Gpio9>>,
         Option<ButtonPin<Gpio26>>,
         Option<ButtonPin<Gpio22>>,
