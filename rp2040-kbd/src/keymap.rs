@@ -316,7 +316,6 @@ keyboard_key!(
     Left, 3, 4,
     Left, 3, 5,
 
-    Left, 4, 0,
     Left, 4, 1,
     Left, 4, 2,
     Left, 4, 3,
@@ -410,12 +409,12 @@ macro_rules! impl_read_pin_col {
 }
 
 // Column pin gets toggled, more efficient to check all rows for each col at once
+// Col 0 doesn't exist on row 4
 impl_read_pin_col!(
     l00, LeftRow0Col0, 0,
     l01, LeftRow1Col0, 1,
     l02, LeftRow2Col0, 2,
     l03, LeftRow3Col0, 3,
-    l04, LeftRow4Col0, 4,
     ,0
 );
 
@@ -461,18 +460,19 @@ impl_read_pin_col!(
     l01, LeftRow1Col5, 1,
     l02, LeftRow2Col5, 2,
     l03, LeftRow3Col5, 3,
+    l04, LeftRow4Col5, 4,
     ,5
 );
 
 
 impl KeyboardState {
     pub fn scan_left(&mut self, left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState) {
-        read_col_0_pins(&mut self.left_row0_col0, &mut self.left_row1_col0, &mut self.left_row2_col0, &mut self.left_row3_col0, &mut self.left_row4_col0, left_buttons, keyboard_report_state);
+        read_col_0_pins(&mut self.left_row0_col0, &mut self.left_row1_col0, &mut self.left_row2_col0, &mut self.left_row3_col0, left_buttons, keyboard_report_state);
         read_col_1_pins(&mut self.left_row0_col1, &mut self.left_row1_col1, &mut self.left_row2_col1, &mut self.left_row3_col1, &mut self.left_row4_col1, left_buttons, keyboard_report_state);
         read_col_2_pins(&mut self.left_row0_col2, &mut self.left_row1_col2, &mut self.left_row2_col2, &mut self.left_row3_col2, &mut self.left_row4_col2, left_buttons, keyboard_report_state);
         read_col_3_pins(&mut self.left_row0_col3, &mut self.left_row1_col3, &mut self.left_row2_col3, &mut self.left_row3_col3, &mut self.left_row4_col3, left_buttons, keyboard_report_state);
         read_col_4_pins(&mut self.left_row0_col4, &mut self.left_row1_col4, &mut self.left_row2_col4, &mut self.left_row3_col4, &mut self.left_row4_col4, left_buttons, keyboard_report_state);
-        read_col_5_pins(&mut self.left_row0_col5, &mut self.left_row1_col5, &mut self.left_row2_col5, &mut self.left_row3_col5, left_buttons, keyboard_report_state);
+        read_col_5_pins(&mut self.left_row0_col5, &mut self.left_row1_col5, &mut self.left_row2_col5, &mut self.left_row3_col5, &mut self.left_row4_col5, left_buttons, keyboard_report_state);
     }
 }
 impl KeyboardButton for LeftRow0Col0 {
@@ -817,7 +817,13 @@ impl KeyboardButton for LeftRow3Col2 {
 }
 
 impl KeyboardButton for LeftRow3Col3 {
-
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        if pressed {
+            reset_to_usb_boot(0, 0);
+        }
+        self.0 = pressed;
+    }
 }
 
 impl KeyboardButton for LeftRow3Col4 {
@@ -828,28 +834,54 @@ impl KeyboardButton for LeftRow3Col5 {
 
 }
 
-impl KeyboardButton for LeftRow4Col0 {
+
+impl KeyboardButton for LeftRow4Col1 {
     fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
         bail_if_same!(self, pressed);
         if pressed {
             reset_to_usb_boot(0, 0);
         }
-        self.0 = true;
+        self.0 = pressed;
     }
 }
 
-impl KeyboardButton for LeftRow4Col1 {
-
-}
-
 impl KeyboardButton for LeftRow4Col2 {
-
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        if pressed {
+            match keyboard_report_state.active_layer {
+                KeymapLayer::DvorakAnsi => {
+                    keyboard_report_state.active_layer = KeymapLayer::DvorakSe;
+                }
+                KeymapLayer::DvorakSe => {
+                    keyboard_report_state.active_layer = KeymapLayer::DvorakAnsi;
+                }
+            }
+        }
+        self.0 = pressed;
+    }
 }
 
 impl KeyboardButton for LeftRow4Col3 {
-
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N3);
+        self.0 = pressed;
+    }
 }
 
 impl KeyboardButton for LeftRow4Col4 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N4);
+        self.0 = pressed;
+    }
+}
 
+impl KeyboardButton for LeftRow4Col5 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N5);
+        self.0 = pressed;
+    }
 }
