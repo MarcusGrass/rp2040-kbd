@@ -391,13 +391,13 @@ macro_rules! bail_if_same {
 }
 
 macro_rules! impl_read_pin_col {
-    ($($arg: expr, $structure: expr, $row: tt,)*, $col: tt) => {
+    ($($structure: expr, $row: tt,)*, $col: tt) => {
         paste! {
-            pub fn [<read_col _ $col _pins>]($($arg: &mut $structure,)* left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState) {
+            pub fn [<read_col _ $col _pins>]($([< $structure:snake >]: &mut $structure,)* left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState) {
                 let mut col = left_buttons.cols.$col.take().unwrap();
                 let mut col = col.into_push_pull_output_in_state(PinState::Low);
                 $(
-                    $arg.update_state(matches!(left_buttons.rows[$row].is_low(), Ok(true)), keyboard_report_state);
+                    [< $structure:snake >].update_state(matches!(left_buttons.rows[$row].is_low(), Ok(true)), keyboard_report_state);
                 )*
                 let _ = col.set_high();
                 left_buttons.cols.$col = Some(col.into_pull_up_input());
@@ -411,56 +411,56 @@ macro_rules! impl_read_pin_col {
 // Column pin gets toggled, more efficient to check all rows for each col at once
 // Col 0 doesn't exist on row 4
 impl_read_pin_col!(
-    l00, LeftRow0Col0, 0,
-    l01, LeftRow1Col0, 1,
-    l02, LeftRow2Col0, 2,
-    l03, LeftRow3Col0, 3,
+    LeftRow0Col0, 0,
+    LeftRow1Col0, 1,
+    LeftRow2Col0, 2,
+    LeftRow3Col0, 3,
     ,0
 );
 
 impl_read_pin_col!(
-    l00, LeftRow0Col1, 0,
-    l01, LeftRow1Col1, 1,
-    l02, LeftRow2Col1, 2,
-    l03, LeftRow3Col1, 3,
-    l04, LeftRow4Col1, 4,
+    LeftRow0Col1, 0,
+    LeftRow1Col1, 1,
+    LeftRow2Col1, 2,
+    LeftRow3Col1, 3,
+    LeftRow4Col1, 4,
     ,1
 );
 
 impl_read_pin_col!(
-    l00, LeftRow0Col2, 0,
-    l01, LeftRow1Col2, 1,
-    l02, LeftRow2Col2, 2,
-    l03, LeftRow3Col2, 3,
-    l04, LeftRow4Col2, 4,
+    LeftRow0Col2, 0,
+    LeftRow1Col2, 1,
+    LeftRow2Col2, 2,
+    LeftRow3Col2, 3,
+    LeftRow4Col2, 4,
     ,2
 );
 
 impl_read_pin_col!(
-    l00, LeftRow0Col3, 0,
-    l01, LeftRow1Col3, 1,
-    l02, LeftRow2Col3, 2,
-    l03, LeftRow3Col3, 3,
-    l04, LeftRow4Col3, 4,
+    LeftRow0Col3, 0,
+    LeftRow1Col3, 1,
+    LeftRow2Col3, 2,
+    LeftRow3Col3, 3,
+    LeftRow4Col3, 4,
     ,3
 );
 
 impl_read_pin_col!(
-    l00, LeftRow0Col4, 0,
-    l01, LeftRow1Col4, 1,
-    l02, LeftRow2Col4, 2,
-    l03, LeftRow3Col4, 3,
-    l04, LeftRow4Col4, 4,
+    LeftRow0Col4, 0,
+    LeftRow1Col4, 1,
+    LeftRow2Col4, 2,
+    LeftRow3Col4, 3,
+    LeftRow4Col4, 4,
     ,4
 );
 
 // Last row only has 5 pins
 impl_read_pin_col!(
-    l00, LeftRow0Col5, 0,
-    l01, LeftRow1Col5, 1,
-    l02, LeftRow2Col5, 2,
-    l03, LeftRow3Col5, 3,
-    l04, LeftRow4Col5, 4,
+    LeftRow0Col5, 0,
+    LeftRow1Col5, 1,
+    LeftRow2Col5, 2,
+    LeftRow3Col5, 3,
+    LeftRow4Col5, 4,
     ,5
 );
 
