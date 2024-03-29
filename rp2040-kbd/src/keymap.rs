@@ -9,7 +9,7 @@ use rp2040_hal::gpio::PinState;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use usbd_hid::descriptor::KeyboardReport;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum KeymapLayer {
     DvorakSe,
     DvorakAnsi,
@@ -19,26 +19,7 @@ pub enum KeymapLayer {
     LowerAnsi,
     Raise,
     Num,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub struct LayerResult {
-    pub next_layer: Option<KeymapLayer>,
-    pub report: KeyboardReport,
-}
-
-impl KeymapLayer {
-    pub fn report(self, left: &MatrixState, right: &MatrixState) -> LayerResult {
-        LayerResult {
-            next_layer: None,
-            report: KeyboardReport {
-                modifier: 0,
-                reserved: 0,
-                leds: 0,
-                keycodes: [0u8; 6],
-            },
-        }
-    }
+    Settings,
 }
 
 pub struct KeyboardReportState {
@@ -116,6 +97,19 @@ impl KeyboardReportState {
     #[inline]
     fn has_modifier(&self, modifier: Modifier) -> bool {
         self.inner_report.modifier & modifier.0 != 0
+    }
+
+    #[inline]
+    fn push_layer_with_fallback(&mut self, keymap_layer: KeymapLayer) {
+        self.last_perm_layer = Some(self.active_layer);
+        self.active_layer = keymap_layer;
+    }
+
+    #[inline]
+    fn pop_layer(&mut self, this: KeymapLayer) {
+        if let Some(old) = self.last_perm_layer.filter(|l| *l == this).take() {
+            self.active_layer = old;
+        }
     }
 }
 
@@ -489,6 +483,16 @@ macro_rules! with_modifier_kc {
     };
 }
 
+macro_rules! pressed_push_pop_layer {
+    ($state: expr, $pressed: expr, $layer: expr) => {
+        if $pressed {
+            $state.push_layer_with_fallback($layer);
+        } else {
+            $state.pop_layer($layer);
+        }
+    };
+}
+
 impl KeyboardButton for LeftRow0Col0 {
     fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
         bail_if_same!(self, pressed);
@@ -539,6 +543,7 @@ impl KeyboardButton for LeftRow0Col1 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F1);
             }
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -596,6 +601,7 @@ impl KeyboardButton for LeftRow0Col2 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F2)
             }
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -642,6 +648,7 @@ impl KeyboardButton for LeftRow0Col3 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F3);
             }
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -675,6 +682,7 @@ impl KeyboardButton for LeftRow0Col4 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F4);
             }
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -699,6 +707,7 @@ impl KeyboardButton for LeftRow0Col5 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F4);
             }
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -734,6 +743,7 @@ impl KeyboardButton for LeftRow1Col1 {
             KeymapLayer::Num => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N1);
             }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -763,6 +773,7 @@ impl KeyboardButton for LeftRow1Col2 {
             KeymapLayer::Num => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N2);
             }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -798,6 +809,7 @@ impl KeyboardButton for LeftRow1Col3 {
             KeymapLayer::Num => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N3);
             }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -832,6 +844,7 @@ impl KeyboardButton for LeftRow1Col4 {
             KeymapLayer::Num => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N4);
             }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -862,6 +875,7 @@ impl KeyboardButton for LeftRow1Col5 {
             KeymapLayer::Num => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N5);
             }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -913,6 +927,7 @@ impl KeyboardButton for LeftRow2Col1 {
             }
             KeymapLayer::Lower | KeymapLayer::LowerAnsi | KeymapLayer::Raise | KeymapLayer::Num => {
             }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -941,6 +956,7 @@ impl KeyboardButton for LeftRow2Col2 {
                 );
             }
             KeymapLayer::Raise | KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -968,6 +984,7 @@ impl KeyboardButton for LeftRow2Col3 {
                 );
             }
             KeymapLayer::LowerAnsi | KeymapLayer::Raise | KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -995,6 +1012,7 @@ impl KeyboardButton for LeftRow2Col4 {
                 );
             }
             KeymapLayer::Raise | KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1025,6 +1043,7 @@ impl KeyboardButton for LeftRow2Col5 {
                 autoshift_kc!(keyboard_report_state, pressed, KeyCode::GRAVE);
             }
             KeymapLayer::Raise | KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1050,6 +1069,7 @@ impl KeyboardButton for LeftRow3Col1 {
             }
             KeymapLayer::Lower | KeymapLayer::LowerAnsi | KeymapLayer::Raise | KeymapLayer::Num => {
             }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1070,6 +1090,7 @@ impl KeyboardButton for LeftRow3Col2 {
             KeymapLayer::LowerAnsi => {}
             KeymapLayer::Raise => {}
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1102,6 +1123,7 @@ impl KeyboardButton for LeftRow3Col5 {
             KeymapLayer::LowerAnsi => {}
             KeymapLayer::Raise => {}
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1132,6 +1154,7 @@ impl KeyboardButton for LeftRow4Col2 {
             KeymapLayer::LowerAnsi => {}
             KeymapLayer::Raise => {}
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1152,6 +1175,7 @@ impl KeyboardButton for LeftRow4Col3 {
             KeymapLayer::LowerAnsi => {}
             KeymapLayer::Raise => {}
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N3);
         self.0 = pressed;
@@ -1171,6 +1195,7 @@ impl KeyboardButton for LeftRow4Col4 {
             KeymapLayer::LowerAnsi => {}
             KeymapLayer::Raise => {}
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1216,6 +1241,7 @@ impl KeyboardButton for RightRow0Col1 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F10);
             }
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1244,6 +1270,7 @@ impl KeyboardButton for RightRow0Col2 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F9);
             }
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1272,6 +1299,7 @@ impl KeyboardButton for RightRow0Col3 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F8);
             }
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1300,6 +1328,7 @@ impl KeyboardButton for RightRow0Col4 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F7);
             }
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1328,6 +1357,7 @@ impl KeyboardButton for RightRow0Col5 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F6);
             }
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1348,12 +1378,22 @@ impl KeyboardButton for RightRow1Col1 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::S);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
+            KeymapLayer::QwertyAnsi | KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::SEMICOLON);
+            }
+            KeymapLayer::Lower => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::SLASH);
+            }
+            KeymapLayer::LowerAnsi => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::KP_MINS);
+            }
+            KeymapLayer::Raise => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::KC_DELF);
+            }
+            KeymapLayer::Num => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N0);
+            }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1366,12 +1406,27 @@ impl KeyboardButton for RightRow1Col2 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
+            KeymapLayer::QwertyAnsi | KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::L);
+            }
+            KeymapLayer::Lower => {
+                with_modifier_kc!(
+                    keyboard_report_state,
+                    pressed,
+                    Modifier::RIGHT_ALT,
+                    KeyCode::N0
+                );
+            }
+            KeymapLayer::LowerAnsi => {
+                autoshift_kc!(keyboard_report_state, pressed, KeyCode::RIGHT_BRACKET);
+            }
+            KeymapLayer::Raise => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::HOME);
+            }
+            KeymapLayer::Num => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N9);
+            }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1384,12 +1439,27 @@ impl KeyboardButton for RightRow1Col3 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::T);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
+            KeymapLayer::QwertyAnsi | KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::K);
+            }
+            KeymapLayer::Lower => {
+                with_modifier_kc!(
+                    keyboard_report_state,
+                    pressed,
+                    Modifier::RIGHT_ALT,
+                    KeyCode::N7
+                );
+            }
+            KeymapLayer::LowerAnsi => {
+                autoshift_kc!(keyboard_report_state, pressed, KeyCode::LEFT_BRACKET);
+            }
+            KeymapLayer::Raise => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::PAGE_UP);
+            }
+            KeymapLayer::Num => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N8);
+            }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1402,12 +1472,22 @@ impl KeyboardButton for RightRow1Col4 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::H);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
+            KeymapLayer::QwertyAnsi | KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::J);
+            }
+            KeymapLayer::Lower => {
+                autoshift_kc!(keyboard_report_state, pressed, KeyCode::N7);
+            }
+            KeymapLayer::LowerAnsi => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::SLASH);
+            }
+            KeymapLayer::Raise => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::PRINT_SCREEN);
+            }
+            KeymapLayer::Num => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N7);
+            }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1420,12 +1500,27 @@ impl KeyboardButton for RightRow1Col5 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::D);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
+            KeymapLayer::QwertyAnsi | KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::H);
+            }
+            KeymapLayer::Lower => {
+                with_modifier_kc!(
+                    keyboard_report_state,
+                    pressed,
+                    Modifier::RIGHT_ALT,
+                    KeyCode::KP_MINS
+                );
+            }
+            KeymapLayer::LowerAnsi => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::BACKSLASH);
+            }
+            KeymapLayer::Raise => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F12);
+            }
+            KeymapLayer::Num => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N6);
+            }
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1434,17 +1529,7 @@ impl KeyboardButton for RightRow1Col5 {
 impl KeyboardButton for RightRow2Col0 {
     fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
         bail_if_same!(self, pressed);
-        match keyboard_report_state.active_layer {
-            KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
-                pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::LEFT_SHIFT);
-            }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
-        }
+        pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::LEFT_SHIFT);
         self.0 = pressed;
     }
 }
@@ -1456,12 +1541,17 @@ impl KeyboardButton for RightRow2Col1 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::Z);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
+            KeymapLayer::QwertyAnsi | KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::QUOTE);
+            }
+            KeymapLayer::Lower => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::SEMICOLON);
+            }
+            KeymapLayer::Raise => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::INSERT);
+            }
+            KeymapLayer::LowerAnsi | KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1474,12 +1564,17 @@ impl KeyboardButton for RightRow2Col2 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::V);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
+            KeymapLayer::QwertyAnsi | KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::DOT);
+            }
+            KeymapLayer::Lower => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::QUOTE);
+            }
+            KeymapLayer::Raise => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::END);
+            }
+            KeymapLayer::LowerAnsi | KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1492,12 +1587,17 @@ impl KeyboardButton for RightRow2Col3 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::W);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
+            KeymapLayer::QwertyAnsi | KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::COMMA);
+            }
+            KeymapLayer::Lower => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::LEFT_BRACKET);
+            }
+            KeymapLayer::Raise => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::PAGE_DOWN);
+            }
+            KeymapLayer::LowerAnsi | KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1510,12 +1610,22 @@ impl KeyboardButton for RightRow2Col4 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::M);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
+            KeymapLayer::QwertyAnsi | KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::M);
+            }
+            KeymapLayer::Lower => {
+                with_modifier_kc!(
+                    keyboard_report_state,
+                    pressed,
+                    Modifier::RIGHT_ALT,
+                    KeyCode::NON_US_BACKSLASH
+                );
+            }
+            KeymapLayer::LowerAnsi => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::PIPE);
+            }
+            KeymapLayer::Raise | KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1528,12 +1638,17 @@ impl KeyboardButton for RightRow2Col5 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::B);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
+            KeymapLayer::QwertyAnsi | KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N);
+            }
+            KeymapLayer::Lower => {
+                autoshift_kc!(keyboard_report_state, pressed, KeyCode::EQUALS);
+            }
+            KeymapLayer::LowerAnsi => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::GRAVE);
+            }
+            KeymapLayer::Raise | KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
@@ -1542,58 +1657,72 @@ impl KeyboardButton for RightRow2Col5 {
 impl KeyboardButton for RightRow3Col0 {
     fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
         bail_if_same!(self, pressed);
-        match keyboard_report_state.active_layer {
-            KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
-                pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::RIGHT_CONTROL);
-            }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
-        }
+        pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::RIGHT_CONTROL);
         self.0 = pressed;
     }
 }
 
-impl KeyboardButton for RightRow3Col1 {}
+impl KeyboardButton for RightRow3Col1 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        pressed_push_pop_layer!(keyboard_report_state, pressed, KeymapLayer::Settings);
+        self.0 = pressed;
+    }
+}
 
 impl KeyboardButton for RightRow3Col2 {
     fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
         bail_if_same!(self, pressed);
-        match keyboard_report_state.active_layer {
-            KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
-                pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::RIGHT_ALT);
-            }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
-            KeymapLayer::Lower => {}
-            KeymapLayer::LowerAnsi => {}
-            KeymapLayer::Raise => {}
-            KeymapLayer::Num => {}
-        }
+        pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::RIGHT_ALT);
         self.0 = pressed;
     }
 }
 
-impl KeyboardButton for RightRow3Col3 {}
+impl KeyboardButton for RightRow3Col3 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        pressed_push_pop_layer!(keyboard_report_state, pressed, KeymapLayer::Raise);
+        self.0 = pressed;
+    }
+}
 
-impl KeyboardButton for RightRow3Col4 {}
+impl KeyboardButton for RightRow3Col4 {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        match keyboard_report_state.active_layer {
+            KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::I);
+            }
+            KeymapLayer::DvorakSe |
+            KeymapLayer::DvorakAnsi |
+            KeymapLayer::QwertyAnsi |
+            KeymapLayer::Lower |
+            KeymapLayer::LowerAnsi |
+            KeymapLayer::Raise |
+            KeymapLayer::Num |
+            KeymapLayer::Settings => {
+                pressed_push_pop_layer!(keyboard_report_state, pressed, KeymapLayer::Num);
+            }
+        }
+        self.0 = pressed;
+    }
+}
 
 impl KeyboardButton for RightRow3Col5 {
     fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
-            KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
+            KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe | KeymapLayer::QwertyAnsi => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::SPACE);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {}
+            KeymapLayer::QwertyGaming => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::G);
+            }
             KeymapLayer::Lower => {}
             KeymapLayer::LowerAnsi => {}
             KeymapLayer::Raise => {}
             KeymapLayer::Num => {}
+            KeymapLayer::Settings => {}
         }
         self.0 = pressed;
     }
