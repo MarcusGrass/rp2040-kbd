@@ -101,8 +101,7 @@ impl KeyboardReportState {
 
     #[inline]
     fn push_layer_with_fallback(&mut self, keymap_layer: KeymapLayer) {
-        self.last_perm_layer = Some(self.active_layer);
-        self.active_layer = keymap_layer;
+        self.last_perm_layer = Some(core::mem::replace(&mut self.active_layer, keymap_layer));
     }
 
     #[inline]
