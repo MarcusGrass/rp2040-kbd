@@ -168,6 +168,9 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
          */
         #[cfg(feature = "hiddev")]
         {
+            if let Some(update) = receiver.try_read() {
+                kbd.update_right(update, &mut report_state);
+            }
             kbd.scan_left(&mut left_buttons, &mut report_state);
             push_hid_report(report_state.report());
         }
