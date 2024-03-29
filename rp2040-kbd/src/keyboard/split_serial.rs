@@ -1,7 +1,7 @@
-use liatris::pac::{PIO0, PIO1, RESETS, UART0};
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
 use embedded_hal::timer::CountDown;
 use embedded_io::{Read, Write};
+use liatris::pac::{PIO0, PIO1, RESETS, UART0};
 use nb::block;
 use pio_uart::{
     install_rx_program, install_tx_program, PioUartRx, PioUartTx, RxProgram, TxProgram,

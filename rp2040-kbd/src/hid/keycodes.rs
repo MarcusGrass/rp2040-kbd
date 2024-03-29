@@ -37,10 +37,10 @@ impl KeyCode {
     pub const N3: Self = Self(0x20); //3 and #2 Sel 4 3 3 3 4/101/104
     pub const N4: Self = Self(0x21); //4 and $2 Sel 5 3 3 3 4/101/104
     pub const N5: Self = Self(0x22); //5 and %2 Sel 6 3 3 3 4/101/104
-    pub const KC_6: Self = Self(0x23); //6 and ∧2 Sel 7 3 3 3 4/101/104
-    pub const KC_7: Self = Self(0x24); //7 and &2 Sel 8 3 3 3 4/101/104
-    pub const KC_8: Self = Self(0x25); //8 and *2 Sel 9 3 3 3 4/101/104
-    pub const KC_9: Self = Self(0x26); //9 and (2 Sel 10 3 3 3 4/101/104
+    pub const N6: Self = Self(0x23); //6 and ∧2 Sel 7 3 3 3 4/101/104
+    pub const N7: Self = Self(0x24); //7 and &2 Sel 8 3 3 3 4/101/104
+    pub const N8: Self = Self(0x25); //8 and *2 Sel 9 3 3 3 4/101/104
+    pub const N9: Self = Self(0x26); //9 and (2 Sel 10 3 3 3 4/101/104
     pub const N0: Self = Self(0x27); //0 and )2 Sel 11 3 3 3 4/101/104
     pub const ENTER: Self = Self(0x28); //Return (ENTER)3 Sel 43 3 3 3 4/101/104
     pub const ESCAPE: Self = Self(0x29); //ESCAPE Sel 110 3 3 3 4/101/104
@@ -48,30 +48,30 @@ impl KeyCode {
     pub const KC_TAB: Self = Self(0x2B); //Tab Sel 16 3 3 3 4/101/104
     pub const SPACE: Self = Self(0x2C); //Spacebar Sel 61 3 3 3 4/101/104
     pub const KC_DASH: Self = Self(0x2D); //- and (underscore)2 Sel 12 3 3 3 4/101/104
-    pub const KC_EQ: Self = Self(0x2E); //= and +2 Sel 13 3 3 3 4/101/104
-    pub const KC_LBRC: Self = Self(0x2F); //[ and {2 Sel 27 3 3 3 4/101/104
-    pub const KC_RBRC: Self = Self(0x30); //] and }2 Sel 28 3 3 3 4/101/104
+    pub const EQUALS: Self = Self(0x2E); //= and +2 Sel 13 3 3 3 4/101/104
+    pub const LEFT_BRACKET: Self = Self(0x2F); //[ and {2 Sel 27 3 3 3 4/101/104
+    pub const RIGHT_BRACKET: Self = Self(0x30); //] and }2 Sel 28 3 3 3 4/101/104
     pub const BACKSLASH: Self = Self(0x31); //\and | Sel 29 3 3 3 4/101/104
     pub const KC_PND: Self = Self(0x32); //Non-US # and ˜5 Sel 42 3 3 3 4/101/104
     pub const SEMICOLON: Self = Self(0x33); //; and :2 Sel 40 3 3 3 4/101/104
     pub const KC_QUOT: Self = Self(0x34); //‘ and “2 Sel 41 3 3 3 4/101/104
-    pub const KC_GRAV: Self = Self(0x35); //Grave Accent and Tilde2 Sel 1 3 3 3 4/101/104
+    pub const GRAVE: Self = Self(0x35); //Grave Accent and Tilde2 Sel 1 3 3 3 4/101/104
     pub const COMMA: Self = Self(0x36); //, and <2 Sel 53 3 3 3 4/101/104
     pub const DOT: Self = Self(0x37); //. and >2 Sel 54 3 3 3 4/101/104
-    pub const KC_SLS: Self = Self(0x38);
+    pub const SLASH: Self = Self(0x38);
     /// and ?2 Sel 55 3 3 3 4/101/104
     pub const KC_CAPS: Self = Self(0x39); //Caps Lock6 Sel 30 3 3 3 4/101/104
-    pub const KC_F1: Self = Self(0x3A); //F1 Sel 112 3 3 3 4/101/104
-    pub const KC_F2: Self = Self(0x3B); //F2 Sel 113 3 3 3 4/101/104
-    pub const KC_F3: Self = Self(0x3C); //F3 Sel 114 3 3 3 4/101/104
-    pub const KC_F4: Self = Self(0x3D); //F4 Sel 115 3 3 3 4/101/104
+    pub const F1: Self = Self(0x3A); //F1 Sel 112 3 3 3 4/101/104
+    pub const F2: Self = Self(0x3B); //F2 Sel 113 3 3 3 4/101/104
+    pub const F3: Self = Self(0x3C); //F3 Sel 114 3 3 3 4/101/104
+    pub const F4: Self = Self(0x3D); //F4 Sel 115 3 3 3 4/101/104
     pub const KC_F5: Self = Self(0x3E); //F5 Sel 116 3 3 3 4/101/104
-    pub const KC_F6: Self = Self(0x3F); //F6 Sel 117 3 3 3 4/101/104
-    pub const KC_F7: Self = Self(0x40); //F7 Sel 118 3 3 3 4/101/104
-    pub const KC_F8: Self = Self(0x41); //F8 Sel 119 3 3 3 4/101/104
-    pub const KC_F9: Self = Self(0x42); //F9 Sel 120 3 3 3 4/101/104
-    pub const KC_F10: Self = Self(0x43); //F10 Sel 121 3 3 3 4/101/104
-    pub const KC_F11: Self = Self(0x44); //F11 Sel 122 3 3 3 4/101/104
+    pub const F6: Self = Self(0x3F); //F6 Sel 117 3 3 3 4/101/104
+    pub const F7: Self = Self(0x40); //F7 Sel 118 3 3 3 4/101/104
+    pub const F8: Self = Self(0x41); //F8 Sel 119 3 3 3 4/101/104
+    pub const F9: Self = Self(0x42); //F9 Sel 120 3 3 3 4/101/104
+    pub const F10: Self = Self(0x43); //F10 Sel 121 3 3 3 4/101/104
+    pub const F11: Self = Self(0x44); //F11 Sel 122 3 3 3 4/101/104
     pub const KC_F12: Self = Self(0x45); //F12 Sel 123 3 3 3 4/101/104
     pub const KC_PRNT: Self = Self(0x46); //PrintScreen7 Sel 124 3 3 3 4/101/104
     pub const KC_SCLK: Self = Self(0x47); //Scroll Lock6 Sel 125 3 3 3 4/101/104
@@ -82,10 +82,10 @@ impl KeyCode {
     pub const KC_DELF: Self = Self(0x4C); //Delete Forward7,8 Sel 76 3 3 3 4/101/104
     pub const KC_END: Self = Self(0x4D); //End7 Sel 81 3 3 3 4/101/104
     pub const KC_PGDN: Self = Self(0x4E); //PageDown7 Sel 86 3 3 3 4/101/104
-    pub const KC_RARR: Self = Self(0x4F); //RightArrow7 Sel 89 3 3 3 4/101/104
-    pub const KC_LARR: Self = Self(0x50); //LeftArrow7 Sel 79 3 3 3 4/101/104
-    pub const KC_DARR: Self = Self(0x51); //DownArrow7 Sel 84 3 3 3 4/101/104
-    pub const KC_UARR: Self = Self(0x52); //UpArrow7 Sel 83 3 3 3 4/101/104
+    pub const RIGHT_ARROW: Self = Self(0x4F); //RightArrow7 Sel 89 3 3 3 4/101/104
+    pub const LEFT_ARROW: Self = Self(0x50); //LeftArrow7 Sel 79 3 3 3 4/101/104
+    pub const DOWN_ARROW: Self = Self(0x51); //DownArrow7 Sel 84 3 3 3 4/101/104
+    pub const UP_ARROW: Self = Self(0x52); //UpArrow7 Sel 83 3 3 3 4/101/104
     pub const KP_NUML: Self = Self(0x53); //Num Lock and Clear6 Sel 90 3 3 3 4/101/104
     pub const KP_7: Self = Self(0x54);
     ///7 Sel 95 3 3 3 4/101/104

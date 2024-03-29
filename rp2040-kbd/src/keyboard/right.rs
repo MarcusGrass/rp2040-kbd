@@ -1,12 +1,13 @@
 pub(crate) mod message_serializer;
 
-use crate::{check_col_no_store, check_col_push_evt};
+use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::usb_serial::UsbSerial;
 use crate::keyboard::{
     matrix_ind, ButtonPin, ButtonState, ButtonStateChange, MatrixState, RowPin, INITIAL_STATE,
     NUM_COLS, NUM_ROWS,
 };
 use crate::runtime::shared::usb::acquire_usb;
+use crate::{check_col_no_store, check_col_push_evt};
 use core::fmt::Write;
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
 use rp2040_hal::gpio::bank0::{
@@ -14,7 +15,6 @@ use rp2040_hal::gpio::bank0::{
     Gpio9,
 };
 use rp2040_hal::gpio::{FunctionSio, Pin, PullUp, SioInput};
-use crate::keyboard::right::message_serializer::MessageSerializer;
 
 pub struct RightButtons {
     pub(crate) matrix: MatrixState,

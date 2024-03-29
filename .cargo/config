@@ -33,6 +33,12 @@ rustflags = [
     "-C", "no-vectorize-loops",
 ]
 
+[profile.lto]
+codegen-units = 1
+debug = false
+inherits = "release"
+lto = true
+strip = true
 # This runner will make a UF2 file and then copy it to a mounted RP2040 in USB
 # Bootloader mode:
 # runner = "elf2uf2-rs -d"

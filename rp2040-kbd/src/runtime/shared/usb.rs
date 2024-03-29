@@ -34,7 +34,6 @@ pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
     USB_DEVICE = Some(UsbSerialDevice::new(USB_BUS.as_ref().unwrap()));
 }
 
-
 #[cfg(feature = "serial")]
 pub fn acquire_usb<'a>() -> UsbGuard<'a> {
     let lock = Spinlock15::claim();
@@ -43,7 +42,7 @@ pub fn acquire_usb<'a>() -> UsbGuard<'a> {
         dev: unsafe { USB_DEVICE.as_mut() },
         output: unsafe { &mut USB_OUTPUT },
         _lock: lock,
-        _pd: PhantomData::default()
+        _pd: PhantomData::default(),
     }
 }
 
@@ -53,8 +52,7 @@ pub fn acquire_usb<'a>() -> UsbGuard<'a> {
         serial: None,
         dev: None,
         output: unsafe { &mut USB_OUTPUT },
-        _pd: PhantomData::default()
-
+        _pd: PhantomData::default(),
     }
 }
 
@@ -66,7 +64,6 @@ pub struct UsbGuard<'a> {
     _lock: Spinlock15,
     _pd: PhantomData<&'a ()>,
 }
-
 
 impl<'a> Write for UsbGuard<'a> {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
@@ -82,7 +79,6 @@ impl<'a> Write for UsbGuard<'a> {
     }
 }
 
-
 #[cfg(feature = "hiddev")]
 pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
     USB_BUS = Some(allocator);
@@ -90,12 +86,13 @@ pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
     let usb_hid = HIDClass::new(USB_BUS.as_ref().unwrap(), KeyboardReport::desc(), 1);
     // Ordering here is extremely important, serial before device.
     USB_HID = Some(usb_hid);
-    USB_HIDDEV = Some(UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0x16c0, 0x27da))
-        .manufacturer("Marcus Grass")
-        .product("Lily58")
-        .serial_number("1")
-        .device_class(0)
-        .build()
+    USB_HIDDEV = Some(
+        UsbDeviceBuilder::new(USB_BUS.as_ref().unwrap(), UsbVidPid(0x16c0, 0x27da))
+            .manufacturer("Marcus Grass")
+            .product("Lily58")
+            .serial_number("1")
+            .device_class(0)
+            .build(),
     );
 }
 
@@ -103,7 +100,10 @@ pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
 pub fn push_hid_report(keyboard_report: &KeyboardReport) -> bool {
     critical_section::with(|_| unsafe {
         Spinlock14::claim();
-        matches!(USB_HID.as_mut().map(|hid| hid.push_input(keyboard_report)), Some(Err(UsbError::WouldBlock)))
+        matches!(
+            USB_HID.as_mut().map(|hid| hid.push_input(keyboard_report)),
+            Some(Err(UsbError::WouldBlock))
+        )
     })
 }
 
@@ -112,8 +112,6 @@ pub fn push_hid_report(keyboard_report: &KeyboardReport) -> bool {
 pub fn push_hid_report(keyboard_report: KeyboardReport) -> bool {
     true
 }
-
-
 
 #[inline]
 #[cfg(feature = "hiddev")]
@@ -127,5 +125,4 @@ pub fn usb_hid_interrupt_poll() {
 }
 #[inline(always)]
 #[cfg(feature = "serial")]
-pub fn usb_hid_interrupt_poll() {
-}
+pub fn usb_hid_interrupt_poll() {}

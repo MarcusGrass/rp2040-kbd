@@ -1,7 +1,10 @@
 pub(crate) mod message_receiver;
 
 use crate::keyboard::usb_serial::UsbSerial;
-use crate::keyboard::{matrix_ind, ButtonPin, ButtonState, ButtonStateChange, MatrixState, RowPin, INITIAL_STATE, NUM_COLS, NUM_ROWS, MatrixUpdate, matrix_ind_to_row_col};
+use crate::keyboard::{
+    matrix_ind, matrix_ind_to_row_col, ButtonPin, ButtonState, ButtonStateChange, MatrixState,
+    MatrixUpdate, RowPin, INITIAL_STATE, NUM_COLS, NUM_ROWS,
+};
 use crate::runtime::shared::usb::acquire_usb;
 use core::fmt::Write;
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
@@ -98,10 +101,7 @@ impl KeyboardState {
     pub fn update_right(&mut self, new: MatrixUpdate) -> bool {
         let (ind, val) = new.matrix_change();
         let (row, col) = matrix_ind_to_row_col(ind as usize);
-        let _ = acquire_usb().write_fmt(format_args!(
-            "R: R{},C{} -> {}\r\n",
-            row, col, val as u8
-        ));
+        let _ = acquire_usb().write_fmt(format_args!("R: R{},C{} -> {}\r\n", row, col, val as u8));
         self.right.set(ind as usize, val);
         true
     }

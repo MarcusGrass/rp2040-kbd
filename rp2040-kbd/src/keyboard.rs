@@ -9,13 +9,13 @@ pub mod split_serial;
 mod sync;
 pub mod usb_serial;
 
+use crate::keyboard::left::message_receiver::EncoderDirection;
 use crate::runtime::shared::usb::acquire_usb;
 use bitvec::array::BitArray;
 use bitvec::order::Lsb0;
 use core::fmt::Write;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use rp2040_hal::gpio::{DynPinId, FunctionSio, Pin, PinId, PullUp, SioInput};
-use crate::keyboard::left::message_receiver::EncoderDirection;
 
 type RowPin = Pin<DynPinId, FunctionSio<SioInput>, PullUp>;
 type ButtonPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
@@ -120,13 +120,11 @@ impl MatrixUpdate {
             inner.set(7, enc);
         };
         Self(inner)
-
     }
 
     #[inline]
     pub fn from_byte(byte: u8) -> Self {
         Self(BitArray::new([byte; 1]))
-
     }
 
     #[inline]
@@ -194,7 +192,9 @@ macro_rules! check_col_push_evt {
                     "R{}, C{} -> {}\r\n",
                     row_ind, $pt, state as u8
                 ));
-                $serializer.serialize_matrix_state(&$crate::keyboard::MatrixUpdate::new(ind as u8, state, $enc_state));
+                $serializer.serialize_matrix_state(&$crate::keyboard::MatrixUpdate::new(
+                    ind as u8, state, $enc_state,
+                ));
                 changed = true;
             }
             $slf.matrix.set(ind, state);

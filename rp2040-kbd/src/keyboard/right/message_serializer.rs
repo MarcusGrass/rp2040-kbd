@@ -11,10 +11,7 @@ pub(crate) struct MessageSerializer {
 impl MessageSerializer {
     #[inline]
     pub(crate) fn serialize_matrix_state(&mut self, update: &MatrixUpdate) -> bool {
-        self.uart
-            .inner
-            .write_raw(update.as_slice())
-            .is_ok()
+        self.uart.inner.write_raw(update.as_slice()).is_ok()
     }
 
     pub fn new(uart: UartRight) -> Self {

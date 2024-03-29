@@ -1,6 +1,9 @@
 use crate::keyboard::split_serial::UartLeft;
 use crate::keyboard::sync::{ENCODER_MSG_LEN, ENCODER_TAG, MATRIX_STATE_MSG_LEN, MATRIX_STATE_TAG};
-use crate::keyboard::{matrix_ind, ButtonState, ButtonStateChange, MatrixState, INITIAL_STATE, NUM_COLS, NUM_ROWS, MatrixUpdate};
+use crate::keyboard::{
+    matrix_ind, ButtonState, ButtonStateChange, MatrixState, MatrixUpdate, INITIAL_STATE, NUM_COLS,
+    NUM_ROWS,
+};
 use embedded_io::Read;
 use pio_uart::PioSerialError;
 
@@ -37,9 +40,7 @@ impl EncoderDirection {
 
     #[inline]
     pub fn into_bool(self) -> bool {
-        unsafe {
-            core::mem::transmute(self)
-        }
+        unsafe { core::mem::transmute(self) }
     }
 }
 
@@ -67,8 +68,6 @@ impl MessageReceiver {
 
     #[inline]
     pub(crate) fn try_read(&mut self) -> Option<MatrixUpdate> {
-        self.uart.inner.read_one()
-            .map(MatrixUpdate::from_byte)
+        self.uart.inner.read_one().map(MatrixUpdate::from_byte)
     }
-
 }

@@ -13,8 +13,8 @@ use core::fmt::Write as _;
 use embedded_hal::timer::CountDown;
 use embedded_io::{Read, Write};
 use heapless::String;
-use liatris::pac::{interrupt, Peripherals};
 use liatris::pac::Interrupt::USBCTRL_IRQ;
+use liatris::pac::{interrupt, Peripherals};
 use nb::block;
 use rp2040_hal::fugit::MicrosDurationU64;
 use rp2040_hal::multicore::Multicore;
@@ -185,7 +185,6 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
 
              */
         }
-
     }
 }
 

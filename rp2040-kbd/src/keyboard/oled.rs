@@ -1,4 +1,3 @@
-use liatris::pac::{I2C1, UART0};
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::Point;
 use embedded_graphics::mono_font::iso_8859_2::FONT_6X9;
@@ -8,6 +7,7 @@ use embedded_graphics::prelude::Size;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::text::{Baseline, Text};
 use embedded_graphics::Drawable;
+use liatris::pac::{I2C1, UART0};
 use rp2040_hal::gpio::bank0::{Gpio0, Gpio1, Gpio2, Gpio3};
 use rp2040_hal::gpio::{FunctionI2c, FunctionUart, Pin, PullDown};
 use rp2040_hal::uart::{Enabled, UartPeripheral};
