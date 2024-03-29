@@ -57,7 +57,7 @@ impl KeyCode {
     pub const KC_QUOT: Self = Self(0x34); //‘ and “2 Sel 41 3 3 3 4/101/104
     pub const KC_GRAV: Self = Self(0x35); //Grave Accent and Tilde2 Sel 1 3 3 3 4/101/104
     pub const COMMA: Self = Self(0x36); //, and <2 Sel 53 3 3 3 4/101/104
-    pub const KC_DOT: Self = Self(0x37); //. and >2 Sel 54 3 3 3 4/101/104
+    pub const DOT: Self = Self(0x37); //. and >2 Sel 54 3 3 3 4/101/104
     pub const KC_SLS: Self = Self(0x38);
     /// and ?2 Sel 55 3 3 3 4/101/104
     pub const KC_CAPS: Self = Self(0x39); //Caps Lock6 Sel 30 3 3 3 4/101/104

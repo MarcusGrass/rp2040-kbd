@@ -70,7 +70,7 @@ fn dvorak_se_to_report(left: &MatrixState, right: &MatrixState) -> LayerResult {
     at_ind_keycode!(left, 0, 0, keycodes, code_ind, KeyCode::KC_TAB);
     at_ind_keycode!(left, 0, 1, keycodes, code_ind, KeyCode::KC_QUOT);
     at_ind_keycode!(left, 0, 2, keycodes, code_ind, KeyCode::COMMA);
-    at_ind_keycode!(left, 0, 3, keycodes, code_ind, KeyCode::KC_DOT);
+    at_ind_keycode!(left, 0, 3, keycodes, code_ind, KeyCode::DOT);
     at_ind_keycode!(left, 0, 4, keycodes, code_ind, KeyCode::KC_P);
     at_ind_keycode!(left, 0, 5, keycodes, code_ind, KeyCode::KC_Y);
 
@@ -159,6 +159,8 @@ struct JankState {
     pressing_single_quote: bool,
     pressing_left_bracket: bool,
     pressing_comma: bool,
+    pressing_right_bracket: bool,
+    pressing_dot: bool,
 }
 
 impl KeyboardReportState {
@@ -178,6 +180,8 @@ impl KeyboardReportState {
                 pressing_single_quote: false,
                 pressing_left_bracket: false,
                 pressing_comma: false,
+                pressing_right_bracket: false,
+                pressing_dot: false,
             },
         }
     }
@@ -376,13 +380,25 @@ keyboard_key!(
     Right, 4, 5,
 );
 
-macro_rules! pressed_push_pop {
+macro_rules! pressed_push_pop_kc {
     ($state: expr, $pressed: expr, $kc: expr) => {
         {
             if $pressed {
                 $state.push_key($kc);
             } else {
                 $state.pop_key($kc);
+            }
+        }
+    };
+}
+
+macro_rules! pressed_push_pop_modifier {
+    ($state: expr, $pressed: expr, $modifier: expr) => {
+        {
+            if $pressed {
+                $state.push_modifier($modifier);
+            } else {
+                $state.pop_modifier($modifier);
             }
         }
     };
@@ -485,7 +501,7 @@ impl KeyboardButton for LeftRow0Col0 {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi |
             KeymapLayer::DvorakSe => {
-                pressed_push_pop!(keyboard_report_state, pressed, KeyCode::KC_TAB);
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::KC_TAB);
                 self.0 = pressed;
             }
         }
@@ -497,7 +513,7 @@ impl KeyboardButton for LeftRow0Col1 {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi => {
-                pressed_push_pop!(keyboard_report_state, pressed, KeyCode::COMMA);
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::COMMA);
             }
             KeymapLayer::DvorakSe => {
                 if pressed {
@@ -531,7 +547,7 @@ impl KeyboardButton for LeftRow0Col2 {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi => {
-                pressed_push_pop!(keyboard_report_state, pressed, KeyCode::COMMA);
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::COMMA);
             }
             KeymapLayer::DvorakSe => {
                 if pressed {
@@ -548,6 +564,7 @@ impl KeyboardButton for LeftRow0Col2 {
                 } else {
                     if (keyboard_report_state.jank.pressing_left_bracket) {
                         keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
+                        keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
                         keyboard_report_state.jank.pressing_left_bracket = false;
                     }
                     if (keyboard_report_state.jank.pressing_comma) {
@@ -565,15 +582,32 @@ impl KeyboardButton for LeftRow0Col3 {
     fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
-            KeymapLayer::DvorakAnsi => {}
+            KeymapLayer::DvorakAnsi => {
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::DOT);
+            }
             KeymapLayer::DvorakSe => {
                 if pressed {
                     if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
-
+                        // Needs a shift, but that's already pressed
+                        keyboard_report_state.push_key(KeyCode::NON_US_BACKSLASH);
+                        keyboard_report_state.jank.pressing_right_bracket = true;
+                    } else {
+                        keyboard_report_state.push_key(KeyCode::DOT);
+                        keyboard_report_state.jank.pressing_dot = true;
+                    }
+                } else {
+                    if keyboard_report_state.jank.pressing_right_bracket {
+                        keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
+                        keyboard_report_state.jank.pressing_right_bracket = false;
+                    }
+                    if keyboard_report_state.jank.pressing_dot {
+                        keyboard_report_state.pop_key(KeyCode::DOT);
+                        keyboard_report_state.jank.pressing_dot = false;
                     }
                 }
             }
         }
+        self.0 = pressed;
     }
 }
 
@@ -607,7 +641,11 @@ impl KeyboardButton for LeftRow1Col5 {
 }
 
 impl KeyboardButton for LeftRow2Col0 {
-
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+        bail_if_same!(self, pressed);
+        pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::LEFT_SHIFT);
+        self.0 = pressed;
+    }
 }
 
 impl KeyboardButton for LeftRow2Col1 {
