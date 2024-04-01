@@ -730,7 +730,7 @@ impl KeyboardButton for LeftRow1Col1 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::T);
             }
             KeymapLayer::Lower => {
-                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::KP_MINS)
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::DASH)
             }
             KeymapLayer::LowerAnsi => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::KP_PLUS);
@@ -862,7 +862,7 @@ impl KeyboardButton for LeftRow1Col5 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::R);
             }
             KeymapLayer::Lower => {
-                autoshift_kc!(keyboard_report_state, pressed, KeyCode::KP_MINS);
+                autoshift_kc!(keyboard_report_state, pressed, KeyCode::DASH);
             }
             KeymapLayer::LowerAnsi => {
                 autoshift_kc!(keyboard_report_state, pressed, KeyCode::SLASH);
@@ -1188,7 +1188,7 @@ impl KeyboardButton for LeftRow4Col3 {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe | KeymapLayer::DvorakAnsi => {
-                autoshift_kc!(keyboard_report_state, pressed, KeyCode::KP_MINS);
+                autoshift_kc!(keyboard_report_state, pressed, KeyCode::DASH);
             }
             KeymapLayer::QwertyAnsi => {}
             KeymapLayer::QwertyGaming => {
@@ -1408,7 +1408,7 @@ impl KeyboardButton for RightRow1Col1 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::SLASH);
             }
             KeymapLayer::LowerAnsi => {
-                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::KP_MINS);
+                pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::DASH);
             }
             KeymapLayer::Raise => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::KC_DELF);
@@ -1531,7 +1531,7 @@ impl KeyboardButton for RightRow1Col5 {
                     keyboard_report_state,
                     pressed,
                     Modifier::RIGHT_ALT,
-                    KeyCode::KP_MINS
+                    KeyCode::DASH
                 );
             }
             KeymapLayer::LowerAnsi => {

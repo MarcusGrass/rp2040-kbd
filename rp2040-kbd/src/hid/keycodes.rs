@@ -47,7 +47,7 @@ impl KeyCode {
     pub const BACKSPACE: Self = Self(0x2A); //DELETE (Backspace)4 Sel 15 3 3 3 4/101/104
     pub const KC_TAB: Self = Self(0x2B); //Tab Sel 16 3 3 3 4/101/104
     pub const SPACE: Self = Self(0x2C); //Spacebar Sel 61 3 3 3 4/101/104
-    pub const KC_DASH: Self = Self(0x2D); //- and (underscore)2 Sel 12 3 3 3 4/101/104
+    pub const DASH: Self = Self(0x2D); //- and (underscore)2 Sel 12 3 3 3 4/101/104
     pub const EQUALS: Self = Self(0x2E); //= and +2 Sel 13 3 3 3 4/101/104
     pub const LEFT_BRACKET: Self = Self(0x2F); //[ and {2 Sel 27 3 3 3 4/101/104
     pub const RIGHT_BRACKET: Self = Self(0x30); //] and }2 Sel 28 3 3 3 4/101/104
