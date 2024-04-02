@@ -1,13 +1,14 @@
 //! Common between sides, put everything with the same pinouts and shared hardware
 //! code here
+#[cfg(feature = "left")]
 pub mod left;
 pub mod oled;
 pub mod power_led;
+#[cfg(feature = "right")]
 pub mod right;
 pub mod split_serial;
 pub mod usb_serial;
 
-use crate::keyboard::left::message_receiver::EncoderDirection;
 use crate::runtime::shared::usb::acquire_usb;
 use bitvec::array::BitArray;
 use bitvec::order::Lsb0;

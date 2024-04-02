@@ -16,6 +16,7 @@ use rp2040_hal::pio::{PIOExt, Running, UninitStateMachine, SM0, SM1, SM2, SM3};
 use rp2040_hal::uart::{Enabled, UartPeripheral};
 use rp2040_hal::{fugit, Timer};
 
+#[cfg(feature = "left")]
 pub struct UartLeft {
     pub(crate) inner: pio_uart::PioUartRx<Gpio1, PIO0, SM0, Running>,
     _prog: RxProgram<PIO0>,
@@ -24,6 +25,7 @@ pub struct UartLeft {
     _sm3: UninitStateMachine<(PIO0, SM3)>,
 }
 
+#[cfg(feature = "left")]
 impl UartLeft {
     pub fn new(
         pin: Pin<Gpio1, FunctionNull, PullDown>,
@@ -46,6 +48,7 @@ impl UartLeft {
     }
 }
 
+#[cfg(feature = "right")]
 pub struct UartRight {
     pub(crate) inner: PioUartTx<Gpio1, PIO0, SM0, Running>,
     _prog: TxProgram<PIO0>,
@@ -54,6 +57,7 @@ pub struct UartRight {
     _sm3: UninitStateMachine<(PIO0, SM3)>,
 }
 
+#[cfg(feature = "right")]
 impl UartRight {
     pub fn new(
         pin: Pin<Gpio1, FunctionNull, PullDown>,

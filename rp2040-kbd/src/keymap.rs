@@ -184,13 +184,6 @@ macro_rules! keyboard_key {
     };
 }
 
-pub trait ReadKeyPins {
-    // Could clean up the codegen so that the right-side doesn't get invoked ever,
-    // hopefully the compiler will just remove this entirely on those cases
-    #[inline(always)]
-    fn read_left_pins(&mut self, left_buttons: &mut LeftButtons) {}
-}
-
 keyboard_key!(
     Left, 0, 0, Left, 0, 1, Left, 0, 2, Left, 0, 3, Left, 0, 4, Left, 0, 5, Left, 1, 0, Left, 1, 1,
     Left, 1, 2, Left, 1, 3, Left, 1, 4, Left, 1, 5, Left, 2, 0, Left, 2, 1, Left, 2, 2, Left, 2, 3,

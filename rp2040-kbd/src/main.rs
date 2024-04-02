@@ -18,6 +18,7 @@
 
 mod hid;
 pub(crate) mod keyboard;
+#[cfg(feature = "left")]
 mod keymap;
 pub(crate) mod runtime;
 
@@ -42,13 +43,8 @@ use liatris::hal;
 // USB Device support
 use usb_device::class_prelude::*;
 
-use crate::keyboard::left::LeftButtons;
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
-use crate::keyboard::right::RightButtons;
-use crate::keyboard::split_serial::{UartLeft, UartRight};
-use crate::runtime::left::run_left;
-use crate::runtime::right::run_right;
 use core::fmt::Write;
 use embedded_graphics::Drawable;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
@@ -58,6 +54,7 @@ use rp2040_hal::gpio::PinId;
 use rp2040_hal::multicore::Multicore;
 use rp2040_hal::pio::PIOExt;
 use rp2040_hal::Clock;
+use rp2040_hal::rom_data::reset_to_usb_boot;
 use ssd1306::mode::DisplayConfig;
 use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
 use ssd1306::size::DisplaySize128x32;
@@ -142,51 +139,69 @@ fn main() -> ! {
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     let uart_baud = 125000.Hz();
     if is_left {
-        // Left side flips tx/rx, check qmk for proton-c in kyria for reference
-        let uart = UartLeft::new(pins.gpio1, uart_baud, 125.MHz(), pac.PIO0, &mut pac.RESETS);
-        let left = LeftButtons::new(
-            (
-                pins.gpio29.into_pull_up_input(),
-                pins.gpio27.into_pull_up_input(),
-                pins.gpio6.into_pull_up_input(),
-                pins.gpio7.into_pull_up_input(),
-                pins.gpio8.into_pull_up_input(),
-            ),
-            (
-                Some(pins.gpio9.into_pull_up_input()),
-                Some(pins.gpio26.into_pull_up_input()),
-                Some(pins.gpio22.into_pull_up_input()),
-                Some(pins.gpio20.into_pull_up_input()),
-                Some(pins.gpio23.into_pull_up_input()),
-                Some(pins.gpio21.into_pull_up_input()),
-            ),
-        );
-        run_left(&mut mc, usb_bus, oled, uart, left, pl, timer);
+        #[cfg(feature = "left")]
+        {
+            // Left side flips tx/rx, check qmk for proton-c in kyria for reference
+            let uart = keyboard::split_serial::UartLeft::new(pins.gpio1, uart_baud, 125.MHz(), pac.PIO0, &mut pac.RESETS);
+            let left = crate::keyboard::left::LeftButtons::new(
+                (
+                    pins.gpio29.into_pull_up_input(),
+                    pins.gpio27.into_pull_up_input(),
+                    pins.gpio6.into_pull_up_input(),
+                    pins.gpio7.into_pull_up_input(),
+                    pins.gpio8.into_pull_up_input(),
+                ),
+                (
+                    Some(pins.gpio9.into_pull_up_input()),
+                    Some(pins.gpio26.into_pull_up_input()),
+                    Some(pins.gpio22.into_pull_up_input()),
+                    Some(pins.gpio20.into_pull_up_input()),
+                    Some(pins.gpio23.into_pull_up_input()),
+                    Some(pins.gpio21.into_pull_up_input()),
+                ),
+            );
+            runtime::left::run_left(&mut mc, usb_bus, oled, uart, left, pl, timer);
+        }
+        #[cfg(not(feature = "left"))]
+        {
+            // Hard error, needs new firmware loaded
+            reset_to_usb_boot(0, 0);
+            loop {}
+        }
     } else {
-        let uart = UartRight::new(
-            pins.gpio1.reconfigure(),
-            uart_baud,
-            125.MHz(),
-            pac.PIO0,
-            &mut pac.RESETS,
-        );
-        let right = RightButtons::new(
-            (
-                pins.gpio29.into_pull_up_input(),
-                pins.gpio4.into_pull_up_input(),
-                pins.gpio20.into_pull_up_input(),
-                pins.gpio23.into_pull_up_input(),
-                pins.gpio21.into_pull_up_input(),
-            ),
-            (
-                Some(pins.gpio22.into_pull_up_input()),
-                Some(pins.gpio5.into_pull_up_input()),
-                Some(pins.gpio6.into_pull_up_input()),
-                Some(pins.gpio7.into_pull_up_input()),
-                Some(pins.gpio8.into_pull_up_input()),
-                Some(pins.gpio9.into_pull_up_input()),
-            ),
-        );
-        run_right(&mut mc, usb_bus, oled, uart, right, pl, timer);
+        #[cfg(feature = "right")]
+        {
+            let uart = keyboard::split_serial::UartRight::new(
+                pins.gpio1.reconfigure(),
+                uart_baud,
+                125.MHz(),
+                pac.PIO0,
+                &mut pac.RESETS,
+            );
+            let right = crate::keyboard::right::RightButtons::new(
+                (
+                    pins.gpio29.into_pull_up_input(),
+                    pins.gpio4.into_pull_up_input(),
+                    pins.gpio20.into_pull_up_input(),
+                    pins.gpio23.into_pull_up_input(),
+                    pins.gpio21.into_pull_up_input(),
+                ),
+                (
+                    Some(pins.gpio22.into_pull_up_input()),
+                    Some(pins.gpio5.into_pull_up_input()),
+                    Some(pins.gpio6.into_pull_up_input()),
+                    Some(pins.gpio7.into_pull_up_input()),
+                    Some(pins.gpio8.into_pull_up_input()),
+                    Some(pins.gpio9.into_pull_up_input()),
+                ),
+            );
+            runtime::right::run_right(&mut mc, usb_bus, oled, uart, right, pl, timer);
+        }
+        #[cfg(not(feature = "right"))]
+        {
+            // Hard error, needs new firmware loaded
+            reset_to_usb_boot(0, 0);
+            loop {}
+        }
     }
 }

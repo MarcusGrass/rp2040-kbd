@@ -45,7 +45,7 @@ defmt-rtt.workspace = true
 
 [features]
 # This is the set of features we enable by default
-default = ["serial"]
+default = []
 
 # Disable automatic mapping of language features (like floating point math) to ROM functions
 disable-intrinsics = ["rp2040-hal/disable-intrinsics"]
@@ -54,5 +54,9 @@ disable-intrinsics = ["rp2040-hal/disable-intrinsics"]
 rom-v2-intrinsics = ["rp2040-hal/rom-v2-intrinsics"]
 
 serial = []
+
+right = []
+
+left = []
 
 hiddev = []
