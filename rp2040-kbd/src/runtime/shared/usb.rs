@@ -83,7 +83,7 @@ impl<'a> Write for UsbGuard<'a> {
 pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
     USB_BUS = Some(allocator);
 
-    let usb_hid = HIDClass::new(USB_BUS.as_ref().unwrap(), KeyboardReport::desc(), 1);
+    let usb_hid = HIDClass::new_ep_in(USB_BUS.as_ref().unwrap(), KeyboardReport::desc(), 1);
     // Ordering here is extremely important, serial before device.
     USB_HID = Some(usb_hid);
     USB_HIDDEV = Some(
