@@ -42,9 +42,7 @@ impl<const N: usize, T> RingBuffer<N, T> {
         if self.filled == 0 {
             return None;
         }
-        let res = unsafe {
-            Some(self.ring[self.start].as_ptr().read())
-        };
+        let res = unsafe { Some(self.ring[self.start].as_ptr().read()) };
         if self.start >= N - 1 {
             self.start = 0;
         } else {

@@ -6,7 +6,7 @@ use crate::keyboard::{
     matrix_ind, ButtonPin, ButtonState, ButtonStateChange, MatrixState, RowPin, INITIAL_STATE,
     NUM_COLS, NUM_ROWS,
 };
-use crate::{check_col_no_store, check_col_push_evt};
+use crate::{check_col_push_evt};
 use core::fmt::Write;
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
 use rp2040_hal::gpio::bank0::{
@@ -60,17 +60,13 @@ impl RightButtons {
     }
 
     pub fn scan_matrix(&mut self, serializer: &mut MessageSerializer) -> bool {
-        if check_col_push_evt!(self, 0, serializer, None)
-            || check_col_push_evt!(self, 1, serializer, None)
-            || check_col_push_evt!(self, 2, serializer, None)
-            || check_col_push_evt!(self, 3, serializer, None)
-            || check_col_push_evt!(self, 4, serializer, None)
-            || check_col_push_evt!(self, 5, serializer, None)
-        {
-            true
-        } else {
-            false
-        }
+        let col0_change = check_col_push_evt!(self, 0, serializer, None);
+        let col1_change = check_col_push_evt!(self, 1, serializer, None);
+        let col2_change = check_col_push_evt!(self, 2, serializer, None);
+        let col3_change = check_col_push_evt!(self, 3, serializer, None);
+        let col4_change = check_col_push_evt!(self, 4, serializer, None);
+        let col5_change = check_col_push_evt!(self, 5, serializer, None);
+        col0_change || col1_change || col2_change || col3_change || col4_change || col5_change
     }
 }
 

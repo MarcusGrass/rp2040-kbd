@@ -1,7 +1,7 @@
 use crate::keyboard::oled::{blank_line, DrawUnit, OledHandle, OledWriter};
 use heapless::String;
 
-pub struct LeftOledDrawer {
+pub struct RightOledDrawer {
     handle: OledHandle,
     hidden: bool,
     header: DrawUnit,
@@ -10,10 +10,10 @@ pub struct LeftOledDrawer {
     scan_loop_content: DrawUnit,
 }
 
-impl LeftOledDrawer {
+impl RightOledDrawer {
     pub fn new(handle: OledHandle) -> Self {
         let mut header_content = String::new();
-        let _ = header_content.push_str("LEFT");
+        let _ = header_content.push_str("RIGHT");
         let mut scan_loop_header_content = String::new();
         let _ = scan_loop_header_content.push_str("SCAN");
         Self {
@@ -87,10 +87,10 @@ impl LeftOledDrawer {
     }
 }
 
-impl OledWriter for LeftOledDrawer {
+impl OledWriter for RightOledDrawer {
     fn write_enter_boot_msg(&mut self) {
         self.handle.clear();
-        let _ = self.handle.write(0, "LEFT");
+        let _ = self.handle.write(0, "RIGHT");
         let _ = self.handle.write(18, "SIDE");
         let _ = self.handle.write(36, "ENTER");
         let _ = self.handle.write(54, "BOOT");

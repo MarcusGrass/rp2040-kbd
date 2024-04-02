@@ -1,5 +1,7 @@
 #[cfg(feature = "left")]
 pub mod left;
+#[cfg(feature = "right")]
+pub mod right;
 
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::Point;
@@ -19,6 +21,10 @@ use ssd1306::mode::BufferedGraphicsMode;
 use ssd1306::prelude::{Brightness, DisplaySize128x32, I2CInterface};
 use ssd1306::Ssd1306;
 
+pub trait OledWriter {
+    fn write_enter_boot_msg(&mut self);
+}
+
 #[inline]
 pub fn blank_line() -> String<5> {
     let mut s = String::new();
@@ -28,16 +34,22 @@ pub fn blank_line() -> String<5> {
 
 pub struct DrawUnit {
     pub content: String<5>,
-    pub needs_redraw: bool
+    pub needs_redraw: bool,
 }
 
 impl DrawUnit {
     #[inline]
     pub fn blank() -> Self {
-        Self { content: blank_line(), needs_redraw: false }
+        Self {
+            content: blank_line(),
+            needs_redraw: false,
+        }
     }
     pub fn new(content: String<5>, needs_redraw: bool) -> Self {
-        Self { content, needs_redraw }
+        Self {
+            content,
+            needs_redraw,
+        }
     }
 }
 
@@ -112,5 +124,15 @@ impl OledHandle {
         } else {
             false
         }
+    }
+
+    pub fn write_bad_boot_msg(&mut self) {
+        let _ = self.display.clear();
+        let _ = self.display.flush();
+        let _ = self.write(0, "BAD");
+        let _ = self.write(9, "IMAGE");
+        let _ = self.write(18, "FORCE");
+        let _ = self.write(27, "BOOT");
+        let _ = self.display.flush();
     }
 }

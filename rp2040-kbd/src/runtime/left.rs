@@ -1,10 +1,16 @@
 use crate::keyboard::left::message_receiver::{DeserializedMessage, MessageReceiver};
 use crate::keyboard::left::{KeyboardState, LeftButtons};
+use crate::keyboard::oled::left::LeftOledDrawer;
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::keymap::{KeyboardReportState, KeymapLayer};
+use crate::runtime::shared::cores_left::{
+    pop_message, push_loop_to_admin, push_touch_to_admin, KeycoreToAdminMessage,
+};
+use crate::runtime::shared::loop_counter::LoopCounter;
+use crate::runtime::shared::sleep::SleepCountdown;
 use crate::runtime::shared::usb::{acquire_usb, init_usb, push_hid_report, usb_hid_interrupt_poll};
 use core::fmt::Write as _;
 use embedded_hal::timer::CountDown;
@@ -19,10 +25,6 @@ use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::{UsbBus, UsbBusAllocator};
 use usbd_hid::descriptor::KeyboardReport;
-use crate::keyboard::oled::left::LeftOledDrawer;
-use crate::runtime::shared::cores_left::{KeycoreToAdminMessage, pop_message, push_loop_to_admin, push_touch_to_admin};
-use crate::runtime::shared::loop_counter::LoopCounter;
-use crate::runtime::shared::sleep::SleepCountdown;
 
 static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
 #[inline(never)]
@@ -46,6 +48,7 @@ pub fn run_left<'a>(
     let mut oled_left = LeftOledDrawer::new(oled_handle);
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
+    let mut has_dumped = false;
     let mut sleep = SleepCountdown::new();
     loop {
         let now = timer.get_counter();
@@ -69,7 +72,16 @@ pub fn run_left<'a>(
         }
         oled_left.render();
         #[cfg(feature = "serial")]
-        handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
+        {
+            handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
+            if output_all {
+                if !has_dumped {
+                    let _ = crate::runtime::shared::usb::acquire_usb()
+                        .write_str("Left side running\r\n");
+                    has_dumped = true;
+                }
+            }
+        }
     }
 }
 #[cfg(feature = "serial")]
@@ -147,17 +159,6 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, t
                 push_touch_to_admin();
             }
         }
-        #[cfg(feature = "serial")]
-        {
-            /*
-            if next_layer.report.keycodes != DEFAULT_KBD.keycodes
-                || next_layer.report.modifier != DEFAULT_KBD.modifier
-            {
-                let _ = acquire_usb().write_fmt(format_args!("Report: {:?}\r\n", next_layer));
-            }
-
-             */
-        }
         if loop_count.increment() {
             let now = timer.get_counter();
             let lc = loop_count.value(now);
@@ -165,7 +166,6 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, t
                 loop_count.reset(now);
             }
         }
-
     }
 }
 

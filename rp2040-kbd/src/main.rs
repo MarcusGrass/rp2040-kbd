@@ -53,15 +53,21 @@ use rp2040_hal::fugit::RateExtU32;
 use rp2040_hal::gpio::PinId;
 use rp2040_hal::multicore::Multicore;
 use rp2040_hal::pio::PIOExt;
-use rp2040_hal::Clock;
 use rp2040_hal::rom_data::reset_to_usb_boot;
+use rp2040_hal::Clock;
 use ssd1306::mode::DisplayConfig;
 use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
 use ssd1306::size::DisplaySize128x32;
 use ssd1306::Ssd1306;
 
 #[cfg(all(feature = "serial", feature = "hiddev"))]
-const _ILLEGAL_FEATURES: () = assert!(false, "Cant run as both serial and hiddev");
+const _ILLEGAL_FEATURES: () = assert!(false, "Can't compile as both serial and hiddev");
+
+#[cfg(all(feature = "left", feature = "right"))]
+const _ILLEGAL_SIDES: () = assert!(false, "Can't compile as both right and left");
+
+#[cfg(all(feature = "hiddev", feature = "right"))]
+const _RIGHT_HIDDEN: () = assert!(false, "Can't compile right as hiddev");
 
 /// Entry point to our bare-metal application.
 ///
@@ -120,7 +126,7 @@ fn main() -> ! {
     display.init().unwrap();
     display.clear();
     let _ = display.flush();
-    let oled = OledHandle::new(display);
+    let mut oled = OledHandle::new(display);
 
     // Set up the USB driver
     let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
@@ -142,7 +148,13 @@ fn main() -> ! {
         #[cfg(feature = "left")]
         {
             // Left side flips tx/rx, check qmk for proton-c in kyria for reference
-            let uart = keyboard::split_serial::UartLeft::new(pins.gpio1, uart_baud, 125.MHz(), pac.PIO0, &mut pac.RESETS);
+            let uart = keyboard::split_serial::UartLeft::new(
+                pins.gpio1,
+                uart_baud,
+                125.MHz(),
+                pac.PIO0,
+                &mut pac.RESETS,
+            );
             let left = crate::keyboard::left::LeftButtons::new(
                 (
                     pins.gpio29.into_pull_up_input(),
@@ -165,6 +177,7 @@ fn main() -> ! {
         #[cfg(not(feature = "left"))]
         {
             // Hard error, needs new firmware loaded
+            oled.write_bad_boot_msg();
             reset_to_usb_boot(0, 0);
             loop {}
         }
@@ -200,6 +213,7 @@ fn main() -> ! {
         #[cfg(not(feature = "right"))]
         {
             // Hard error, needs new firmware loaded
+            oled.write_bad_boot_msg();
             reset_to_usb_boot(0, 0);
             loop {}
         }

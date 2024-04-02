@@ -1,8 +1,14 @@
+use crate::keyboard::oled::right::RightOledDrawer;
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::right::RightButtons;
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
+use crate::runtime::shared::cores_right::{
+    pop_message, push_loop_to_admin, push_touch_to_admin, KeycoreToAdminMessage,
+};
+use crate::runtime::shared::loop_counter::LoopCounter;
+use crate::runtime::shared::sleep::SleepCountdown;
 use crate::runtime::shared::{acquire_matrix_scan, try_acquire_matrix_scan};
 use core::fmt::Write;
 use embedded_hal::timer::CountDown;
@@ -29,14 +35,11 @@ pub fn run_right<'a>(
     mut power_led_pin: PowerLed,
     timer: Timer,
 ) -> ! {
-    const PING: &[u8] = b"ping";
-    oled_handle.clear();
-    oled_handle.clear_line(72);
-    let _ = oled_handle.write(72, "0");
     #[cfg(feature = "serial")]
-    unsafe { crate::runtime::shared::usb::init_usb(usb_bus) };
-    oled_handle.clear_line(0);
-    let _ = oled_handle.write(72, "1");
+    unsafe {
+        crate::runtime::shared::usb::init_usb(usb_bus)
+    };
+    let mut oled = RightOledDrawer::new(oled_handle);
     let cores = mc.cores();
     let c1 = &mut cores[1];
     let mut serializer = MessageSerializer::new(uart_driver);
@@ -47,109 +50,38 @@ pub fn run_right<'a>(
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut has_dumped = false;
-    let mut prev = timer.get_counter();
-    let mut matrix_sends = 0u16;
-    let mut pump_failures = 0u16;
-    let mut total_read = 0u16;
-    let mut total_written = 0u16;
-    let mut errs = 0u16;
-    let mut buf = [0u8; 64];
-    let mut offset = 0;
-    let mut loop_counter = timer.get_counter();
-    let mut avg_loop = 0f32;
-    let mut num_loops: f32 = 0.0;
-    let mut scan_counter = timer.get_counter();
-    let mut avg_scan = 0f32;
-    let mut num_scans: f32 = 1.0;
-    oled_handle.clear_line(72);
-    let _ = oled_handle.write(72, "2");
+    let mut sleep = SleepCountdown::new();
     loop {
+        let now = timer.get_counter();
+        match pop_message() {
+            Some(KeycoreToAdminMessage::Touch) => {
+                sleep.touch(now);
+                oled.show();
+            }
+            Some(KeycoreToAdminMessage::Loop(lc)) => {
+                let loop_millis = lc.count as u64 / lc.duration.to_millis();
+                if sleep.is_awake() {
+                    if let Some((header, body)) = lc.as_display() {
+                        oled.update_scan_loop(header, body);
+                    }
+                }
+            }
+            _ => {}
+        }
+        if sleep.should_sleep(now) {
+            oled.hide();
+        }
+        oled.render();
         #[cfg(feature = "serial")]
         {
             handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
             if output_all {
                 if !has_dumped {
-                    let _ = crate::runtime::shared::usb::acquire_usb().write_str("Right side running\r\n");
+                    let _ = crate::runtime::shared::usb::acquire_usb()
+                        .write_str("Right side running\r\n");
                     has_dumped = true;
                 }
             }
-        }
-
-        let now = timer.get_counter();
-        if let Some(dur) = now.checked_duration_since(prev) {
-            if dur.to_millis() > 200 {
-                if dur.to_secs() % 2 == 0 {
-                    oled_handle.clear_line(72);
-                    let _ = oled_handle.write(72, "3");
-                } else {
-                    oled_handle.clear_line(72);
-                    let _ = oled_handle.write(72, "4");
-                }
-                prev = now;
-                let mut s: String<5> = String::new();
-
-                if s.write_fmt(format_args!("{matrix_sends}")).is_ok() {
-                    oled_handle.clear_line(0);
-                    let _ = oled_handle.write(0, s.as_str());
-                }
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{pump_failures}")).is_ok() {
-                    oled_handle.clear_line(18);
-                    let _ = oled_handle.write(18, s.as_str());
-                }
-                let mut time_text: String<5> = String::new();
-                if time_text.write_fmt(format_args!("{avg_loop:.1}")).is_ok() {
-                    oled_handle.clear_line(36);
-                    let _ = oled_handle.write(36, time_text.as_str());
-                }
-                let mut time_text: String<5> = String::new();
-                if time_text.write_fmt(format_args!("{avg_scan:.1}")).is_ok() {
-                    oled_handle.clear_line(54);
-                    let _ = oled_handle.write(54, time_text.as_str());
-                }
-            }
-        }
-        if num_loops >= f32::MAX - 1.0 {
-            num_loops = 0.0;
-            avg_loop = 0.0;
-        }
-        num_loops += 1.0;
-        if let Some(loop_cnt) = now.checked_duration_since(loop_counter) {
-            let time = loop_cnt.to_micros() as f32;
-            avg_loop = avg_loop * ((num_loops - 1.0) / num_loops) + time / num_loops;
-        }
-        loop_counter = now;
-        let Some(ms) = try_acquire_matrix_scan() else {
-            continue;
-        };
-        let count = core::mem::replace(&mut ms.scan.num_scans, 0);
-        drop(ms);
-        if count >= f32::MAX as usize - 2 {
-            num_scans = 1.0;
-            avg_scan = 0.0;
-        } else {
-            let count_f = count as f32;
-            if count_f >= f32::MAX - num_scans - 1.0 {
-                num_scans = 1.0;
-                avg_scan = 1.0;
-            }
-        }
-        let count_f = count as f32;
-        num_scans += count_f;
-        if let Some(scan_timer) = now.checked_duration_since(scan_counter) {
-            let scan_time = scan_timer.to_millis();
-            if scan_time >= f32::MAX as u64 - 1 {
-                scan_counter = timer.get_counter();
-                continue;
-            } else if scan_time == 0 {
-                continue;
-            }
-            let scan_timef = scan_time as f32;
-            avg_scan = scan_timef / num_scans;
-        } else {
-            num_scans = 1.0;
-            avg_scan = 0.0;
-            scan_counter = timer.get_counter();
         }
     }
 }
@@ -201,11 +133,17 @@ fn run_core1(
     mut right_buttons: RightButtons,
     mut timer: Timer,
 ) -> ! {
-    const SEND_AT_LEAST_MICROS: u64 = 1000;
-    let mut last_send = timer.count_down();
-    last_send.start(MicrosDurationU64::micros(SEND_AT_LEAST_MICROS));
+    let mut loop_count: LoopCounter<100_000> = LoopCounter::new(timer.get_counter());
     loop {
-        right_buttons.scan_matrix(&mut serializer);
-        acquire_matrix_scan().scan.num_scans += 1;
+        if right_buttons.scan_matrix(&mut serializer) {
+            push_touch_to_admin();
+        }
+        if loop_count.increment() {
+            let now = timer.get_counter();
+            let lc = loop_count.value(now);
+            if push_loop_to_admin(lc) {
+                loop_count.reset(now);
+            }
+        }
     }
 }

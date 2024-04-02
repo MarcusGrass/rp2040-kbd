@@ -9,11 +9,10 @@ pub struct SleepCountdown {
 }
 
 impl SleepCountdown {
-
     pub const fn new() -> Self {
         Self {
             is_asleep: false,
-            touched_last: Instant::from_ticks(0)
+            touched_last: Instant::from_ticks(0),
         }
     }
 
@@ -25,9 +24,11 @@ impl SleepCountdown {
 
     #[inline]
     pub fn should_sleep(&mut self, now: Instant) -> bool {
-        !self.is_asleep && now.checked_duration_since(self.touched_last)
-            .map(|dur| dur.to_secs() > SLEEP_AFTER_SECONDS )
-            .unwrap_or_default()
+        !self.is_asleep
+            && now
+                .checked_duration_since(self.touched_last)
+                .map(|dur| dur.to_secs() > SLEEP_AFTER_SECONDS)
+                .unwrap_or_default()
     }
 
     #[inline]
@@ -44,6 +45,4 @@ impl SleepCountdown {
     pub fn set_is_awake(&mut self) {
         self.is_asleep = false;
     }
-
-
 }

@@ -14,6 +14,7 @@ use bitvec::order::Lsb0;
 use core::fmt::Write;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use rp2040_hal::gpio::{DynPinId, FunctionSio, Pin, PinId, PullUp, SioInput};
+use rp2040_hal::rom_data::reset_to_usb_boot;
 
 type RowPin = Pin<DynPinId, FunctionSio<SioInput>, PullUp>;
 type ButtonPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
@@ -151,39 +152,10 @@ impl MatrixUpdate {
 }
 
 #[macro_export]
-macro_rules! check_col_no_store {
-    ($slf: expr, $pt: tt) => {{
-        let mut col = $slf.cols.$pt.take().unwrap();
-        let mut col = col.into_push_pull_output_in_state(PinState::Low);
-        // Todo: Remove this redundant wait
-        let mut changed = false;
-        for row_ind in 0..NUM_ROWS {
-            let ind = matrix_ind(row_ind, $pt);
-            let state = matches!($slf.rows[row_ind].is_low(), Ok(true));
-            if state != $slf.matrix[ind] {
-                #[cfg(feature = "serial")]
-                {
-                    let _ = acquire_usb().write_fmt(format_args!(
-                        "R{}, C{} -> {}\r\n",
-                        row_ind, $pt, state as u8
-                    ));
-                }
-                changed = true;
-            }
-            $slf.matrix.set(ind, state);
-        }
-        let _ = col.set_high();
-        $slf.cols.$pt = Some(col.into_pull_up_input());
-        changed
-    }};
-}
-
-#[macro_export]
 macro_rules! check_col_push_evt {
     ($slf: expr, $pt: tt, $serializer: expr, $enc_state: expr) => {{
         let mut col = $slf.cols.$pt.take().unwrap();
         let mut col = col.into_push_pull_output_in_state(PinState::Low);
-        // Todo: Remove this redundant wait
         let mut changed = false;
         for row_ind in 0..NUM_ROWS {
             let ind = matrix_ind(row_ind, $pt);
@@ -199,6 +171,10 @@ macro_rules! check_col_push_evt {
                 $serializer.serialize_matrix_state(&$crate::keyboard::MatrixUpdate::new(
                     ind as u8, state, $enc_state,
                 ));
+                // Todo: Make this less esoteric
+                if $pt == 2 && row_ind == 4 {
+                    rp2040_hal::rom_data::reset_to_usb_boot(0, 0);
+                }
                 changed = true;
             }
             $slf.matrix.set(ind, state);

@@ -1,5 +1,6 @@
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::keyboard::{MatrixState, INITIAL_STATE};
+use crate::runtime::locks::UsbLock;
 use core::cell::OnceCell;
 use core::fmt::Write;
 use core::marker::PhantomData;
@@ -10,7 +11,6 @@ use usb_device::device::{UsbDevice, UsbDeviceBuilder, UsbVidPid};
 use usb_device::UsbError;
 use usbd_hid::descriptor::{KeyboardReport, MouseReport, SerializedDescriptor};
 use usbd_hid::hid_class::HIDClass;
-use crate::runtime::locks::UsbLock;
 
 static mut USB_BUS: Option<UsbBusAllocator<hal::usb::UsbBus>> = None;
 
