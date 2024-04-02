@@ -1,5 +1,4 @@
 use crate::keyboard::split_serial::UartLeft;
-use crate::keyboard::sync::{ENCODER_MSG_LEN, ENCODER_TAG, MATRIX_STATE_MSG_LEN, MATRIX_STATE_TAG};
 use crate::keyboard::{
     matrix_ind, ButtonState, ButtonStateChange, MatrixState, MatrixUpdate, INITIAL_STATE, NUM_COLS,
     NUM_ROWS,

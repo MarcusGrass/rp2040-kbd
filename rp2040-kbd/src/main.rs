@@ -12,6 +12,7 @@
 #![allow(unused_imports)]
 #![allow(unused)]
 #![allow(dead_code)]
+#![allow(static_mut_refs)]
 #![cfg_attr(not(test), no_std)]
 //#![no_std]
 #![no_main]
@@ -20,7 +21,6 @@ pub(crate) mod debugger;
 mod hid;
 pub(crate) mod keyboard;
 mod keymap;
-pub(crate) mod lock;
 pub(crate) mod runtime;
 
 use core::borrow::BorrowMut;

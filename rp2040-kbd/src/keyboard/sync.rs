@@ -1,6 +1,0 @@
-use crate::keyboard::{ButtonStateChange, MatrixState, NUM_COLS, NUM_ROWS};
-pub const MATRIX_STATE_TAG: u8 = u8::MAX - 1;
-pub const MATRIX_STATE_MSG_LEN: usize = 5;
-pub const ENCODER_TAG: u8 = u8::MAX - 2;
-
-pub const ENCODER_MSG_LEN: usize = 2;

@@ -1,12 +1,10 @@
 //! Common between sides, put everything with the same pinouts and shared hardware
 //! code here
-mod layer;
 pub mod left;
 pub mod oled;
 pub mod power_led;
 pub mod right;
 pub mod split_serial;
-mod sync;
 pub mod usb_serial;
 
 use crate::keyboard::left::message_receiver::EncoderDirection;

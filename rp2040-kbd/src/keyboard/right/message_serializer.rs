@@ -1,5 +1,4 @@
 use crate::keyboard::split_serial::UartRight;
-use crate::keyboard::sync::{ENCODER_MSG_LEN, ENCODER_TAG, MATRIX_STATE_MSG_LEN, MATRIX_STATE_TAG};
 use crate::keyboard::{MatrixState, MatrixUpdate, NUM_COLS, NUM_ROWS};
 use embedded_io::Write;
 
