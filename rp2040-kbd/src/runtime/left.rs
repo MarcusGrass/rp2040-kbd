@@ -143,7 +143,6 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
         keycodes: [0u8; 6],
     };
 
-    // Handle interrupt on this same core
     #[cfg(feature = "hiddev")]
     unsafe {
         liatris::hal::pac::NVIC::unmask(USBCTRL_IRQ);
@@ -180,6 +179,7 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
     }
 }
 
+/// Safety: Called from the same core that publishes
 #[interrupt]
 #[allow(non_snake_case)]
 #[cfg(feature = "hiddev")]

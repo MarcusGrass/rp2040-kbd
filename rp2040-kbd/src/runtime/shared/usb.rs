@@ -4,7 +4,7 @@ use core::cell::OnceCell;
 use core::fmt::Write;
 use core::marker::PhantomData;
 use liatris::hal;
-use rp2040_hal::sio::{Spinlock14, Spinlock15};
+use rp2040_hal::sio::{Spinlock15};
 use rp2040_hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::device::{UsbDevice, UsbDeviceBuilder, UsbVidPid};
@@ -99,7 +99,6 @@ pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
 #[cfg(feature = "hiddev")]
 pub fn push_hid_report(keyboard_report: &KeyboardReport) -> bool {
     critical_section::with(|_| unsafe {
-        Spinlock14::claim();
         matches!(
             USB_HID.as_mut().map(|hid| hid.push_input(keyboard_report)),
             Some(Err(UsbError::WouldBlock))
@@ -116,7 +115,6 @@ pub fn push_hid_report(keyboard_report: KeyboardReport) -> bool {
 #[inline]
 #[cfg(feature = "hiddev")]
 pub fn usb_hid_interrupt_poll() {
-    Spinlock14::claim();
     unsafe {
         if let (Some(dev), Some(hid)) = (USB_HIDDEV.as_mut(), USB_HID.as_mut()) {
             dev.poll(&mut [hid]);
