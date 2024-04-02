@@ -9,7 +9,6 @@ pub mod right;
 pub mod split_serial;
 pub mod usb_serial;
 
-use crate::runtime::shared::usb::acquire_usb;
 use bitvec::array::BitArray;
 use bitvec::order::Lsb0;
 use core::fmt::Write;
@@ -162,10 +161,13 @@ macro_rules! check_col_no_store {
             let ind = matrix_ind(row_ind, $pt);
             let state = matches!($slf.rows[row_ind].is_low(), Ok(true));
             if state != $slf.matrix[ind] {
-                let _ = acquire_usb().write_fmt(format_args!(
-                    "R{}, C{} -> {}\r\n",
-                    row_ind, $pt, state as u8
-                ));
+                #[cfg(feature = "serial")]
+                {
+                    let _ = acquire_usb().write_fmt(format_args!(
+                        "R{}, C{} -> {}\r\n",
+                        row_ind, $pt, state as u8
+                    ));
+                }
                 changed = true;
             }
             $slf.matrix.set(ind, state);
@@ -187,10 +189,13 @@ macro_rules! check_col_push_evt {
             let ind = matrix_ind(row_ind, $pt);
             let state = matches!($slf.rows[row_ind].is_low(), Ok(true));
             if state != $slf.matrix[ind] {
-                let _ = acquire_usb().write_fmt(format_args!(
-                    "R{}, C{} -> {}\r\n",
-                    row_ind, $pt, state as u8
-                ));
+                #[cfg(feature = "serial")]
+                {
+                    let _ = $crate::runtime::shared::usb::acquire_usb().write_fmt(format_args!(
+                        "R{}, C{} -> {}\r\n",
+                        row_ind, $pt, state as u8
+                    ));
+                }
                 $serializer.serialize_matrix_state(&$crate::keyboard::MatrixUpdate::new(
                     ind as u8, state, $enc_state,
                 ));

@@ -14,7 +14,6 @@ use rp2040_hal::gpio::bank0::{
 use usbd_hid::descriptor::KeyboardReport;
 
 pub struct LeftButtons {
-    pub matrix: MatrixState,
     pub rows: [RowPin; 5],
     pub cols: (
         Option<ButtonPin<Gpio9>>,
@@ -45,7 +44,6 @@ impl LeftButtons {
         ),
     ) -> Self {
         Self {
-            matrix: INITIAL_STATE,
             rows: [
                 rows.0.into_dyn_pin(),
                 rows.1.into_dyn_pin(),
@@ -54,21 +52,6 @@ impl LeftButtons {
                 rows.4.into_dyn_pin(),
             ],
             cols,
-        }
-    }
-
-    pub fn scan_matrix(&mut self) -> bool {
-        if crate::check_col_no_store!(self, 0) ||
-        crate::check_col_no_store!(self, 1) ||
-        crate::check_col_no_store!(self, 2) ||
-        crate::check_col_no_store!(self, 3) ||
-        crate::check_col_no_store!(self, 4) ||
-        // Todo: Row 4 gets weird, may be because it has fewer buttons, may be wrongly mapped
-        crate::check_col_no_store!(self, 5)
-        {
-            true
-        } else {
-            false
         }
     }
 }

@@ -6,7 +6,6 @@ use crate::keyboard::{
     matrix_ind, ButtonPin, ButtonState, ButtonStateChange, MatrixState, RowPin, INITIAL_STATE,
     NUM_COLS, NUM_ROWS,
 };
-use crate::runtime::shared::usb::acquire_usb;
 use crate::{check_col_no_store, check_col_push_evt};
 use core::fmt::Write;
 use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};

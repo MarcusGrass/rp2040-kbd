@@ -3,7 +3,6 @@ use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::right::RightButtons;
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
-use crate::runtime::shared::usb::{acquire_usb, init_usb};
 use crate::runtime::shared::{acquire_matrix_scan, try_acquire_matrix_scan};
 use core::fmt::Write;
 use embedded_hal::timer::CountDown;
@@ -34,7 +33,8 @@ pub fn run_right<'a>(
     oled_handle.clear();
     oled_handle.clear_line(72);
     let _ = oled_handle.write(72, "0");
-    unsafe { init_usb(usb_bus) };
+    #[cfg(feature = "serial")]
+    unsafe { crate::runtime::shared::usb::init_usb(usb_bus) };
     oled_handle.clear_line(0);
     let _ = oled_handle.write(72, "1");
     let cores = mc.cores();
@@ -64,14 +64,17 @@ pub fn run_right<'a>(
     oled_handle.clear_line(72);
     let _ = oled_handle.write(72, "2");
     loop {
-        handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
-
-        if output_all {
-            if !has_dumped {
-                let _ = acquire_usb().write_str("Right side running\r\n");
-                has_dumped = true;
+        #[cfg(feature = "serial")]
+        {
+            handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
+            if output_all {
+                if !has_dumped {
+                    let _ = crate::runtime::shared::usb::acquire_usb().write_str("Right side running\r\n");
+                    has_dumped = true;
+                }
             }
         }
+
         let now = timer.get_counter();
         if let Some(dur) = now.checked_duration_since(prev) {
             if dur.to_millis() > 200 {
@@ -151,8 +154,9 @@ pub fn run_right<'a>(
     }
 }
 
+#[cfg(feature = "serial")]
 fn handle_usb(power_led: &mut PowerLed, last_chars: &mut [u8], output_all: &mut bool) {
-    let mut usb = acquire_usb();
+    let mut usb = crate::runtime::shared::usb::acquire_usb();
     if usb
         .dev
         .as_mut()

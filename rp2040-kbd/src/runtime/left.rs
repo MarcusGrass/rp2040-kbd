@@ -31,7 +31,6 @@ pub fn run_left<'a>(
     mut power_led_pin: PowerLed,
     timer: Timer,
 ) -> ! {
-    const PONG: &[u8] = b"pong";
     unsafe {
         init_usb(usb_bus);
     }
@@ -89,9 +88,11 @@ pub fn run_left<'a>(
         }
 
          */
+        #[cfg(feature = "serial")]
         handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
     }
 }
+#[cfg(feature = "serial")]
 fn handle_usb(
     power_led: &mut PowerLed,
     last_chars: &mut [u8],
