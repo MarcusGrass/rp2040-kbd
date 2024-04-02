@@ -19,6 +19,7 @@ use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::{UsbBus, UsbBusAllocator};
 use usbd_hid::descriptor::KeyboardReport;
+use crate::keyboard::oled::left::LeftOledDrawer;
 use crate::runtime::shared::cores_left::{KeycoreToAdminMessage, pop_message, push_loop_to_admin, push_touch_to_admin};
 use crate::runtime::shared::loop_counter::LoopCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
@@ -42,7 +43,7 @@ pub fn run_left<'a>(
         run_core1(receiver, left_buttons, timer)
     });
 
-    oled_handle.clear();
+    let mut oled_left = LeftOledDrawer::new(oled_handle);
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
     let mut sleep = SleepCountdown::new();
@@ -51,31 +52,22 @@ pub fn run_left<'a>(
         match pop_message() {
             Some(KeycoreToAdminMessage::Touch) => {
                 sleep.touch(now);
+                oled_left.show();
             }
             Some(KeycoreToAdminMessage::Loop(lc)) => {
                 let loop_millis = lc.count as u64 / lc.duration.to_millis();
                 if sleep.is_awake() {
-                    if loop_millis <= u16::MAX as u64 {
-                        let mut s: String<5> = String::new();
-                        s.write_fmt(format_args!("{loop_millis}"));
-                        oled_handle.clear_line(18);
-                        oled_handle.write(18, s.as_str());
-                    } else {
-                        oled_handle.clear_line(18);
-                        oled_handle.write(18, "OFL");
+                    if let Some((header, body)) = lc.as_display() {
+                        oled_left.update_scan_loop(header, body);
                     }
                 }
-
             }
             _ => {}
         }
         if sleep.should_sleep(now) {
-            oled_handle.clear();
-            sleep.set_sleeping();
+            oled_left.hide();
         }
-        if sleep.is_awake() {
-            oled_handle.write(0, "Hello");
-        }
+        oled_left.render();
         #[cfg(feature = "serial")]
         handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
     }

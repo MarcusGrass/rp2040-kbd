@@ -1,3 +1,6 @@
+#[cfg(feature = "left")]
+pub mod left;
+
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::Point;
 use embedded_graphics::mono_font::iso_8859_2::FONT_6X9;
@@ -7,6 +10,7 @@ use embedded_graphics::prelude::Size;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::text::{Baseline, Text};
 use embedded_graphics::Drawable;
+use heapless::String;
 use liatris::pac::{I2C1, UART0};
 use rp2040_hal::gpio::bank0::{Gpio0, Gpio1, Gpio2, Gpio3};
 use rp2040_hal::gpio::{FunctionI2c, FunctionUart, Pin, PullDown};
@@ -14,6 +18,28 @@ use rp2040_hal::uart::{Enabled, UartPeripheral};
 use ssd1306::mode::BufferedGraphicsMode;
 use ssd1306::prelude::{Brightness, DisplaySize128x32, I2CInterface};
 use ssd1306::Ssd1306;
+
+#[inline]
+pub fn blank_line() -> String<5> {
+    let mut s = String::new();
+    let _ = s.push_str("     ");
+    s
+}
+
+pub struct DrawUnit {
+    pub content: String<5>,
+    pub needs_redraw: bool
+}
+
+impl DrawUnit {
+    #[inline]
+    pub fn blank() -> Self {
+        Self { content: blank_line(), needs_redraw: false }
+    }
+    pub fn new(content: String<5>, needs_redraw: bool) -> Self {
+        Self { content, needs_redraw }
+    }
+}
 
 pub struct OledHandle {
     display: Ssd1306<

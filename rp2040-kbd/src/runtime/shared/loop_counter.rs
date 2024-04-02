@@ -1,3 +1,5 @@
+use core::fmt::Write;
+use heapless::String;
 use rp2040_hal::fugit::{MicrosDuration};
 use rp2040_hal::timer::Instant;
 
@@ -5,6 +7,42 @@ use rp2040_hal::timer::Instant;
 pub struct LoopCount {
     pub duration: MicrosDuration<u64>,
     pub count: u32,
+}
+
+impl LoopCount {
+
+    pub fn as_display(&self) -> Option<(String<5>, String<5>)> {
+        if self.count > f32::MAX as u32 {
+            return None;
+        }
+        let count = self.count as f32;
+        let micros = self.duration.to_micros();
+        if micros < f32::MAX as u64 {
+            let dur = micros as f32;
+            let res = dur / count;
+            if res <= 9999.9 {
+                let mut header = String::new();
+                let _ = header.push_str("my");
+                let mut body = String::new();
+                body.write_fmt(format_args!("{res:.1}"));
+                return Some((header, body))
+            }
+        }
+        let millis = self.duration.to_millis();
+        if millis >= f32::MAX as u64 {
+            return None;
+        }
+        let dur = millis as f32;
+        let res = dur / count;
+        if res > 9999.9 {
+            return None;
+        }
+        let mut header = String::new();
+        let _ = header.push_str("ms");
+        let mut body = String::new();
+        let _ = body.write_fmt(format_args!("{res:.1}"));
+        Some((header, body))
+    }
 }
 
 pub struct LoopCounter<const N: u32> {
@@ -36,4 +74,5 @@ impl<const N: u32> LoopCounter<N> {
         self.start = start;
         self.count = 0;
     }
+
 }

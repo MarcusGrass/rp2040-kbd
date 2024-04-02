@@ -1,7 +1,7 @@
 use core::time::Duration;
 use rp2040_hal::timer::Instant;
 
-const SLEEP_AFTER_SECONDS: u64 = 6;
+const SLEEP_AFTER_SECONDS: u64 = 60;
 
 pub struct SleepCountdown {
     is_asleep: bool,
