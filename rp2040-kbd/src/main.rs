@@ -9,7 +9,6 @@
 //!
 //! See the `Cargo.toml` file for Copyright and license details.
 //!
-#![allow(unused_imports)]
 #![allow(unused)]
 #![allow(dead_code)]
 #![allow(static_mut_refs)]
@@ -17,7 +16,6 @@
 //#![no_std]
 #![no_main]
 
-pub(crate) mod debugger;
 mod hid;
 pub(crate) mod keyboard;
 mod keymap;

@@ -1,6 +1,3 @@
-mod shared;
-mod usb;
-
 use crate::keyboard::left::message_receiver::{DeserializedMessage, MessageReceiver};
 use crate::keyboard::left::{KeyboardState, LeftButtons};
 use crate::keyboard::oled::OledHandle;
