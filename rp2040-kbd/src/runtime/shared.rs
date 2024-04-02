@@ -1,4 +1,9 @@
 pub mod usb;
+pub mod sleep;
+#[cfg(feature = "left")]
+pub mod cores_left;
+mod ring_buffer;
+pub mod loop_counter;
 
 use crate::keyboard::{MatrixState, INITIAL_STATE};
 use core::marker::PhantomData;

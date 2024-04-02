@@ -19,6 +19,9 @@ use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::{UsbBus, UsbBusAllocator};
 use usbd_hid::descriptor::KeyboardReport;
+use crate::runtime::shared::cores_left::{KeycoreToAdminMessage, pop_message, push_loop_to_admin, push_touch_to_admin};
+use crate::runtime::shared::loop_counter::LoopCounter;
+use crate::runtime::shared::sleep::SleepCountdown;
 
 static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
 #[inline(never)]
@@ -35,59 +38,44 @@ pub fn run_left<'a>(
         init_usb(usb_bus);
     }
     let mut receiver = MessageReceiver::new(uart_driver);
-    mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, || {
-        run_core1(receiver, left_buttons)
+    mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
+        run_core1(receiver, left_buttons, timer)
     });
+
+    oled_handle.clear();
     let mut last_chars = [0u8; 128];
     let mut output_all = false;
-    let mut has_dumped = false;
-    let mut wants_read = false;
-    let mut next_u8 = 0u8;
-    let mut prev = timer.get_counter();
-    let mut flips = 0u16;
-    let mut buf = [0u8; 64];
-    let mut offset = 0;
-    let mut read = 0u16;
-    let mut written = 0u16;
-    let mut empty_reads = 0u16;
-    let mut err_reads = 0u16;
+    let mut sleep = SleepCountdown::new();
     loop {
         let now = timer.get_counter();
-        /*
-        if let Some(dur) = now.checked_duration_since(prev) {
-            if dur.to_millis() > 1000 && output_all {
-                oled_handle.clear();
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{}", receiver.good_matrix)).is_ok() {
-                    oled_handle.write(0, s.as_str());
+        match pop_message() {
+            Some(KeycoreToAdminMessage::Touch) => {
+                sleep.touch(now);
+            }
+            Some(KeycoreToAdminMessage::Loop(lc)) => {
+                let loop_millis = lc.count as u64 / lc.duration.to_millis();
+                if sleep.is_awake() {
+                    if loop_millis <= u16::MAX as u64 {
+                        let mut s: String<5> = String::new();
+                        s.write_fmt(format_args!("{loop_millis}"));
+                        oled_handle.clear_line(18);
+                        oled_handle.write(18, s.as_str());
+                    } else {
+                        oled_handle.clear_line(18);
+                        oled_handle.write(18, "OFL");
+                    }
                 }
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{}", receiver.successful_reads)).is_ok() {
-                    oled_handle.write(18, s.as_str());
-                }
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{}", receiver.total_read)).is_ok() {
-                    oled_handle.write(36, s.as_str());
-                }
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{}", receiver.bad_matrix)).is_ok() {
-                    oled_handle.write(54, s.as_str());
-                }
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{}", receiver.unk_msg)).is_ok() {
-                    oled_handle.write(74, s.as_str());
-                }
-                let mut s: String<5> = String::new();
-                if s.write_fmt(format_args!("{}", receiver.unk_rollback)).is_ok() {
-                    oled_handle.write(92, s.as_str());
-                }
-                wants_read = false;
-                prev = now;
 
             }
+            _ => {}
         }
-
-         */
+        if sleep.should_sleep(now) {
+            oled_handle.clear();
+            sleep.set_sleeping();
+        }
+        if sleep.is_awake() {
+            oled_handle.write(0, "Hello");
+        }
         #[cfg(feature = "serial")]
         handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
     }
@@ -135,7 +123,7 @@ fn handle_usb(
     Some(())
 }
 
-pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -> ! {
+pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, timer: Timer) -> ! {
     const DEFAULT_KBD: KeyboardReport = KeyboardReport {
         modifier: 0,
         reserved: 0,
@@ -150,6 +138,7 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
     let mut kbd = KeyboardState::empty();
     let mut kbd = crate::keymap::KeyboardState::new();
     let mut report_state = KeyboardReportState::new();
+    let mut loop_count: LoopCounter<100_000> = LoopCounter::new(timer.get_counter());
     loop {
         let mut any_change = false;
         #[cfg(feature = "hiddev")]
@@ -163,6 +152,7 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
             }
             if any_change {
                 push_hid_report(report_state.report());
+                push_touch_to_admin();
             }
         }
         #[cfg(feature = "serial")]
@@ -176,6 +166,14 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
 
              */
         }
+        if loop_count.increment() {
+            let now = timer.get_counter();
+            let lc = loop_count.value(now);
+            if push_loop_to_admin(lc) {
+                loop_count.reset(now);
+            }
+        }
+
     }
 }
 

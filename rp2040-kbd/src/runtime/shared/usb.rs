@@ -4,13 +4,13 @@ use core::cell::OnceCell;
 use core::fmt::Write;
 use core::marker::PhantomData;
 use liatris::hal;
-use rp2040_hal::sio::{Spinlock15};
 use rp2040_hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::device::{UsbDevice, UsbDeviceBuilder, UsbVidPid};
 use usb_device::UsbError;
 use usbd_hid::descriptor::{KeyboardReport, MouseReport, SerializedDescriptor};
 use usbd_hid::hid_class::HIDClass;
+use crate::runtime::locks::UsbLock;
 
 static mut USB_BUS: Option<UsbBusAllocator<hal::usb::UsbBus>> = None;
 
@@ -36,7 +36,7 @@ pub unsafe fn init_usb(allocator: UsbBusAllocator<hal::usb::UsbBus>) {
 
 #[cfg(feature = "serial")]
 pub fn acquire_usb<'a>() -> UsbGuard<'a> {
-    let lock = Spinlock15::claim();
+    let lock = UsbLock::claim();
     UsbGuard {
         serial: unsafe { USB_SERIAL.as_mut() },
         dev: unsafe { USB_DEVICE.as_mut() },
@@ -61,7 +61,7 @@ pub struct UsbGuard<'a> {
     pub dev: Option<&'a mut UsbSerialDevice<'static>>,
     pub output: &'a mut bool,
     #[cfg(feature = "serial")]
-    _lock: Spinlock15,
+    _lock: UsbLock,
     _pd: PhantomData<&'a ()>,
 }
 

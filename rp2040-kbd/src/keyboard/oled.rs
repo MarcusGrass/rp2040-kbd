@@ -53,6 +53,7 @@ impl OledHandle {
 
     pub fn clear(&mut self) {
         self.display.clear();
+        let _ = self.display.flush();
     }
 
     pub fn write(&mut self, l: i32, s: &str) -> bool {
