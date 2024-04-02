@@ -141,7 +141,9 @@ where
 
 pub trait KeyboardButton {
     #[inline(always)]
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {}
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
+        false
+    }
 }
 
 macro_rules! keyboard_key {
@@ -219,7 +221,7 @@ macro_rules! pressed_push_pop_modifier {
 macro_rules! bail_if_same {
     ($slf: expr, $pressed: expr) => {
         if $slf.0 == $pressed {
-            return;
+            return false;
         }
     };
 }
@@ -227,14 +229,18 @@ macro_rules! bail_if_same {
 macro_rules! impl_read_pin_col {
     ($($structure: expr, $row: tt,)*, $col: tt) => {
         paste! {
-            pub fn [<read_col _ $col _pins>]($([< $structure:snake >]: &mut $structure,)* left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState) {
+            pub fn [<read_col _ $col _pins>]($([< $structure:snake >]: &mut $structure,)* left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState) -> bool {
                 let mut col = left_buttons.cols.$col.take().unwrap();
                 let mut col = col.into_push_pull_output_in_state(PinState::Low);
+                let mut any_change = false;
                 $(
-                    [< $structure:snake >].update_state(matches!(left_buttons.rows[$row].is_low(), Ok(true)), keyboard_report_state);
+                    if [< $structure:snake >].update_state(matches!(left_buttons.rows[$row].is_low(), Ok(true)), keyboard_report_state) {
+                        any_change = true;
+                    }
                 )*
                 let _ = col.set_high();
                 left_buttons.cols.$col = Some(col.into_pull_up_input());
+                any_change
             }
 
         }
@@ -303,8 +309,8 @@ impl KeyboardState {
         &mut self,
         left_buttons: &mut LeftButtons,
         keyboard_report_state: &mut KeyboardReportState,
-    ) {
-        read_col_0_pins(
+    ) -> bool {
+        let col0_change = read_col_0_pins(
             &mut self.left_row0_col0,
             &mut self.left_row1_col0,
             &mut self.left_row2_col0,
@@ -312,7 +318,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
         );
-        read_col_1_pins(
+        let col1_change = read_col_1_pins(
             &mut self.left_row0_col1,
             &mut self.left_row1_col1,
             &mut self.left_row2_col1,
@@ -321,7 +327,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
         );
-        read_col_2_pins(
+        let col2_change = read_col_2_pins(
             &mut self.left_row0_col2,
             &mut self.left_row1_col2,
             &mut self.left_row2_col2,
@@ -330,7 +336,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
         );
-        read_col_3_pins(
+        let col3_change = read_col_3_pins(
             &mut self.left_row0_col3,
             &mut self.left_row1_col3,
             &mut self.left_row2_col3,
@@ -339,7 +345,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
         );
-        read_col_4_pins(
+        let col4_change = read_col_4_pins(
             &mut self.left_row0_col4,
             &mut self.left_row1_col4,
             &mut self.left_row2_col4,
@@ -348,7 +354,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
         );
-        read_col_5_pins(
+        let col5_change = read_col_5_pins(
             &mut self.left_row0_col5,
             &mut self.left_row1_col5,
             &mut self.left_row2_col5,
@@ -357,6 +363,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
         );
+        col0_change || col1_change || col2_change || col3_change || col4_change || col5_change
     }
 
     pub fn update_right(
@@ -366,93 +373,151 @@ impl KeyboardState {
     ) {
         let (ind, change) = update.matrix_change();
         match ind {
-            0 => self
-                .right_row0_col0
-                .update_state(change, keyboard_report_state),
-            1 => self
-                .right_row0_col1
-                .update_state(change, keyboard_report_state),
-            2 => self
-                .right_row0_col2
-                .update_state(change, keyboard_report_state),
-            3 => self
-                .right_row0_col3
-                .update_state(change, keyboard_report_state),
-            4 => self
-                .right_row0_col4
-                .update_state(change, keyboard_report_state),
-            5 => self
-                .right_row0_col5
-                .update_state(change, keyboard_report_state),
-            6 => self
-                .right_row1_col0
-                .update_state(change, keyboard_report_state),
-            7 => self
-                .right_row1_col1
-                .update_state(change, keyboard_report_state),
-            8 => self
-                .right_row1_col2
-                .update_state(change, keyboard_report_state),
-            9 => self
-                .right_row1_col3
-                .update_state(change, keyboard_report_state),
-            10 => self
-                .right_row1_col4
-                .update_state(change, keyboard_report_state),
-            11 => self
-                .right_row1_col5
-                .update_state(change, keyboard_report_state),
-            12 => self
-                .right_row2_col0
-                .update_state(change, keyboard_report_state),
-            13 => self
-                .right_row2_col1
-                .update_state(change, keyboard_report_state),
-            14 => self
-                .right_row2_col2
-                .update_state(change, keyboard_report_state),
-            15 => self
-                .right_row2_col3
-                .update_state(change, keyboard_report_state),
-            16 => self
-                .right_row2_col4
-                .update_state(change, keyboard_report_state),
-            17 => self
-                .right_row2_col5
-                .update_state(change, keyboard_report_state),
-            18 => self
-                .right_row3_col0
-                .update_state(change, keyboard_report_state),
-            19 => self
-                .right_row3_col1
-                .update_state(change, keyboard_report_state),
-            20 => self
-                .right_row3_col2
-                .update_state(change, keyboard_report_state),
-            21 => self
-                .right_row3_col3
-                .update_state(change, keyboard_report_state),
-            22 => self
-                .right_row3_col4
-                .update_state(change, keyboard_report_state),
-            23 => self
-                .right_row3_col5
-                .update_state(change, keyboard_report_state),
-            25 => self
-                .right_row4_col1
-                .update_state(change, keyboard_report_state),
-            26 => self
-                .right_row4_col2
-                .update_state(change, keyboard_report_state),
-            27 => self
-                .right_row4_col3
-                .update_state(change, keyboard_report_state),
-            28 => self
-                .right_row4_col4
-                .update_state(change, keyboard_report_state),
-            29 => self
-                .right_row4_col5
-                .update_state(change, keyboard_report_state),
+            0 => {
+                self
+                    .right_row0_col0
+                    .update_state(change, keyboard_report_state);
+            },
+            1 => {
+                self
+                    .right_row0_col1
+                    .update_state(change, keyboard_report_state);
+            },
+            2 => {
+                self
+                    .right_row0_col2
+                    .update_state(change, keyboard_report_state);
+            },
+            3 => {
+                self
+                    .right_row0_col3
+                    .update_state(change, keyboard_report_state);
+            }
+            4 => {
+                self
+                    .right_row0_col4
+                    .update_state(change, keyboard_report_state);
+            },
+            5 => {
+                self
+                    .right_row0_col5
+                    .update_state(change, keyboard_report_state);
+            },
+            6 => {
+                self
+                    .right_row1_col0
+                    .update_state(change, keyboard_report_state);
+            },
+            7 => {
+                self
+                    .right_row1_col1
+                    .update_state(change, keyboard_report_state);
+            },
+            8 => {
+                self
+                    .right_row1_col2
+                    .update_state(change, keyboard_report_state);
+            },
+            9 => {
+                self
+                    .right_row1_col3
+                    .update_state(change, keyboard_report_state);
+            },
+            10 => {
+                self
+                    .right_row1_col4
+                    .update_state(change, keyboard_report_state);
+            },
+            11 => {
+                self
+                    .right_row1_col5
+                    .update_state(change, keyboard_report_state);
+            },
+            12 => {
+                self
+                    .right_row2_col0
+                    .update_state(change, keyboard_report_state);
+            },
+            13 => {
+                self
+                    .right_row2_col1
+                    .update_state(change, keyboard_report_state);
+            },
+            14 => {
+                self
+                    .right_row2_col2
+                    .update_state(change, keyboard_report_state);
+            },
+            15 => {
+                self
+                    .right_row2_col3
+                    .update_state(change, keyboard_report_state);
+            },
+            16 => {
+                self
+                    .right_row2_col4
+                    .update_state(change, keyboard_report_state);
+            },
+            17 => {
+                self
+                    .right_row2_col5
+                    .update_state(change, keyboard_report_state);
+            },
+            18 => {
+                self
+                    .right_row3_col0
+                    .update_state(change, keyboard_report_state);
+            },
+            19 => {
+                self
+                    .right_row3_col1
+                    .update_state(change, keyboard_report_state);
+            },
+            20 => {
+                self
+                    .right_row3_col2
+                    .update_state(change, keyboard_report_state);
+            },
+            21 => {
+                self
+                    .right_row3_col3
+                    .update_state(change, keyboard_report_state);
+            },
+            22 => {
+                self
+                    .right_row3_col4
+                    .update_state(change, keyboard_report_state);
+            },
+            23 => {
+                self
+                    .right_row3_col5
+                    .update_state(change, keyboard_report_state);
+            },
+            25 => {
+                self
+                    .right_row4_col1
+                    .update_state(change, keyboard_report_state);
+            },
+            26 => {
+                self
+                    .right_row4_col2
+                    .update_state(change, keyboard_report_state);
+            },
+            27 => {
+                self
+                    .right_row4_col3
+                    .update_state(change, keyboard_report_state);
+            },
+            28 => {
+                self
+                    .right_row4_col4
+                    .update_state(change, keyboard_report_state);
+            },
+            29 => {
+                self
+                    .right_row4_col5
+                    .update_state(change, keyboard_report_state);
+            },
             _ => {}
         }
     }
@@ -492,15 +557,16 @@ macro_rules! with_modifier_kc {
 
 
 impl KeyboardButton for LeftRow0Col0 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::KC_TAB);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow0Col1 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi => {
@@ -544,11 +610,12 @@ impl KeyboardButton for LeftRow0Col1 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow0Col2 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi => {
@@ -602,11 +669,12 @@ impl KeyboardButton for LeftRow0Col2 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow0Col3 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi => {
@@ -649,11 +717,12 @@ impl KeyboardButton for LeftRow0Col3 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow0Col4 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -683,10 +752,11 @@ impl KeyboardButton for LeftRow0Col4 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 impl KeyboardButton for LeftRow0Col5 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -708,19 +778,21 @@ impl KeyboardButton for LeftRow0Col5 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow1Col0 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::ESCAPE);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow1Col1 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe | KeymapLayer::QwertyAnsi => {
@@ -744,10 +816,11 @@ impl KeyboardButton for LeftRow1Col1 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 impl KeyboardButton for LeftRow1Col2 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -774,11 +847,12 @@ impl KeyboardButton for LeftRow1Col2 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow1Col3 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -810,10 +884,11 @@ impl KeyboardButton for LeftRow1Col3 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 impl KeyboardButton for LeftRow1Col4 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -845,11 +920,12 @@ impl KeyboardButton for LeftRow1Col4 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow1Col5 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -876,19 +952,21 @@ impl KeyboardButton for LeftRow1Col5 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow2Col0 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::LEFT_SHIFT);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow2Col1 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi => {
@@ -928,11 +1006,12 @@ impl KeyboardButton for LeftRow2Col1 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow2Col2 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -957,11 +1036,12 @@ impl KeyboardButton for LeftRow2Col2 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow2Col3 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -985,11 +1065,12 @@ impl KeyboardButton for LeftRow2Col3 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow2Col4 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1013,11 +1094,12 @@ impl KeyboardButton for LeftRow2Col4 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow2Col5 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1044,19 +1126,21 @@ impl KeyboardButton for LeftRow2Col5 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow3Col0 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::LEFT_CONTROL);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow3Col1 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe | KeymapLayer::QwertyAnsi => {
@@ -1070,11 +1154,12 @@ impl KeyboardButton for LeftRow3Col1 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow3Col2 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe | KeymapLayer::QwertyGaming => {
@@ -1091,13 +1176,14 @@ impl KeyboardButton for LeftRow3Col2 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow3Col3 {}
 
 impl KeyboardButton for LeftRow3Col4 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::QwertyAnsi => {
@@ -1128,11 +1214,12 @@ impl KeyboardButton for LeftRow3Col4 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow3Col5 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1149,22 +1236,24 @@ impl KeyboardButton for LeftRow3Col5 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 // Row 4 col 0 does not exist
 impl KeyboardButton for LeftRow4Col1 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         if pressed {
             reset_to_usb_boot(0, 0);
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow4Col2 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe => {}
@@ -1180,11 +1269,12 @@ impl KeyboardButton for LeftRow4Col2 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow4Col3 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe | KeymapLayer::DvorakAnsi => {
@@ -1202,11 +1292,12 @@ impl KeyboardButton for LeftRow4Col3 {
         }
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N3);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow4Col4 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe | KeymapLayer::DvorakAnsi => {}
@@ -1221,28 +1312,31 @@ impl KeyboardButton for LeftRow4Col4 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for LeftRow4Col5 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         self.0 = pressed;
+        true
     }
 }
 
 // Right side, goes from right to left
 
 impl KeyboardButton for RightRow0Col0 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::BACKSPACE);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow0Col1 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1267,11 +1361,12 @@ impl KeyboardButton for RightRow0Col1 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow0Col2 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1296,11 +1391,12 @@ impl KeyboardButton for RightRow0Col2 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow0Col3 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1325,11 +1421,12 @@ impl KeyboardButton for RightRow0Col3 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow0Col4 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1354,11 +1451,12 @@ impl KeyboardButton for RightRow0Col4 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow0Col5 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1383,19 +1481,21 @@ impl KeyboardButton for RightRow0Col5 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow1Col0 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::ENTER);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow1Col1 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1419,11 +1519,12 @@ impl KeyboardButton for RightRow1Col1 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow1Col2 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1452,11 +1553,12 @@ impl KeyboardButton for RightRow1Col2 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow1Col3 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1485,11 +1587,12 @@ impl KeyboardButton for RightRow1Col3 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow1Col4 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1513,11 +1616,12 @@ impl KeyboardButton for RightRow1Col4 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow1Col5 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1546,19 +1650,21 @@ impl KeyboardButton for RightRow1Col5 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow2Col0 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::LEFT_SHIFT);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow2Col1 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1581,11 +1687,12 @@ impl KeyboardButton for RightRow2Col1 {
             }
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow2Col2 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1608,11 +1715,12 @@ impl KeyboardButton for RightRow2Col2 {
             }
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow2Col3 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1635,11 +1743,12 @@ impl KeyboardButton for RightRow2Col3 {
             }
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow2Col4 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1667,11 +1776,12 @@ impl KeyboardButton for RightRow2Col4 {
             }
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow2Col5 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
@@ -1690,19 +1800,21 @@ impl KeyboardButton for RightRow2Col5 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow3Col0 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::RIGHT_CONTROL);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow3Col1 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe |
@@ -1724,19 +1836,21 @@ impl KeyboardButton for RightRow3Col1 {
             }
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow3Col2 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_modifier!(keyboard_report_state, pressed, Modifier::RIGHT_ALT);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow3Col3 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe |
@@ -1758,11 +1872,12 @@ impl KeyboardButton for RightRow3Col3 {
             }
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow3Col4 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::QwertyGaming => {
@@ -1786,11 +1901,12 @@ impl KeyboardButton for RightRow3Col4 {
             }
         }
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow3Col5 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe | KeymapLayer::QwertyAnsi => {
@@ -1806,6 +1922,7 @@ impl KeyboardButton for RightRow3Col5 {
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
+        true
     }
 }
 
@@ -1814,33 +1931,37 @@ impl KeyboardButton for RightRow4Col1 {
 }
 
 impl KeyboardButton for RightRow4Col2 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N2);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow4Col3 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N3);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow4Col4 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N4);
         self.0 = pressed;
+        true
     }
 }
 
 impl KeyboardButton for RightRow4Col5 {
-    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) {
+    fn update_state(&mut self, pressed: bool, keyboard_report_state: &mut KeyboardReportState) -> bool {
         bail_if_same!(self, pressed);
         pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N5);
         self.0 = pressed;
+        true
     }
 }

@@ -154,25 +154,19 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons) -
     let mut kbd = crate::keymap::KeyboardState::new();
     let mut report_state = KeyboardReportState::new();
     loop {
-        /*
         let mut any_change = false;
-        if let Some(update) = receiver.try_read() {
-            any_change = kbd.update_right(update);
-        }
-
-        if left_buttons.scan_matrix() {
-            any_change = true;
-        }
-        let next_layer = KeymapLayer::DvorakAnsi.report(&left_buttons.matrix, &kbd.right);
-
-         */
         #[cfg(feature = "hiddev")]
         {
             if let Some(update) = receiver.try_read() {
                 kbd.update_right(update, &mut report_state);
+                any_change = true;
             }
-            kbd.scan_left(&mut left_buttons, &mut report_state);
-            push_hid_report(report_state.report());
+            if kbd.scan_left(&mut left_buttons, &mut report_state) {
+                any_change = true;
+            }
+            if any_change {
+                push_hid_report(report_state.report());
+            }
         }
         #[cfg(feature = "serial")]
         {
