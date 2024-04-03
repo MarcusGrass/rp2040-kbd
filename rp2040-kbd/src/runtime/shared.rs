@@ -3,7 +3,7 @@ pub mod cores_left;
 #[cfg(feature = "right")]
 pub mod cores_right;
 pub mod loop_counter;
-mod ring_buffer;
+pub mod ring_buffer;
 pub mod sleep;
 pub mod usb;
 

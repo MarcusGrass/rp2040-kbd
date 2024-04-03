@@ -6,9 +6,7 @@ use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::keymap::{KeyboardReportState, KeymapLayer};
-use crate::runtime::shared::cores_left::{
-    pop_message, push_loop_to_admin, push_touch_to_admin, KeycoreToAdminMessage,
-};
+use crate::runtime::shared::cores_left::{pop_message, push_loop_to_admin, push_touch_to_admin, KeycoreToAdminMessage, push_layer_change};
 use crate::runtime::shared::loop_counter::LoopCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
 use crate::runtime::shared::usb::{acquire_usb, init_usb, push_hid_report, usb_hid_interrupt_poll};
@@ -64,6 +62,39 @@ pub fn run_left<'a>(
                         oled_left.update_scan_loop(header, body);
                     }
                 }
+            }
+            Some(KeycoreToAdminMessage::LayerChange(km)) => {
+                let mut s = String::new();
+                match km {
+                    KeymapLayer::DvorakSe => {
+                        let _ = s.push_str("DV-SE");
+                    }
+                    KeymapLayer::DvorakAnsi => {
+                        let _ = s.push_str("DV-AN");
+                    }
+                    KeymapLayer::QwertyAnsi => {
+                        let _ = s.push_str("QW-AN");
+                    }
+                    KeymapLayer::QwertyGaming => {
+                        let _ = s.push_str("QW-GM");
+                    }
+                    KeymapLayer::Lower => {
+                        let _ = s.push_str("LO");
+                    }
+                    KeymapLayer::LowerAnsi => {
+                        let _ = s.push_str("LO-AN");
+                    }
+                    KeymapLayer::Raise => {
+                        let _ = s.push_str("RA");
+                    }
+                    KeymapLayer::Num => {
+                        let _ = s.push_str("NUM");
+                    }
+                    KeymapLayer::Settings => {
+                        let _ = s.push_str("SET");
+                    }
+                }
+                oled_left.update_layer(s);
             }
             _ => {}
         }
@@ -142,6 +173,9 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, t
     let mut kbd = crate::keymap::KeyboardState::new();
     let mut report_state = KeyboardReportState::new();
     let mut loop_count: LoopCounter<100_000> = LoopCounter::new(timer.get_counter());
+    if let Some(change) = report_state.layer_update() {
+        push_layer_change(change);
+    }
     loop {
         let mut any_change = false;
         if let Some(update) = receiver.try_read() {
@@ -154,6 +188,9 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, t
         if any_change {
             push_hid_report(report_state.report());
             push_touch_to_admin();
+        }
+        if let Some(change) = report_state.layer_update() {
+            push_layer_change(change);
         }
         if loop_count.increment() {
             let now = timer.get_counter();

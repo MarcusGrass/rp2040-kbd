@@ -8,6 +8,8 @@ pub struct LeftOledDrawer {
     scan_loop_header: DrawUnit,
     scan_loop_unit: DrawUnit,
     scan_loop_content: DrawUnit,
+    layer_header: DrawUnit,
+    layer_content: DrawUnit,
 }
 
 impl LeftOledDrawer {
@@ -16,6 +18,8 @@ impl LeftOledDrawer {
         let _ = header_content.push_str("LEFT");
         let mut scan_loop_header_content = String::new();
         let _ = scan_loop_header_content.push_str("SCAN");
+        let mut layer_header = String::new();
+        let _ = layer_header.push_str("LAYER");
         Self {
             handle,
             hidden: false,
@@ -23,6 +27,8 @@ impl LeftOledDrawer {
             scan_loop_header: DrawUnit::new(scan_loop_header_content, true),
             scan_loop_unit: DrawUnit::blank(),
             scan_loop_content: DrawUnit::blank(),
+            layer_header: DrawUnit::new(layer_header, true),
+            layer_content: DrawUnit::blank(),
         }
     }
 
@@ -39,6 +45,8 @@ impl LeftOledDrawer {
             self.scan_loop_header.needs_redraw = true;
             self.scan_loop_content.needs_redraw = true;
             self.scan_loop_unit.needs_redraw = true;
+            self.layer_header.needs_redraw = true;
+            self.layer_content.needs_redraw = true;
         }
         self.hidden = false;
     }
@@ -49,6 +57,11 @@ impl LeftOledDrawer {
         self.scan_loop_unit.needs_redraw = true;
         self.scan_loop_content.content = scan_loop_content;
         self.scan_loop_content.needs_redraw = true;
+    }
+
+    pub fn update_layer(&mut self, layer_content: String<5>) {
+        self.layer_content.content = layer_content;
+        self.layer_content.needs_redraw = true;
     }
 
     pub fn render(&mut self) {
@@ -78,6 +91,14 @@ impl LeftOledDrawer {
             let _ = self.handle.clear_line(36);
             let _ = self.handle.write(36, self.scan_loop_unit.content.as_str());
             self.scan_loop_unit.needs_redraw = false;
+        }
+        if self.layer_header.needs_redraw {
+            let _ = self.handle.clear_line(54);
+            let _ = self.handle.write(54, self.layer_header.content.as_str());
+        }
+        if self.layer_content.needs_redraw {
+            let _ = self.handle.clear_line(63);
+            let _ = self.handle.write(63, self.layer_content.content.as_str());
         }
     }
 

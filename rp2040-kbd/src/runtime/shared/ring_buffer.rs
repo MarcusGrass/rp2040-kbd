@@ -1,9 +1,20 @@
 use core::mem::MaybeUninit;
 
+#[derive(Copy)]
 pub(crate) struct RingBuffer<const N: usize, T> {
     ring: [MaybeUninit<T>; N],
     start: usize,
     filled: usize,
+}
+
+impl<const N: usize, T: Copy> Clone for RingBuffer<N, T> {
+    fn clone(&self) -> Self {
+        Self {
+            ring: self.ring.clone(),
+            start: self.start,
+            filled: self.filled,
+        }
+    }
 }
 
 impl<const N: usize, T> RingBuffer<N, T> {
