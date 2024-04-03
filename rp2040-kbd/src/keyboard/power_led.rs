@@ -12,16 +12,19 @@ impl PowerLed {
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn is_on(&self) -> bool {
         matches!(self.pin.is_high(), Ok(true))
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn turn_on(&mut self) {
         let _ = self.pin.set_high();
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn turn_off(&mut self) {
         let _ = self.pin.set_low();
     }

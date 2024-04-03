@@ -1,8 +1,6 @@
 use crate::keyboard::split_serial::UartRight;
-use crate::keyboard::{MatrixState, MatrixUpdate, NUM_COLS, NUM_ROWS};
-use embedded_io::Write;
+use crate::keyboard::MatrixUpdate;
 
-const BUF_SIZE: usize = 32;
 pub(crate) struct MessageSerializer {
     uart: UartRight,
 }

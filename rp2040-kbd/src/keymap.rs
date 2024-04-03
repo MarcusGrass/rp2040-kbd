@@ -1,11 +1,7 @@
 use crate::hid::keycodes::{KeyCode, Modifier};
 use crate::keyboard::left::LeftButtons;
-use crate::keyboard::{
-    matrix_ind, matrix_ind_to_row_col, MatrixChange, MatrixState, MatrixUpdate, NUM_COLS, NUM_ROWS,
-};
-use core::hash::BuildHasherDefault;
+use crate::keyboard::{MatrixChange, MatrixUpdate};
 use embedded_hal::digital::v2::{InputPin, OutputPin};
-use heapless::IndexMap;
 use paste::paste;
 use rp2040_hal::gpio::PinState;
 use rp2040_hal::rom_data::reset_to_usb_boot;
@@ -28,7 +24,6 @@ pub struct KeyboardReportState {
     inner_report: KeyboardReport,
     active_layer: KeymapLayer,
     last_perm_layer: Option<KeymapLayer>,
-    cursor: usize,
     jank: JankState,
     layer_change: Option<KeymapLayer>,
 }
@@ -56,7 +51,6 @@ impl KeyboardReportState {
             },
             active_layer: KeymapLayer::DvorakSe,
             last_perm_layer: None,
-            cursor: 0,
             jank: JankState {
                 pressing_double_quote: false,
                 pressing_single_quote: false,
@@ -72,6 +66,7 @@ impl KeyboardReportState {
         }
     }
 
+    #[cfg(feature = "hiddev")]
     pub fn report(&self) -> &KeyboardReport {
         &self.inner_report
     }
@@ -154,8 +149,8 @@ pub trait KeyboardButton {
     #[inline(always)]
     fn update_state(
         &mut self,
-        pressed: bool,
-        keyboard_report_state: &mut KeyboardReportState,
+        _pressed: bool,
+        _keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         false
     }
@@ -168,11 +163,6 @@ macro_rules! keyboard_key {
                 #[repr(transparent)]
                 #[derive(Copy, Clone, Default)]
                 pub struct [<$side Row $row Col $col>](bool);
-                impl [<$side Row $row Col $col>] {
-                    pub const ROW: u8 = $row;
-                    pub const COL: u8 = $col;
-                    pub const MATRIX_IND: usize = $crate::keyboard::matrix_ind($row, $col);
-                }
             )*
         }
         paste! {
@@ -238,7 +228,7 @@ macro_rules! impl_read_pin_col {
     ($($structure: expr, $row: tt,)*, $col: tt) => {
         paste! {
             pub fn [<read_col _ $col _pins>]($([< $structure:snake >]: &mut $structure,)* left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState) -> bool {
-                let mut col = left_buttons.cols.$col.take().unwrap();
+                let col = left_buttons.cols.$col.take().unwrap();
                 let mut col = col.into_push_pull_output_in_state(PinState::Low);
                 let mut any_change = false;
                 $(
@@ -386,8 +376,8 @@ impl KeyboardState {
             MatrixChange::Key(ind, change) => {
                 #[cfg(feature = "serial")]
                 {
-                    let (row, col) = matrix_ind_to_row_col(ind as usize);
-                    core::fmt::Write::write_fmt(
+                    let (row, col) = crate::keyboard::matrix_ind_to_row_col(ind as usize);
+                    let _ = core::fmt::Write::write_fmt(
                         &mut crate::runtime::shared::usb::acquire_usb(),
                         format_args!("R: R{row}, C{col} -> {}\r\n", change),
                     );
@@ -683,12 +673,12 @@ impl KeyboardButton for LeftRow0Col2 {
                         keyboard_report_state.jank.pressing_comma = true;
                     }
                 } else {
-                    if (keyboard_report_state.jank.pressing_left_bracket) {
+                    if keyboard_report_state.jank.pressing_left_bracket {
                         keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
                         keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
                         keyboard_report_state.jank.pressing_left_bracket = false;
                     }
-                    if (keyboard_report_state.jank.pressing_comma) {
+                    if keyboard_report_state.jank.pressing_comma {
                         keyboard_report_state.pop_key(KeyCode::COMMA);
                         keyboard_report_state.jank.pressing_comma = false;
                     }
@@ -1114,8 +1104,7 @@ impl KeyboardButton for LeftRow2Col2 {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::Q);
             }
-            KeymapLayer::QwertyAnsi => {}
-            KeymapLayer::QwertyGaming => {
+            KeymapLayer::QwertyAnsi => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::X);
             }
             KeymapLayer::QwertyGaming => {
@@ -1162,7 +1151,7 @@ impl KeyboardButton for LeftRow2Col3 {
                     KeyCode::X
                 );
             }
-            KeymapLayer::LowerAnsi | KeymapLayer::Raise | KeymapLayer::Num => {}
+            KeymapLayer::Raise | KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
         self.0 = pressed;
@@ -1289,7 +1278,6 @@ impl KeyboardButton for LeftRow3Col2 {
             KeymapLayer::QwertyAnsi => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::X);
             }
-            KeymapLayer::QwertyGaming => {}
             KeymapLayer::Lower => {}
             KeymapLayer::LowerAnsi => {}
             KeymapLayer::Raise => {}
@@ -1374,7 +1362,7 @@ impl KeyboardButton for LeftRow4Col1 {
     fn update_state(
         &mut self,
         pressed: bool,
-        keyboard_report_state: &mut KeyboardReportState,
+        _keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         bail_if_same!(self, pressed);
         if pressed {
@@ -1465,7 +1453,7 @@ impl KeyboardButton for LeftRow4Col5 {
     fn update_state(
         &mut self,
         pressed: bool,
-        keyboard_report_state: &mut KeyboardReportState,
+        _keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         bail_if_same!(self, pressed);
         self.0 = pressed;

@@ -2,6 +2,7 @@
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct KeyCode(pub u8);
 
+#[allow(dead_code)]
 impl KeyCode {
     //Keyboard = 0x01; //ErrorRollOver1 Sel N/A 3 3 3 4/101/104
     //Keyboard = 0x02; //POSTFail1 Sel N/A 3 3 3 4/101/104
@@ -221,6 +222,7 @@ impl KeyCode {
 #[derive(Copy, Clone, Debug)]
 pub struct Modifier(pub u8);
 
+#[allow(dead_code)]
 impl Modifier {
     pub const LEFT_CONTROL: Self = Self(0b0000_0001); //LeftControl DV 58 3 3 3 4/101/104
     pub const LEFT_SHIFT: Self = Self(0b0000_0010); //LeftShift DV 44 3 3 3 4/101/104

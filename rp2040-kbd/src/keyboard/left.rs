@@ -1,17 +1,9 @@
 pub(crate) mod message_receiver;
 
-use crate::keyboard::usb_serial::UsbSerial;
-use crate::keyboard::{
-    matrix_ind, matrix_ind_to_row_col, ButtonPin, ButtonState, ButtonStateChange, MatrixState,
-    MatrixUpdate, RowPin, INITIAL_STATE, NUM_COLS, NUM_ROWS,
-};
-use crate::runtime::shared::usb::acquire_usb;
-use core::fmt::Write;
-use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
+use crate::keyboard::{ButtonPin, RowPin};
 use rp2040_hal::gpio::bank0::{
     Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio6, Gpio7, Gpio8, Gpio9,
 };
-use usbd_hid::descriptor::KeyboardReport;
 
 pub struct LeftButtons {
     pub rows: [RowPin; 5],

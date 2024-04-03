@@ -9,8 +9,6 @@
 //!
 //! See the `Cargo.toml` file for Copyright and license details.
 //!
-#![allow(unused)]
-#![allow(dead_code)]
 #![allow(static_mut_refs)]
 #![cfg_attr(not(test), no_std)]
 //#![no_std]
@@ -22,7 +20,6 @@ pub(crate) mod keyboard;
 mod keymap;
 pub(crate) mod runtime;
 
-use core::borrow::BorrowMut;
 // The macro for our start-up function
 use liatris::{entry, Pins};
 
@@ -45,18 +42,11 @@ use usb_device::class_prelude::*;
 
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
-use core::fmt::Write;
-use embedded_graphics::Drawable;
-use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
-use embedded_hal::prelude::_embedded_hal_blocking_delay_DelayMs;
+use embedded_hal::digital::v2::InputPin;
 use rp2040_hal::fugit::RateExtU32;
-use rp2040_hal::gpio::PinId;
 use rp2040_hal::multicore::Multicore;
-use rp2040_hal::pio::PIOExt;
-use rp2040_hal::rom_data::reset_to_usb_boot;
-use rp2040_hal::Clock;
 use ssd1306::mode::DisplayConfig;
-use ssd1306::prelude::{DisplayRotation, WriteOnlyDataCommand};
+use ssd1306::prelude::DisplayRotation;
 use ssd1306::size::DisplaySize128x32;
 use ssd1306::Ssd1306;
 
@@ -101,7 +91,7 @@ fn main() -> ! {
 
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut sio = hal::Sio::new(pac.SIO);
-    let mut pins = Pins::new(
+    let pins = Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
         sio.gpio_bank0,
@@ -178,7 +168,7 @@ fn main() -> ! {
         {
             // Hard error, needs new firmware loaded
             oled.write_bad_boot_msg();
-            reset_to_usb_boot(0, 0);
+            rp2040_hal::rom_data::reset_to_usb_boot(0, 0);
             loop {}
         }
     } else {
@@ -218,7 +208,7 @@ fn main() -> ! {
         {
             // Hard error, needs new firmware loaded
             oled.write_bad_boot_msg();
-            reset_to_usb_boot(0, 0);
+            rp2040_hal::rom_data::reset_to_usb_boot(0, 0);
             loop {}
         }
     }

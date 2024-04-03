@@ -4,7 +4,6 @@ use rp2040_hal::usb::UsbBus;
 use usb_device::bus::UsbBusAllocator;
 use usb_device::device::{UsbDevice, UsbDeviceBuilder, UsbVidPid};
 use usb_device::UsbError;
-use usb_device::{class_prelude::*, prelude::*};
 use usbd_serial::SerialPort;
 
 pub struct UsbSerial<'a> {
@@ -14,7 +13,7 @@ pub struct UsbSerial<'a> {
 impl<'a> UsbSerial<'a> {
     pub fn new(usb_bus: &'a UsbBusAllocator<UsbBus>) -> Self {
         // Set up the USB Communications Class Device driver
-        let mut inner = SerialPort::new(&usb_bus);
+        let inner = SerialPort::new(&usb_bus);
         Self { inner }
     }
 }

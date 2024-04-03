@@ -1,19 +1,17 @@
 pub(crate) mod message_serializer;
 
 use crate::keyboard::right::message_serializer::MessageSerializer;
-use crate::keyboard::usb_serial::UsbSerial;
 use crate::keyboard::{
-    matrix_ind, ButtonPin, ButtonState, ButtonStateChange, MatrixState, MatrixUpdate, RowPin,
-    INITIAL_STATE, NUM_COLS, NUM_ROWS,
+    matrix_ind, ButtonPin, MatrixState, MatrixUpdate, RowPin, INITIAL_STATE, NUM_COLS, NUM_ROWS,
 };
+#[cfg(feature = "serial")]
 use core::fmt::Write;
-use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
-use rp2040_hal::fugit::MicrosDurationU64;
+use embedded_hal::digital::v2::{InputPin, PinState};
 use rp2040_hal::gpio::bank0::{
     Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8,
     Gpio9,
 };
-use rp2040_hal::gpio::{FunctionSio, OutputSlewRate, Pin, PinId, PullDown, PullUp, SioInput};
+use rp2040_hal::gpio::{FunctionSio, Pin, PinId, PullUp, SioInput};
 use rp2040_hal::timer::Instant;
 use rp2040_hal::Timer;
 
@@ -50,7 +48,7 @@ impl JitterRegulator {
     }
 
     fn try_release_quarantined(&mut self, now: Instant) -> Option<bool> {
-        let quarantined = self.quarantined?;
+        let _quarantined = self.quarantined?;
         let last = self.last_touch?;
         let diff = now.checked_duration_since(last)?;
         if diff.to_millis() < 10_000 {
@@ -77,14 +75,14 @@ pub struct RightButtons {
 
 impl RightButtons {
     pub fn new(
-        mut rows: (
+        rows: (
             ButtonPin<Gpio29>,
             ButtonPin<Gpio4>,
             ButtonPin<Gpio20>,
             ButtonPin<Gpio23>,
             ButtonPin<Gpio21>,
         ),
-        mut cols: (
+        cols: (
             ButtonPin<Gpio22>,
             ButtonPin<Gpio5>,
             ButtonPin<Gpio6>,
@@ -251,11 +249,11 @@ fn check_col<
     serializer: &mut MessageSerializer,
     timer: Timer,
 ) -> bool {
-    let mut col = input.take().unwrap();
-    let mut col = col.into_push_pull_output_in_state(PinState::Low);
+    let col = input.take().unwrap();
+    let col = col.into_push_pull_output_in_state(PinState::Low);
     let mut cd = timer.count_down();
     embedded_hal::timer::CountDown::start(&mut cd, rp2040_hal::fugit::MicrosDurationU64::micros(1));
-    nb::block!(embedded_hal::timer::CountDown::wait(&mut cd));
+    let _ = nb::block!(embedded_hal::timer::CountDown::wait(&mut cd));
     let mut changed = false;
     for (row_ind, row_pin) in rows.iter().enumerate() {
         let ind = matrix_ind(row_ind, N);

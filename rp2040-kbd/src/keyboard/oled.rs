@@ -13,10 +13,9 @@ use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::text::{Baseline, Text};
 use embedded_graphics::Drawable;
 use heapless::String;
-use liatris::pac::{I2C1, UART0};
-use rp2040_hal::gpio::bank0::{Gpio0, Gpio1, Gpio2, Gpio3};
-use rp2040_hal::gpio::{FunctionI2c, FunctionUart, Pin, PullDown};
-use rp2040_hal::uart::{Enabled, UartPeripheral};
+use liatris::pac::I2C1;
+use rp2040_hal::gpio::bank0::{Gpio2, Gpio3};
+use rp2040_hal::gpio::{FunctionI2c, PullDown};
 use ssd1306::mode::BufferedGraphicsMode;
 use ssd1306::prelude::{Brightness, DisplaySize128x32, I2CInterface};
 use ssd1306::Ssd1306;
@@ -85,7 +84,7 @@ impl OledHandle {
             BufferedGraphicsMode<DisplaySize128x32>,
         >,
     ) -> Self {
-        display.set_brightness(Brightness::BRIGHTEST);
+        let _ = display.set_brightness(Brightness::BRIGHTEST);
         Self { display }
     }
 

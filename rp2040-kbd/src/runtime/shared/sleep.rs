@@ -1,4 +1,3 @@
-use core::time::Duration;
 use rp2040_hal::timer::Instant;
 
 const SLEEP_AFTER_SECONDS: u64 = 60;
@@ -39,10 +38,5 @@ impl SleepCountdown {
     #[inline]
     pub fn is_awake(&self) -> bool {
         !self.is_asleep
-    }
-
-    #[inline]
-    pub fn set_is_awake(&mut self) {
-        self.is_asleep = false;
     }
 }

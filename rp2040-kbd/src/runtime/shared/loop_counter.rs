@@ -23,7 +23,7 @@ impl LoopCount {
                 let mut header = String::new();
                 let _ = header.push_str("my");
                 let mut body = String::new();
-                body.write_fmt(format_args!("{res:.1}"));
+                let _ = body.write_fmt(format_args!("{res:.1}"));
                 return Some((header, body));
             }
         }

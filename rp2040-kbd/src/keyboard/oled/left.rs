@@ -1,4 +1,4 @@
-use crate::keyboard::oled::{blank_line, DrawUnit, OledHandle, OledWriter};
+use crate::keyboard::oled::{DrawUnit, OledHandle, OledWriter};
 use heapless::String;
 
 pub struct LeftOledDrawer {
@@ -102,6 +102,7 @@ impl LeftOledDrawer {
         }
     }
 
+    #[allow(dead_code)]
     pub fn render_boot_msg(&mut self) {
         self.handle.clear();
         let _ = self.handle.write(0, "BOOT");

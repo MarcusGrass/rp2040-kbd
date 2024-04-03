@@ -3,36 +3,27 @@ use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::right::RightButtons;
-use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::runtime::shared::cores_right::{
     pop_message, push_loop_to_admin, push_touch_to_admin, KeycoreToAdminMessage,
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
-use crate::runtime::shared::{acquire_matrix_scan, try_acquire_matrix_scan};
+#[cfg(feature = "serial")]
 use core::fmt::Write;
-use embedded_hal::timer::CountDown;
-use embedded_io::Read;
-use heapless::String;
-use liatris::hal;
-use nb::block;
-use rp2040_hal::fugit::MicrosDurationU64;
 use rp2040_hal::multicore::Multicore;
-use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
-use usb_device::bus::{UsbBus, UsbBusAllocator};
-use usb_device::device::UsbDevice;
+use usb_device::bus::UsbBusAllocator;
 
 static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
 
 #[inline(never)]
 pub fn run_right<'a>(
     mc: &'a mut Multicore<'a>,
-    mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>,
-    mut oled_handle: OledHandle,
+    #[allow(unused_variables)] usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>,
+    oled_handle: OledHandle,
     uart_driver: crate::keyboard::split_serial::UartRight,
-    mut right_buttons: RightButtons,
-    mut power_led_pin: PowerLed,
+    right_buttons: RightButtons,
+    #[allow(unused_variables, unused_mut)] mut power_led_pin: PowerLed,
     timer: Timer,
 ) -> ! {
     #[cfg(feature = "serial")]
@@ -42,13 +33,16 @@ pub fn run_right<'a>(
     let mut oled = RightOledDrawer::new(oled_handle);
     let cores = mc.cores();
     let c1 = &mut cores[1];
-    let mut serializer = MessageSerializer::new(uart_driver);
+    let serializer = MessageSerializer::new(uart_driver);
     c1.spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
         run_core1(serializer, right_buttons, timer)
     })
     .unwrap();
+    #[cfg(feature = "serial")]
     let mut last_chars = [0u8; 128];
+    #[cfg(feature = "serial")]
     let mut output_all = false;
+    #[cfg(feature = "serial")]
     let mut has_dumped = false;
     let mut sleep = SleepCountdown::new();
     loop {
@@ -59,7 +53,6 @@ pub fn run_right<'a>(
                 oled.show();
             }
             Some(KeycoreToAdminMessage::Loop(lc)) => {
-                let loop_millis = lc.count as u64 / lc.duration.to_millis();
                 if sleep.is_awake() {
                     if let Some((header, body)) = lc.as_display() {
                         oled.update_scan_loop(header, body);
@@ -69,6 +62,7 @@ pub fn run_right<'a>(
             _ => {}
         }
         if sleep.should_sleep(now) {
+            sleep.set_sleeping();
             oled.hide();
         }
         oled.render();
@@ -110,7 +104,7 @@ fn handle_usb(power_led: &mut PowerLed, last_chars: &mut [u8], output_all: &mut 
                     last_chars.copy_within(1..last_chars_len, 0);
                     last_chars[last_chars.len() - 1] = *byte;
                     if last_chars.ends_with(b"boot") {
-                        reset_to_usb_boot(0, 0);
+                        rp2040_hal::rom_data::reset_to_usb_boot(0, 0);
                     } else if last_chars.ends_with(b"output") {
                         *usb.output = true;
                         let _ = usb.write_str("output ON\r\n");
@@ -131,7 +125,7 @@ fn handle_usb(power_led: &mut PowerLed, last_chars: &mut [u8], output_all: &mut 
 fn run_core1(
     mut serializer: MessageSerializer,
     mut right_buttons: RightButtons,
-    mut timer: Timer,
+    timer: Timer,
 ) -> ! {
     let mut loop_count: LoopCounter<100_000> = LoopCounter::new(timer.get_counter());
     right_buttons.scan_encoder(&mut serializer);

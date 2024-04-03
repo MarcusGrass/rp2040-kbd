@@ -1,53 +1,59 @@
-use crate::keyboard::left::message_receiver::{DeserializedMessage, MessageReceiver};
+use crate::keyboard::left::message_receiver::MessageReceiver;
 use crate::keyboard::left::LeftButtons;
 use crate::keyboard::oled::left::LeftOledDrawer;
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
-use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::keymap::{KeyboardReportState, KeymapLayer};
 use crate::runtime::shared::cores_left::{
     pop_message, push_layer_change, push_loop_to_admin, push_touch_to_admin, KeycoreToAdminMessage,
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
-use crate::runtime::shared::usb::{acquire_usb, init_usb, push_hid_report, usb_hid_interrupt_poll};
-use core::fmt::Write as _;
-use embedded_hal::timer::CountDown;
-use embedded_io::{Read, Write};
+use crate::runtime::shared::usb::init_usb;
+#[cfg(feature = "serial")]
+use core::fmt::Write;
 use heapless::String;
-use liatris::pac::Interrupt::USBCTRL_IRQ;
-use liatris::pac::{interrupt, Peripherals};
-use nb::block;
-use rp2040_hal::fugit::MicrosDurationU64;
+#[cfg(feature = "hiddev")]
+use liatris::pac::interrupt;
 use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
-use usb_device::bus::{UsbBus, UsbBusAllocator};
-use usbd_hid::descriptor::KeyboardReport;
+use usb_device::bus::UsbBusAllocator;
 
 static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
 #[inline(never)]
 pub fn run_left<'a>(
     mc: &'a mut Multicore<'a>,
-    mut usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>,
+    usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>,
     mut oled_handle: OledHandle,
-    mut uart_driver: UartLeft,
-    mut left_buttons: LeftButtons,
-    mut power_led_pin: PowerLed,
+    uart_driver: UartLeft,
+    left_buttons: LeftButtons,
+    #[allow(unused_variables, unused_mut)] mut power_led_pin: PowerLed,
     timer: Timer,
 ) -> ! {
     unsafe {
         init_usb(usb_bus);
     }
-    let mut receiver = MessageReceiver::new(uart_driver);
-    mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
+    let receiver = MessageReceiver::new(uart_driver);
+    if let Err(_e) = mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
         run_core1(receiver, left_buttons, timer)
-    });
+    }) {
+        oled_handle.clear();
+        oled_handle.write(0, "ERROR");
+        oled_handle.write(9, "SPAWN");
+        oled_handle.write(18, "CORE1");
+        oled_handle.write(27, "FAIL");
+        oled_handle.write(36, "BOOT");
+        reset_to_usb_boot(0, 0);
+    }
 
     let mut oled_left = LeftOledDrawer::new(oled_handle);
+    #[cfg(feature = "serial")]
     let mut last_chars = [0u8; 128];
+    #[cfg(feature = "serial")]
     let mut output_all = false;
+    #[cfg(feature = "serial")]
     let mut has_dumped = false;
     let mut sleep = SleepCountdown::new();
     loop {
@@ -58,7 +64,6 @@ pub fn run_left<'a>(
                 oled_left.show();
             }
             Some(KeycoreToAdminMessage::Loop(lc)) => {
-                let loop_millis = lc.count as u64 / lc.duration.to_millis();
                 if sleep.is_awake() {
                     if let Some((header, body)) = lc.as_display() {
                         oled_left.update_scan_loop(header, body);
@@ -102,6 +107,7 @@ pub fn run_left<'a>(
         }
         if sleep.should_sleep(now) {
             oled_left.hide();
+            sleep.set_sleeping();
         }
         oled_left.render();
         #[cfg(feature = "serial")]
@@ -123,9 +129,9 @@ fn handle_usb(
     last_chars: &mut [u8],
     output_all: &mut bool,
 ) -> Option<()> {
-    let mut usb = acquire_usb();
-    let mut serial = usb.serial?;
-    let mut dev = usb.dev?;
+    let usb = crate::runtime::shared::usb::acquire_usb();
+    let serial = usb.serial?;
+    let dev = usb.dev?;
     if dev.inner.poll(&mut [&mut serial.inner]) {
         let last_chars_len = last_chars.len();
         let mut buf = [0u8; 64];
@@ -161,16 +167,9 @@ fn handle_usb(
 }
 
 pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, timer: Timer) -> ! {
-    const DEFAULT_KBD: KeyboardReport = KeyboardReport {
-        modifier: 0,
-        reserved: 0,
-        leds: 0,
-        keycodes: [0u8; 6],
-    };
-
     #[cfg(feature = "hiddev")]
     unsafe {
-        liatris::hal::pac::NVIC::unmask(USBCTRL_IRQ);
+        liatris::hal::pac::NVIC::unmask(liatris::pac::Interrupt::USBCTRL_IRQ);
     }
     let mut kbd = crate::keymap::KeyboardState::new();
     let mut report_state = KeyboardReportState::new();
@@ -188,7 +187,10 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, t
             any_change = true;
         }
         if any_change {
-            push_hid_report(report_state.report());
+            #[cfg(feature = "hiddev")]
+            {
+                crate::runtime::shared::usb::push_hid_report(report_state.report());
+            }
             push_touch_to_admin();
         }
         if let Some(change) = report_state.layer_update() {
@@ -209,5 +211,5 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, t
 #[allow(non_snake_case)]
 #[cfg(feature = "hiddev")]
 unsafe fn USBCTRL_IRQ() {
-    usb_hid_interrupt_poll()
+    crate::runtime::shared::usb::usb_hid_interrupt_poll()
 }
