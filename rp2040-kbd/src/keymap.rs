@@ -370,12 +370,7 @@ impl KeyboardState {
     ) {
         match update.matrix_change() {
             MatrixChange::Encoder(enc) => {
-                #[cfg(feature = "serial")]
-                {
-                    use core::fmt::Write;
-                    let _ = crate::runtime::shared::usb::acquire_usb()
-                        .write_fmt(format_args!("Enc clockwise: {enc}\r\n"));
-                }
+                rotate_layer(enc, keyboard_report_state);
             }
             MatrixChange::Key(ind, change) => match ind {
                 0 => {
@@ -497,6 +492,51 @@ impl KeyboardState {
                 _ => {}
             },
         }
+    }
+}
+
+fn rotate_layer(clockwise: bool, keyboard_report_state: &mut KeyboardReportState) {
+    match (
+        keyboard_report_state.active_layer,
+        keyboard_report_state.last_perm_layer,
+    ) {
+        (KeymapLayer::DvorakSe, _) => {
+            if clockwise {
+                keyboard_report_state.active_layer = KeymapLayer::DvorakAnsi;
+            } else {
+                keyboard_report_state.active_layer = KeymapLayer::QwertyGaming;
+            }
+        }
+        (KeymapLayer::DvorakAnsi, _) => {
+            if clockwise {
+                keyboard_report_state.active_layer = KeymapLayer::QwertyAnsi;
+            } else {
+                keyboard_report_state.active_layer = KeymapLayer::DvorakSe;
+            }
+        }
+        (KeymapLayer::QwertyAnsi, _) => {
+            if clockwise {
+                keyboard_report_state.active_layer = KeymapLayer::QwertyGaming;
+            } else {
+                keyboard_report_state.active_layer = KeymapLayer::DvorakAnsi;
+            }
+        }
+        (KeymapLayer::QwertyGaming, _) => {
+            if clockwise {
+                keyboard_report_state.active_layer = KeymapLayer::DvorakSe;
+            } else {
+                keyboard_report_state.active_layer = KeymapLayer::QwertyAnsi;
+            }
+        }
+        _ => {}
+    }
+    #[cfg(feature = "serial")]
+    {
+        use core::fmt::Write;
+        let _ = crate::runtime::shared::usb::acquire_usb().write_fmt(format_args!(
+            "Post rotate layer: {:?}\r\n",
+            keyboard_report_state.active_layer
+        ));
     }
 }
 
