@@ -136,7 +136,7 @@ fn run_core1(
     let mut loop_count: LoopCounter<100_000> = LoopCounter::new(timer.get_counter());
     right_buttons.scan_encoder(&mut serializer);
     loop {
-        if right_buttons.scan_matrix(&mut serializer) {
+        if right_buttons.scan_matrix(&mut serializer, timer) {
             push_touch_to_admin();
         }
         if right_buttons.scan_encoder(&mut serializer) {

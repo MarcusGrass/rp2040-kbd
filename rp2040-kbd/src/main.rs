@@ -47,7 +47,7 @@ use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use core::fmt::Write;
 use embedded_graphics::Drawable;
-use embedded_hal::digital::v2::{InputPin, OutputPin};
+use embedded_hal::digital::v2::{InputPin, OutputPin, PinState};
 use embedded_hal::prelude::_embedded_hal_blocking_delay_DelayMs;
 use rp2040_hal::fugit::RateExtU32;
 use rp2040_hal::gpio::PinId;
@@ -200,12 +200,12 @@ fn main() -> ! {
                     pins.gpio21.into_pull_up_input(),
                 ),
                 (
-                    Some(pins.gpio22.into_pull_up_input()),
-                    Some(pins.gpio5.into_pull_up_input()),
-                    Some(pins.gpio6.into_pull_up_input()),
-                    Some(pins.gpio7.into_pull_up_input()),
-                    Some(pins.gpio8.into_pull_up_input()),
-                    Some(pins.gpio9.into_pull_up_input()),
+                    pins.gpio22.into_pull_up_input(),
+                    pins.gpio5.into_pull_up_input(),
+                    pins.gpio6.into_pull_up_input(),
+                    pins.gpio7.into_pull_up_input(),
+                    pins.gpio8.into_pull_up_input(),
+                    pins.gpio9.into_pull_up_input(),
                 ),
                 crate::keyboard::right::RotaryEncoder::new(
                     pins.gpio26.into_pull_up_input(),
