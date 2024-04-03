@@ -14,13 +14,55 @@ use rp2040_hal::gpio::bank0::{
     Gpio9,
 };
 use rp2040_hal::gpio::{FunctionSio, OutputSlewRate, Pin, PinId, PullDown, PullUp, SioInput};
-use rp2040_hal::Timer;
 use rp2040_hal::timer::Instant;
+use rp2040_hal::Timer;
 
+#[derive(Copy, Clone, Debug)]
+pub struct JitterRegulator {
+    last_touch: Option<Instant>,
+    quarantined: Option<bool>,
+}
+
+impl JitterRegulator {
+    const fn new() -> Self {
+        Self {
+            last_touch: None,
+            quarantined: None,
+        }
+    }
+    fn try_submit(&mut self, now: Instant, state: bool) -> bool {
+        let Some(earlier) = self.last_touch else {
+            self.last_touch = Some(now);
+            return true;
+        };
+        self.last_touch = Some(now);
+        let Some(diff) = now.checked_duration_since(earlier) else {
+            return true;
+        };
+        // Effectively, maximum presses per single key becomes is 1 per 10 millis, that's a 1200 WPM with a single finger
+        if diff.to_micros() < 10_000 {
+            self.quarantined = Some(state);
+            return false;
+        }
+
+        self.quarantined.take();
+        true
+    }
+
+    fn try_release_quarantined(&mut self, now: Instant) -> Option<bool> {
+        let quarantined = self.quarantined?;
+        let last = self.last_touch?;
+        let diff = now.checked_duration_since(last)?;
+        if diff.to_millis() < 10_000 {
+            return None;
+        }
+        self.quarantined.take()
+    }
+}
 
 pub struct RightButtons {
     pub(crate) matrix: MatrixState,
-    pub(crate) changes: [Instant; NUM_ROWS * NUM_COLS],
+    pub(crate) changes: [JitterRegulator; NUM_ROWS * NUM_COLS],
     rows: [RowPin; 5],
     cols: (
         Option<ButtonPin<Gpio22>>,
@@ -54,7 +96,7 @@ impl RightButtons {
     ) -> Self {
         Self {
             matrix: INITIAL_STATE,
-            changes: [Instant::from_ticks(0); NUM_COLS * NUM_ROWS],
+            changes: [JitterRegulator::new(); NUM_COLS * NUM_ROWS],
             rows: [
                 rows.0.into_dyn_pin(),
                 rows.1.into_dyn_pin(),
@@ -63,25 +105,119 @@ impl RightButtons {
                 rows.4.into_dyn_pin(),
             ],
             cols: (
-                Some(cols.0.into_push_pull_output_in_state(PinState::High).into_function()),
-                Some(cols.1.into_push_pull_output_in_state(PinState::High).into_function()),
-                Some(cols.2.into_push_pull_output_in_state(PinState::High).into_function()),
-                Some(cols.3.into_push_pull_output_in_state(PinState::High).into_function()),
-                Some(cols.4.into_push_pull_output_in_state(PinState::High).into_function()),
-                Some(cols.5.into_push_pull_output_in_state(PinState::High).into_function()),
+                Some(
+                    cols.0
+                        .into_push_pull_output_in_state(PinState::High)
+                        .into_function(),
                 ),
+                Some(
+                    cols.1
+                        .into_push_pull_output_in_state(PinState::High)
+                        .into_function(),
+                ),
+                Some(
+                    cols.2
+                        .into_push_pull_output_in_state(PinState::High)
+                        .into_function(),
+                ),
+                Some(
+                    cols.3
+                        .into_push_pull_output_in_state(PinState::High)
+                        .into_function(),
+                ),
+                Some(
+                    cols.4
+                        .into_push_pull_output_in_state(PinState::High)
+                        .into_function(),
+                ),
+                Some(
+                    cols.5
+                        .into_push_pull_output_in_state(PinState::High)
+                        .into_function(),
+                ),
+            ),
             encoder: rotary_encoder,
         }
     }
 
     pub fn scan_matrix(&mut self, serializer: &mut MessageSerializer, timer: Timer) -> bool {
-        let col0_change = check_col::<0, _>(&mut self.cols.0, &mut self.rows, &mut self.matrix, &mut self.changes, serializer, timer);
-        let col1_change = check_col::<1, _>(&mut self.cols.1, &mut self.rows, &mut self.matrix, &mut self.changes, serializer, timer);
-        let col2_change = check_col::<2, _>(&mut self.cols.2, &mut self.rows, &mut self.matrix, &mut self.changes, serializer, timer);
-        let col3_change = check_col::<3, _>(&mut self.cols.3, &mut self.rows, &mut self.matrix, &mut self.changes, serializer, timer);
-        let col4_change = check_col::<4, _>(&mut self.cols.4, &mut self.rows, &mut self.matrix, &mut self.changes, serializer, timer);
-        let col5_change = check_col::<5, _>(&mut self.cols.5, &mut self.rows, &mut self.matrix, &mut self.changes, serializer, timer);
-        col0_change || col1_change || col2_change || col3_change || col4_change || col5_change
+        let col0_change = check_col::<0, _>(
+            &mut self.cols.0,
+            &mut self.rows,
+            &mut self.matrix,
+            &mut self.changes,
+            serializer,
+            timer,
+        );
+        let col1_change = check_col::<1, _>(
+            &mut self.cols.1,
+            &mut self.rows,
+            &mut self.matrix,
+            &mut self.changes,
+            serializer,
+            timer,
+        );
+        let col2_change = check_col::<2, _>(
+            &mut self.cols.2,
+            &mut self.rows,
+            &mut self.matrix,
+            &mut self.changes,
+            serializer,
+            timer,
+        );
+        let col3_change = check_col::<3, _>(
+            &mut self.cols.3,
+            &mut self.rows,
+            &mut self.matrix,
+            &mut self.changes,
+            serializer,
+            timer,
+        );
+        let col4_change = check_col::<4, _>(
+            &mut self.cols.4,
+            &mut self.rows,
+            &mut self.matrix,
+            &mut self.changes,
+            serializer,
+            timer,
+        );
+        let col5_change = check_col::<5, _>(
+            &mut self.cols.5,
+            &mut self.rows,
+            &mut self.matrix,
+            &mut self.changes,
+            serializer,
+            timer,
+        );
+        let now = timer.get_counter();
+        let mut changed = false;
+        for (matrix_ind, jitter) in self.changes.iter_mut().enumerate() {
+            let Some(state) = jitter.try_release_quarantined(now) else {
+                continue;
+            };
+            if state == self.matrix[matrix_ind] {
+                continue;
+            }
+            #[cfg(feature = "serial")]
+            {
+                let _ = crate::runtime::shared::usb::acquire_usb().write_fmt(format_args!(
+                    "Release Quarantined M{}-> {}\r\n",
+                    matrix_ind, state as u8
+                ));
+            }
+            serializer.serialize_matrix_state(&crate::keyboard::MatrixUpdate::new_keypress(
+                matrix_ind as u8,
+                state,
+            ));
+            changed = true;
+        }
+        col0_change
+            || col1_change
+            || col2_change
+            || col3_change
+            || col4_change
+            || col5_change
+            || changed
     }
 
     #[inline]
@@ -102,7 +238,19 @@ impl RightButtons {
     }
 }
 
-fn check_col<const N: usize, Id: PinId + rp2040_hal::gpio::ValidFunction<FunctionSio<SioInput>> + rp2040_hal::gpio::ValidFunction<FunctionSio<rp2040_hal::gpio::SioOutput>>>(input: &mut Option<ButtonPin<Id>>, rows: &mut [RowPin], matrix: &mut MatrixState, changes: &mut [Instant; NUM_ROWS * NUM_COLS], serializer: &mut MessageSerializer,timer: Timer) -> bool {
+fn check_col<
+    const N: usize,
+    Id: PinId
+        + rp2040_hal::gpio::ValidFunction<FunctionSio<SioInput>>
+        + rp2040_hal::gpio::ValidFunction<FunctionSio<rp2040_hal::gpio::SioOutput>>,
+>(
+    input: &mut Option<ButtonPin<Id>>,
+    rows: &mut [RowPin],
+    matrix: &mut MatrixState,
+    jitters: &mut [JitterRegulator; NUM_ROWS * NUM_COLS],
+    serializer: &mut MessageSerializer,
+    timer: Timer,
+) -> bool {
     let mut col = input.take().unwrap();
     let mut col = col.into_push_pull_output_in_state(PinState::Low);
     let mut cd = timer.count_down();
@@ -117,18 +265,23 @@ fn check_col<const N: usize, Id: PinId + rp2040_hal::gpio::ValidFunction<Functio
             }
         };
         if state != matrix[ind] {
-            let now = timer.get_counter();
-            let passed = now.checked_duration_since(changes[ind]).unwrap().to_micros();
-            let hit = passed < 500;
-
-            changes[ind] = now;
+            if !jitters[ind].try_submit(timer.get_counter(), state) {
+                #[cfg(feature = "serial")]
+                {
+                    let _ = crate::runtime::shared::usb::acquire_usb().write_fmt(format_args!(
+                        "Quarantine: M{}, R{}, C{} -> {}\r\n",
+                        ind, row_ind, N, state as u8
+                    ));
+                }
+                continue;
+            }
 
             #[cfg(feature = "serial")]
             {
                 let _ = crate::runtime::shared::usb::acquire_usb().write_fmt(format_args!(
-                        "M{}, R{}, C{} -> {} [{passed}] {}\r\n",
-                        ind, row_ind, N, state as u8, if hit {"HIT!"} else {""}
-                    ));
+                    "M{}, R{}, C{} -> {}\r\n",
+                    ind, row_ind, N, state as u8
+                ));
             }
             serializer.serialize_matrix_state(&crate::keyboard::MatrixUpdate::new_keypress(
                 ind as u8, state,

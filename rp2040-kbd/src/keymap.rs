@@ -1,6 +1,8 @@
 use crate::hid::keycodes::{KeyCode, Modifier};
 use crate::keyboard::left::LeftButtons;
-use crate::keyboard::{matrix_ind, matrix_ind_to_row_col, MatrixChange, MatrixState, MatrixUpdate, NUM_COLS, NUM_ROWS};
+use crate::keyboard::{
+    matrix_ind, matrix_ind_to_row_col, MatrixChange, MatrixState, MatrixUpdate, NUM_COLS, NUM_ROWS,
+};
 use core::hash::BuildHasherDefault;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use heapless::IndexMap;
@@ -385,9 +387,10 @@ impl KeyboardState {
                 #[cfg(feature = "serial")]
                 {
                     let (row, col) = matrix_ind_to_row_col(ind as usize);
-                    core::fmt::Write::write_fmt(&mut crate::runtime::shared::usb::acquire_usb(),
-                    format_args!("R: R{row}, C{col} -> {}\r\n", change));
-
+                    core::fmt::Write::write_fmt(
+                        &mut crate::runtime::shared::usb::acquire_usb(),
+                        format_args!("R: R{row}, C{col} -> {}\r\n", change),
+                    );
                 }
                 match ind {
                     0 => {
@@ -508,7 +511,7 @@ impl KeyboardState {
                     }
                     _ => {}
                 }
-            },
+            }
         }
     }
 }

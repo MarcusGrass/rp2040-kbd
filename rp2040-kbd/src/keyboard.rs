@@ -163,4 +163,3 @@ impl MatrixUpdate {
         &self.0.data
     }
 }
-

@@ -6,7 +6,9 @@ use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
 use crate::keyboard::usb_serial::{UsbSerial, UsbSerialDevice};
 use crate::keymap::{KeyboardReportState, KeymapLayer};
-use crate::runtime::shared::cores_left::{pop_message, push_loop_to_admin, push_touch_to_admin, KeycoreToAdminMessage, push_layer_change};
+use crate::runtime::shared::cores_left::{
+    pop_message, push_layer_change, push_loop_to_admin, push_touch_to_admin, KeycoreToAdminMessage,
+};
 use crate::runtime::shared::loop_counter::LoopCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
 use crate::runtime::shared::usb::{acquire_usb, init_usb, push_hid_report, usb_hid_interrupt_poll};
