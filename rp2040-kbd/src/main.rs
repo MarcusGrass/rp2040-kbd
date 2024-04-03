@@ -207,6 +207,10 @@ fn main() -> ! {
                     Some(pins.gpio8.into_pull_up_input()),
                     Some(pins.gpio9.into_pull_up_input()),
                 ),
+                crate::keyboard::right::RotaryEncoder::new(
+                    pins.gpio26.into_pull_up_input(),
+                    pins.gpio27.into_pull_up_input(),
+                ),
             );
             runtime::right::run_right(&mut mc, usb_bus, oled, uart, right, pl, timer);
         }

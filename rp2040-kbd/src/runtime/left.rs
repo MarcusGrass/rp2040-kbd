@@ -1,5 +1,5 @@
 use crate::keyboard::left::message_receiver::{DeserializedMessage, MessageReceiver};
-use crate::keyboard::left::{KeyboardState, LeftButtons};
+use crate::keyboard::left::LeftButtons;
 use crate::keyboard::oled::left::LeftOledDrawer;
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
@@ -139,25 +139,21 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, t
     unsafe {
         liatris::hal::pac::NVIC::unmask(USBCTRL_IRQ);
     }
-    let mut kbd = KeyboardState::empty();
     let mut kbd = crate::keymap::KeyboardState::new();
     let mut report_state = KeyboardReportState::new();
     let mut loop_count: LoopCounter<100_000> = LoopCounter::new(timer.get_counter());
     loop {
         let mut any_change = false;
-        #[cfg(feature = "hiddev")]
-        {
-            if let Some(update) = receiver.try_read() {
-                kbd.update_right(update, &mut report_state);
-                any_change = true;
-            }
-            if kbd.scan_left(&mut left_buttons, &mut report_state) {
-                any_change = true;
-            }
-            if any_change {
-                push_hid_report(report_state.report());
-                push_touch_to_admin();
-            }
+        if let Some(update) = receiver.try_read() {
+            kbd.update_right(update, &mut report_state);
+            any_change = true;
+        }
+        if kbd.scan_left(&mut left_buttons, &mut report_state) {
+            any_change = true;
+        }
+        if any_change {
+            push_hid_report(report_state.report());
+            push_touch_to_admin();
         }
         if loop_count.increment() {
             let now = timer.get_counter();

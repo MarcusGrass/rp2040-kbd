@@ -109,15 +109,24 @@ pub(crate) const INITIAL_STATE: MatrixState = BitArray::ZERO;
 #[derive(Debug, Copy, Clone)]
 pub(crate) struct MatrixUpdate(BitArray<[u8; 1], Lsb0>);
 
+#[derive(Debug, Copy, Clone)]
+pub enum MatrixChange {
+    Key(u8, bool),
+    Encoder(bool),
+}
+
 impl MatrixUpdate {
     #[inline]
-    pub fn new(matrix_ind: u8, state: bool, encoder_state: Option<bool>) -> Self {
+    pub fn new_keypress(matrix_ind: u8, state: bool) -> Self {
         let mut inner = BitArray::new([matrix_ind; 1]);
         inner.set(5, state);
-        if let Some(enc) = encoder_state {
-            inner.set(6, true);
-            inner.set(7, enc);
-        };
+        Self(inner)
+    }
+
+    pub fn new_encoder_rotation(clockwise: bool) -> Self {
+        let mut inner = BitArray::new([0u8; 1]);
+        inner.set(6, true);
+        inner.set(7, clockwise);
         Self(inner)
     }
 
@@ -127,13 +136,17 @@ impl MatrixUpdate {
     }
 
     #[inline]
-    pub fn matrix_ind(self) -> u8 {
+    fn matrix_ind(self) -> u8 {
         self.0.data[0] & 0b0001_1111
     }
 
     #[inline]
-    pub fn matrix_change(self) -> (u8, bool) {
-        (self.matrix_ind(), self.0[5])
+    pub fn matrix_change(self) -> MatrixChange {
+        if let Some(enc) = self.encoder_state() {
+            MatrixChange::Encoder(enc)
+        } else {
+            MatrixChange::Key(self.matrix_ind(), self.0[5])
+        }
     }
 
     #[inline]
@@ -153,7 +166,7 @@ impl MatrixUpdate {
 
 #[macro_export]
 macro_rules! check_col_push_evt {
-    ($slf: expr, $pt: tt, $serializer: expr, $enc_state: expr) => {{
+    ($slf: expr, $pt: tt, $serializer: expr) => {{
         let mut col = $slf.cols.$pt.take().unwrap();
         let mut col = col.into_push_pull_output_in_state(PinState::Low);
         let mut changed = false;
@@ -168,8 +181,8 @@ macro_rules! check_col_push_evt {
                         row_ind, $pt, state as u8
                     ));
                 }
-                $serializer.serialize_matrix_state(&$crate::keyboard::MatrixUpdate::new(
-                    ind as u8, state, $enc_state,
+                $serializer.serialize_matrix_state(&$crate::keyboard::MatrixUpdate::new_keypress(
+                    ind as u8, state,
                 ));
                 // Todo: Make this less esoteric
                 if $pt == 2 && row_ind == 4 {

@@ -1,6 +1,6 @@
 use crate::hid::keycodes::{KeyCode, Modifier};
 use crate::keyboard::left::LeftButtons;
-use crate::keyboard::{matrix_ind, MatrixState, MatrixUpdate, NUM_COLS, NUM_ROWS};
+use crate::keyboard::{matrix_ind, MatrixChange, MatrixState, MatrixUpdate, NUM_COLS, NUM_ROWS};
 use core::hash::BuildHasherDefault;
 use embedded_hal::digital::v2::{InputPin, OutputPin};
 use heapless::IndexMap;
@@ -368,125 +368,134 @@ impl KeyboardState {
         update: MatrixUpdate,
         keyboard_report_state: &mut KeyboardReportState,
     ) {
-        let (ind, change) = update.matrix_change();
-        match ind {
-            0 => {
-                self.right_row0_col0
-                    .update_state(change, keyboard_report_state);
+        match update.matrix_change() {
+            MatrixChange::Encoder(enc) => {
+                #[cfg(feature = "serial")]
+                {
+                    use core::fmt::Write;
+                    let _ = crate::runtime::shared::usb::acquire_usb()
+                        .write_fmt(format_args!("Enc clockwise: {enc}\r\n"));
+                }
             }
-            1 => {
-                self.right_row0_col1
-                    .update_state(change, keyboard_report_state);
-            }
-            2 => {
-                self.right_row0_col2
-                    .update_state(change, keyboard_report_state);
-            }
-            3 => {
-                self.right_row0_col3
-                    .update_state(change, keyboard_report_state);
-            }
-            4 => {
-                self.right_row0_col4
-                    .update_state(change, keyboard_report_state);
-            }
-            5 => {
-                self.right_row0_col5
-                    .update_state(change, keyboard_report_state);
-            }
-            6 => {
-                self.right_row1_col0
-                    .update_state(change, keyboard_report_state);
-            }
-            7 => {
-                self.right_row1_col1
-                    .update_state(change, keyboard_report_state);
-            }
-            8 => {
-                self.right_row1_col2
-                    .update_state(change, keyboard_report_state);
-            }
-            9 => {
-                self.right_row1_col3
-                    .update_state(change, keyboard_report_state);
-            }
-            10 => {
-                self.right_row1_col4
-                    .update_state(change, keyboard_report_state);
-            }
-            11 => {
-                self.right_row1_col5
-                    .update_state(change, keyboard_report_state);
-            }
-            12 => {
-                self.right_row2_col0
-                    .update_state(change, keyboard_report_state);
-            }
-            13 => {
-                self.right_row2_col1
-                    .update_state(change, keyboard_report_state);
-            }
-            14 => {
-                self.right_row2_col2
-                    .update_state(change, keyboard_report_state);
-            }
-            15 => {
-                self.right_row2_col3
-                    .update_state(change, keyboard_report_state);
-            }
-            16 => {
-                self.right_row2_col4
-                    .update_state(change, keyboard_report_state);
-            }
-            17 => {
-                self.right_row2_col5
-                    .update_state(change, keyboard_report_state);
-            }
-            18 => {
-                self.right_row3_col0
-                    .update_state(change, keyboard_report_state);
-            }
-            19 => {
-                self.right_row3_col1
-                    .update_state(change, keyboard_report_state);
-            }
-            20 => {
-                self.right_row3_col2
-                    .update_state(change, keyboard_report_state);
-            }
-            21 => {
-                self.right_row3_col3
-                    .update_state(change, keyboard_report_state);
-            }
-            22 => {
-                self.right_row3_col4
-                    .update_state(change, keyboard_report_state);
-            }
-            23 => {
-                self.right_row3_col5
-                    .update_state(change, keyboard_report_state);
-            }
-            25 => {
-                self.right_row4_col1
-                    .update_state(change, keyboard_report_state);
-            }
-            26 => {
-                self.right_row4_col2
-                    .update_state(change, keyboard_report_state);
-            }
-            27 => {
-                self.right_row4_col3
-                    .update_state(change, keyboard_report_state);
-            }
-            28 => {
-                self.right_row4_col4
-                    .update_state(change, keyboard_report_state);
-            }
-            29 => {
-                self.right_row4_col5
-                    .update_state(change, keyboard_report_state);
-            }
-            _ => {}
+            MatrixChange::Key(ind, change) => match ind {
+                0 => {
+                    self.right_row0_col0
+                        .update_state(change, keyboard_report_state);
+                }
+                1 => {
+                    self.right_row0_col1
+                        .update_state(change, keyboard_report_state);
+                }
+                2 => {
+                    self.right_row0_col2
+                        .update_state(change, keyboard_report_state);
+                }
+                3 => {
+                    self.right_row0_col3
+                        .update_state(change, keyboard_report_state);
+                }
+                4 => {
+                    self.right_row0_col4
+                        .update_state(change, keyboard_report_state);
+                }
+                5 => {
+                    self.right_row0_col5
+                        .update_state(change, keyboard_report_state);
+                }
+                6 => {
+                    self.right_row1_col0
+                        .update_state(change, keyboard_report_state);
+                }
+                7 => {
+                    self.right_row1_col1
+                        .update_state(change, keyboard_report_state);
+                }
+                8 => {
+                    self.right_row1_col2
+                        .update_state(change, keyboard_report_state);
+                }
+                9 => {
+                    self.right_row1_col3
+                        .update_state(change, keyboard_report_state);
+                }
+                10 => {
+                    self.right_row1_col4
+                        .update_state(change, keyboard_report_state);
+                }
+                11 => {
+                    self.right_row1_col5
+                        .update_state(change, keyboard_report_state);
+                }
+                12 => {
+                    self.right_row2_col0
+                        .update_state(change, keyboard_report_state);
+                }
+                13 => {
+                    self.right_row2_col1
+                        .update_state(change, keyboard_report_state);
+                }
+                14 => {
+                    self.right_row2_col2
+                        .update_state(change, keyboard_report_state);
+                }
+                15 => {
+                    self.right_row2_col3
+                        .update_state(change, keyboard_report_state);
+                }
+                16 => {
+                    self.right_row2_col4
+                        .update_state(change, keyboard_report_state);
+                }
+                17 => {
+                    self.right_row2_col5
+                        .update_state(change, keyboard_report_state);
+                }
+                18 => {
+                    self.right_row3_col0
+                        .update_state(change, keyboard_report_state);
+                }
+                19 => {
+                    self.right_row3_col1
+                        .update_state(change, keyboard_report_state);
+                }
+                20 => {
+                    self.right_row3_col2
+                        .update_state(change, keyboard_report_state);
+                }
+                21 => {
+                    self.right_row3_col3
+                        .update_state(change, keyboard_report_state);
+                }
+                22 => {
+                    self.right_row3_col4
+                        .update_state(change, keyboard_report_state);
+                }
+                23 => {
+                    self.right_row3_col5
+                        .update_state(change, keyboard_report_state);
+                }
+                25 => {
+                    self.right_row4_col1
+                        .update_state(change, keyboard_report_state);
+                }
+                26 => {
+                    self.right_row4_col2
+                        .update_state(change, keyboard_report_state);
+                }
+                27 => {
+                    self.right_row4_col3
+                        .update_state(change, keyboard_report_state);
+                }
+                28 => {
+                    self.right_row4_col4
+                        .update_state(change, keyboard_report_state);
+                }
+                29 => {
+                    self.right_row4_col5
+                        .update_state(change, keyboard_report_state);
+                }
+                _ => {}
+            },
         }
     }
 }

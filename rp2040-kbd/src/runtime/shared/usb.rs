@@ -108,7 +108,7 @@ pub fn push_hid_report(keyboard_report: &KeyboardReport) -> bool {
 
 #[inline(always)]
 #[cfg(feature = "serial")]
-pub fn push_hid_report(keyboard_report: KeyboardReport) -> bool {
+pub fn push_hid_report(keyboard_report: &KeyboardReport) -> bool {
     true
 }
 
