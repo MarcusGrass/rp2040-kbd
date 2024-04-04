@@ -10,16 +10,17 @@ use crate::runtime::shared::cores_left::{
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
+#[cfg(feature = "serial")]
 use crate::runtime::shared::usb::init_usb;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
 use heapless::String;
-#[cfg(feature = "hiddev")]
-use liatris::pac::interrupt;
 use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::UsbBusAllocator;
+#[cfg(feature = "hiddev")]
+use usbd_hid::descriptor::SerializedDescriptor;
 
 static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
 #[inline(never)]
@@ -32,13 +33,20 @@ pub fn run_left<'a>(
     #[allow(unused_variables, unused_mut)] mut power_led_pin: PowerLed,
     timer: Timer,
 ) -> ! {
+    #[cfg(feature = "serial")]
     unsafe {
         init_usb(usb_bus);
     }
     let receiver = MessageReceiver::new(uart_driver);
     #[allow(static_mut_refs)]
     if let Err(_e) = mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
-        run_core1(receiver, left_buttons, timer)
+        run_core1(
+            receiver,
+            left_buttons,
+            timer,
+            #[cfg(feature = "hiddev")]
+            usb_bus,
+        )
     }) {
         oled_handle.clear();
         oled_handle.write(0, "ERROR");
@@ -167,11 +175,30 @@ fn handle_usb(
     Some(())
 }
 
-pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, timer: Timer) -> ! {
+pub fn run_core1(
+    mut receiver: MessageReceiver,
+    mut left_buttons: LeftButtons,
+    timer: Timer,
+    #[cfg(feature = "hiddev")] allocator: usb_device::bus::UsbBusAllocator<
+        liatris::hal::usb::UsbBus,
+    >,
+) -> ! {
     #[cfg(feature = "hiddev")]
-    unsafe {
-        liatris::hal::pac::NVIC::unmask(liatris::pac::Interrupt::USBCTRL_IRQ);
-    }
+    let mut usb_hid = usbd_hid::hid_class::HIDClass::new_ep_in(
+        &allocator,
+        usbd_hid::descriptor::KeyboardReport::desc(),
+        1,
+    );
+    #[cfg(feature = "hiddev")]
+    let mut usb_dev = usb_device::device::UsbDeviceBuilder::new(
+        &allocator,
+        usb_device::device::UsbVidPid(0x16c0, 0x27da),
+    )
+    .manufacturer("Marcus Grass")
+    .product("Lily58")
+    .serial_number("1")
+    .device_class(0)
+    .build();
     let mut kbd = crate::keymap::KeyboardState::new();
     let mut report_state = KeyboardReportState::new();
     let mut loop_count: LoopCounter<100_000> = LoopCounter::new(timer.get_counter());
@@ -190,7 +217,7 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, t
         if any_change {
             #[cfg(feature = "hiddev")]
             {
-                crate::runtime::shared::usb::push_hid_report(report_state.report());
+                let _ = usb_hid.push_input(report_state.report());
             }
             push_touch_to_admin();
         }
@@ -204,13 +231,7 @@ pub fn run_core1(mut receiver: MessageReceiver, mut left_buttons: LeftButtons, t
                 loop_count.reset(now);
             }
         }
+        #[cfg(feature = "hiddev")]
+        usb_dev.poll(&mut [&mut usb_hid]);
     }
-}
-
-/// Safety: Called from the same core that publishes
-#[interrupt]
-#[allow(non_snake_case)]
-#[cfg(feature = "hiddev")]
-unsafe fn USBCTRL_IRQ() {
-    crate::runtime::shared::usb::usb_hid_interrupt_poll()
 }
