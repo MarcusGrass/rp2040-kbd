@@ -1,5 +1,11 @@
 #[cfg(any(feature = "left", feature = "serial"))]
-static mut USB_BUS: Option<usb_device::bus::UsbBusAllocator<liatris::hal::usb::UsbBus>> = None;
+pub struct SyncBus(core::cell::OnceCell<usb_device::bus::UsbBusAllocator<liatris::hal::usb::UsbBus>>);
+
+#[cfg(any(feature = "left", feature = "serial"))]
+unsafe impl Sync for SyncBus {}
+
+#[cfg(any(feature = "left", feature = "serial"))]
+static USB_BUS: SyncBus = SyncBus(core::cell::OnceCell::new());
 
 #[cfg(feature = "serial")]
 static mut USB_DEVICE: Option<crate::keyboard::usb_serial::UsbSerialDevice> = None;
@@ -18,13 +24,13 @@ static mut USB_OUTPUT: bool = false;
 
 #[cfg(feature = "serial")]
 pub unsafe fn init_usb(allocator: usb_device::bus::UsbBusAllocator<liatris::hal::usb::UsbBus>) {
-    USB_BUS = Some(allocator);
+    let _ = USB_BUS.0.set(allocator);
     // Ordering here is extremely important, serial before device.
     USB_SERIAL = Some(crate::keyboard::usb_serial::UsbSerial::new(
-        USB_BUS.as_ref().unwrap(),
+        USB_BUS.0.get().unwrap(),
     ));
     USB_DEVICE = Some(crate::keyboard::usb_serial::UsbSerialDevice::new(
-        USB_BUS.as_ref().unwrap(),
+        USB_BUS.0.get().unwrap(),
     ));
 }
 
@@ -67,10 +73,10 @@ impl<'a> core::fmt::Write for UsbGuard<'a> {
 #[cfg(feature = "hiddev")]
 pub unsafe fn init_usb(allocator: usb_device::bus::UsbBusAllocator<liatris::hal::usb::UsbBus>) {
     use usbd_hid::descriptor::SerializedDescriptor;
-    USB_BUS = Some(allocator);
+    let _ = USB_BUS.0.set(allocator);
 
     let usb_hid = usbd_hid::hid_class::HIDClass::new_ep_in(
-        USB_BUS.as_ref().unwrap(),
+        USB_BUS.0.get().unwrap(),
         usbd_hid::descriptor::KeyboardReport::desc(),
         1,
     );
@@ -78,7 +84,7 @@ pub unsafe fn init_usb(allocator: usb_device::bus::UsbBusAllocator<liatris::hal:
     USB_HID = Some(usb_hid);
     USB_HIDDEV = Some(
         usb_device::device::UsbDeviceBuilder::new(
-            USB_BUS.as_ref().unwrap(),
+            USB_BUS.0.get().unwrap(),
             usb_device::device::UsbVidPid(0x16c0, 0x27da),
         )
         .manufacturer("Marcus Grass")
