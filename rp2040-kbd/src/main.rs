@@ -9,7 +9,6 @@
 //!
 //! See the `Cargo.toml` file for Copyright and license details.
 //!
-#![allow(static_mut_refs)]
 #![cfg_attr(not(test), no_std)]
 //#![no_std]
 #![no_main]

@@ -36,6 +36,7 @@ pub fn run_left<'a>(
         init_usb(usb_bus);
     }
     let receiver = MessageReceiver::new(uart_driver);
+    #[allow(static_mut_refs)]
     if let Err(_e) = mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
         run_core1(receiver, left_buttons, timer)
     }) {

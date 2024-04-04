@@ -34,6 +34,7 @@ pub fn run_right<'a>(
     let cores = mc.cores();
     let c1 = &mut cores[1];
     let serializer = MessageSerializer::new(uart_driver);
+    #[allow(static_mut_refs)]
     c1.spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
         run_core1(serializer, right_buttons, timer)
     })
