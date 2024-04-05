@@ -1,5 +1,6 @@
 //! Common between sides, put everything with the same pinouts and shared hardware
 //! code here
+pub mod jitter;
 #[cfg(feature = "left")]
 pub mod left;
 pub mod oled;
@@ -15,7 +16,7 @@ use bitvec::order::Lsb0;
 use rp2040_hal::gpio::{DynPinId, FunctionSio, Pin, PullUp, SioInput};
 
 type RowPin = Pin<DynPinId, FunctionSio<SioInput>, PullUp>;
-type ButtonPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
+pub type ButtonPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
 
 #[cfg(any(feature = "right", feature = "serial"))]
 pub const NUM_COLS: usize = 6;

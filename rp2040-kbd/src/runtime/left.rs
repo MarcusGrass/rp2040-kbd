@@ -195,7 +195,7 @@ pub fn run_core1(
             kbd.update_right(update, &mut report_state);
             any_change = true;
         }
-        if kbd.scan_left(&mut left_buttons, &mut report_state) {
+        if kbd.scan_left(&mut left_buttons, &mut report_state, timer) {
             any_change = true;
         }
         if any_change {
