@@ -4,7 +4,6 @@ use embedded_hal::digital::v2::{InputPin, OutputPin};
 use paste::paste;
 use rp2040_hal::gpio::PinState;
 use rp2040_hal::rom_data::reset_to_usb_boot;
-use rp2040_hal::timer::Instant;
 use rp2040_hal::Timer;
 use usbd_hid::descriptor::KeyboardReport;
 
@@ -204,6 +203,23 @@ macro_rules! keyboard_key {
                         }
                         false
                     }
+
+                    #[allow(dead_code)]
+                    pub fn check_jitter_state(
+                        &mut self,
+                        keyboard_report_state: &mut KeyboardReportState,
+                        timer: Timer,
+                    ) -> bool {
+                        let mut any_change = false;
+                        if let Some(next) = self.0.jitter.try_release_quarantined(timer.get_counter()) {
+                            if self.0.last_state != next {
+                                self.update_state(next, keyboard_report_state);
+                                any_change = true;
+                                self.0.last_state = next;
+                            }
+                        }
+                        any_change
+                    }
                 }
             )*
         }
@@ -221,24 +237,6 @@ macro_rules! keyboard_key {
                             [<$side:snake _ row $row _ col $col>]: [<$side Row $row Col $col>]::new(),
                         )*
                     }
-                }
-
-                pub fn check_jitter_changes(
-                    &mut self,
-                    keyboard_report_state: &mut KeyboardReportState,
-                    now: Instant,
-                ) -> bool {
-                    let mut any_change = false;
-                    $(
-                        if let Some(next) = self.[<$side:snake _ row $row _ col $col>].0.jitter.try_release_quarantined(now) {
-                            if self.[<$side:snake _ row $row _ col $col>].0.last_state != next {
-                                self.[<$side:snake _ row $row _ col $col>].update_state(next, keyboard_report_state);
-                                any_change = true;
-                                self.[<$side:snake _ row $row _ col $col>].0.last_state = next;
-                            }
-                        }
-                    )*
-                    any_change
                 }
             }
         }
@@ -285,6 +283,8 @@ macro_rules! impl_read_pin_col {
                 let mut any_change = false;
                 $(
                     if [< $structure:snake >].check_update_state(matches!(left_buttons.rows[$row].is_low(), Ok(true)), keyboard_report_state, timer) {
+                        any_change = true;
+                    } else if [< $structure:snake >].check_jitter_state(keyboard_report_state, timer) {
                         any_change = true;
                     }
                 )*
@@ -420,14 +420,7 @@ impl KeyboardState {
             keyboard_report_state,
             timer,
         );
-        let jitter_change = self.check_jitter_changes(keyboard_report_state, timer.get_counter());
-        col0_change
-            || col1_change
-            || col2_change
-            || col3_change
-            || col4_change
-            || col5_change
-            || jitter_change
+        col0_change || col1_change || col2_change || col3_change || col4_change || col5_change
     }
 
     pub fn update_right(
