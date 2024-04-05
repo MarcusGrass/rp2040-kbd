@@ -1,8 +1,9 @@
 [workspace]
 resolver = "2"
-members = [ "rp2040-kbd"]
+members = [ "rp2040-kbd", "rp2040-kbd-lib"]
 
 [workspace.dependencies]
+rp2040-kbd-lib = { path = "rp2040-kbd-lib" }
 arrayvec = { version = "0.7.4", default-features = false }
 bitvec = { version = "1.0.1", default-features = false }
 cortex-m = "0.7.7"

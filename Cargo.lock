@@ -1041,6 +1041,7 @@ dependencies = [
  "rotary-encoder-embedded",
  "rp2040-boot2",
  "rp2040-hal",
+ "rp2040-kbd-lib",
  "rustc-hash",
  "smart-leds",
  "ssd1306",
@@ -1049,6 +1050,10 @@ dependencies = [
  "usbd-serial",
  "ws2812-pio",
 ]
+
+[[package]]
+name = "rp2040-kbd-lib"
+version = "0.1.0"
 
 [[package]]
 name = "rp2040-pac"
