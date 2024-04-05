@@ -6,5 +6,5 @@ pub mod loop_counter;
 pub mod ring_buffer;
 pub mod sleep;
 
-#[cfg(feature = "serial")]
+#[cfg(any(feature = "left", feature = "serial"))]
 pub mod usb;

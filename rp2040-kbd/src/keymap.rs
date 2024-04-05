@@ -5,6 +5,7 @@ use paste::paste;
 use rp2040_hal::gpio::PinState;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
+use rp2040_kbd_lib::queue::Queue;
 use usbd_hid::descriptor::KeyboardReport;
 
 use crate::hid::keycodes::{KeyCode, Modifier};
@@ -25,8 +26,18 @@ pub enum KeymapLayer {
     Settings,
 }
 
+fn copy_report(keyboard_report: &KeyboardReport) -> KeyboardReport {
+    KeyboardReport {
+        modifier: keyboard_report.modifier,
+        reserved: keyboard_report.reserved,
+        leds: keyboard_report.leds,
+        keycodes: keyboard_report.keycodes,
+    }
+}
+
 pub struct KeyboardReportState {
     inner_report: KeyboardReport,
+    outbound_reports: Queue<KeyboardReport, 16>,
     active_layer: KeymapLayer,
     last_perm_layer: Option<KeymapLayer>,
     jank: JankState,
@@ -54,6 +65,7 @@ impl KeyboardReportState {
                 leds: 0,
                 keycodes: [0u8; 6],
             },
+            outbound_reports: Queue::new(),
             active_layer: KeymapLayer::DvorakSe,
             last_perm_layer: None,
             jank: JankState {
@@ -72,8 +84,13 @@ impl KeyboardReportState {
     }
 
     #[cfg(feature = "hiddev")]
-    pub fn report(&self) -> &KeyboardReport {
-        &self.inner_report
+    pub fn report(&self) -> Option<&KeyboardReport> {
+        self.outbound_reports.peek()
+    }
+
+    #[cfg(feature = "hiddev")]
+    pub fn accept(&mut self) {
+        self.outbound_reports.pop_front();
     }
 
     pub fn layer_update(&mut self) -> Option<KeymapLayer> {
@@ -84,22 +101,30 @@ impl KeyboardReportState {
     fn push_key(&mut self, key_code: KeyCode) {
         // Don't know if there's ever a case where pressing more keys is valid, just replace front
         self.inner_report.keycodes[0] = key_code.0;
+        self.outbound_reports
+            .push_back(copy_report(&self.inner_report));
     }
 
     fn pop_key(&mut self, key_code: KeyCode) {
         if self.inner_report.keycodes[0] == key_code.0 {
             self.inner_report.keycodes[0] = 0;
+            self.outbound_reports
+                .push_back(copy_report(&self.inner_report));
         }
     }
 
     #[inline]
     fn push_modifier(&mut self, modifier: Modifier) {
-        self.inner_report.modifier |= modifier.0
+        self.inner_report.modifier |= modifier.0;
+        self.outbound_reports
+            .push_back(copy_report(&self.inner_report));
     }
 
     #[inline]
     fn pop_modifier(&mut self, modifier: Modifier) {
-        self.inner_report.modifier &= !modifier.0
+        self.inner_report.modifier &= !modifier.0;
+        self.outbound_reports
+            .push_back(copy_report(&self.inner_report));
     }
 
     #[inline]

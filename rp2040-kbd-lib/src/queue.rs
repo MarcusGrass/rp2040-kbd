@@ -34,10 +34,21 @@ impl<T, const N: usize> Queue<T, N> {
         }
         true
     }
+    pub fn peek(&self) -> Option<&T> {
+        if self.head == self.tail {
+            return None;
+        };
+        // Safety: Head always in range (always moves after tail) and points to initialized memory
+        let val = unsafe {
+            let cur = self.buffer.get_unchecked(self.head);
+            cur.as_ptr().as_ref()
+        };
+        val
+    }
 
     pub fn pop_front(&mut self) -> Option<T> {
         if self.head == self.tail {
-           return None
+            return None;
         };
         // Safety: Head always in range (always moves after tail) and points to initialized memory
         let val = unsafe {
@@ -52,7 +63,11 @@ impl<T, const N: usize> Queue<T, N> {
     }
 
     pub const fn new() -> Self {
-        Self { buffer: [Self::NULL; N], head: 0, tail: 0 }
+        Self {
+            buffer: [Self::NULL; N],
+            head: 0,
+            tail: 0,
+        }
     }
 }
 
@@ -78,7 +93,6 @@ mod tests {
         assert!(queue.pop_front().is_none());
         for i in 0..128 {
             queue.push_back(i);
-
         }
         for i in 0..128 {
             let val = queue.pop_front();
@@ -98,7 +112,7 @@ mod tests {
         assert_eq!(2, queue.pop_front().unwrap());
         assert_eq!(3, queue.pop_front().unwrap());
         assert!(queue.pop_front().is_none());
-        for i in 27..27+64 {
+        for i in 27..27 + 64 {
             queue.push_back(i);
             let val = queue.pop_front();
             assert_eq!(Some(i), val);

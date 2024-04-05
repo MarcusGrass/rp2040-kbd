@@ -30,13 +30,20 @@ impl<T> SyncUnsafeOnce<T> {
 }
 static USB_BUS: SyncBus = SyncBus(core::cell::OnceCell::new());
 
+#[cfg(feature = "serial")]
 static USB_DEVICE: SyncUnsafeOnce<crate::keyboard::usb_serial::UsbSerialDevice> =
     SyncUnsafeOnce::new();
 
+#[cfg(feature = "serial")]
 static USB_SERIAL: SyncUnsafeOnce<crate::keyboard::usb_serial::UsbSerial> = SyncUnsafeOnce::new();
 
+#[cfg(feature = "serial")]
 static USB_OUTPUT: SyncUnsafeOnce<bool> = SyncUnsafeOnce::new();
 
+#[cfg(feature = "hiddev")]
+static USB_HIDDEV: SyncUnsafeOnce<crate::hid::usb_hiddev::UsbHiddev> = SyncUnsafeOnce::new();
+
+#[cfg(feature = "serial")]
 pub unsafe fn init_usb(allocator: usb_device::bus::UsbBusAllocator<liatris::hal::usb::UsbBus>) {
     let _ = USB_BUS.0.set(allocator);
     USB_OUTPUT.set(false);
@@ -49,6 +56,7 @@ pub unsafe fn init_usb(allocator: usb_device::bus::UsbBusAllocator<liatris::hal:
     ));
 }
 
+#[cfg(feature = "serial")]
 pub fn acquire_usb<'a>() -> UsbGuard<'a> {
     let lock = crate::runtime::locks::UsbLock::claim();
     UsbGuard {
@@ -60,6 +68,7 @@ pub fn acquire_usb<'a>() -> UsbGuard<'a> {
     }
 }
 
+#[cfg(feature = "serial")]
 pub struct UsbGuard<'a> {
     pub serial: Option<&'a mut crate::keyboard::usb_serial::UsbSerial<'static>>,
     pub dev: Option<&'a mut crate::keyboard::usb_serial::UsbSerialDevice<'static>>,
@@ -68,6 +77,7 @@ pub struct UsbGuard<'a> {
     _pd: core::marker::PhantomData<&'a ()>,
 }
 
+#[cfg(feature = "serial")]
 impl<'a> core::fmt::Write for UsbGuard<'a> {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         if let Some(serial) = self.serial.as_mut() {
@@ -80,4 +90,29 @@ impl<'a> core::fmt::Write for UsbGuard<'a> {
             Ok(())
         }
     }
+}
+
+#[cfg(feature = "hiddev")]
+pub unsafe fn init_usb_hiddev(
+    allocator: usb_device::bus::UsbBusAllocator<liatris::hal::usb::UsbBus>,
+) {
+    let _ = USB_BUS.0.set(allocator);
+    USB_HIDDEV.set(crate::hid::usb_hiddev::UsbHiddev::new(
+        USB_BUS.0.get().unwrap(),
+    ));
+}
+
+#[cfg(feature = "hiddev")]
+pub unsafe fn try_push_report(keyboard_report: &usbd_hid::descriptor::KeyboardReport) -> bool {
+    critical_section::with(|_cs| {
+        USB_HIDDEV
+            .as_mut()
+            .map(|hid| hid.try_submit_report(keyboard_report))
+            .unwrap_or_default()
+    })
+}
+
+#[cfg(feature = "hiddev")]
+pub unsafe fn hiddev_interrup_poll() {
+    USB_HIDDEV.as_mut().map(|hid| hid.poll());
 }

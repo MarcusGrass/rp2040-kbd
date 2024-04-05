@@ -15,6 +15,8 @@ use crate::runtime::shared::usb::init_usb;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
 use heapless::String;
+#[cfg(feature = "hiddev")]
+use liatris::pac::interrupt;
 use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
@@ -182,12 +184,18 @@ pub fn run_core1(
     >,
 ) -> ! {
     #[cfg(feature = "hiddev")]
-    let mut hiddev = crate::hid::usb_hiddev::UsbHiddev::new(&allocator);
+    unsafe {
+        crate::runtime::shared::usb::init_usb_hiddev(allocator);
+    }
     let mut kbd = crate::keymap::KeyboardState::new();
     let mut report_state = KeyboardReportState::new();
     let mut loop_count: LoopCounter<100_000> = LoopCounter::new(timer.get_counter());
     if let Some(change) = report_state.layer_update() {
         push_layer_change(change);
+    }
+    #[cfg(feature = "hiddev")]
+    unsafe {
+        liatris::hal::pac::NVIC::unmask(liatris::pac::Interrupt::USBCTRL_IRQ);
     }
     loop {
         let mut any_change = false;
@@ -199,12 +207,21 @@ pub fn run_core1(
             any_change = true;
         }
         if any_change {
-            #[cfg(feature = "hiddev")]
-            {
-                let _ = hiddev.submit_blocking(report_state.report());
-            }
             push_touch_to_admin();
         }
+        #[cfg(feature = "hiddev")]
+        {
+            let mut pop = false;
+            if let Some(next_update) = report_state.report() {
+                unsafe {
+                    pop = crate::runtime::shared::usb::try_push_report(next_update);
+                }
+            }
+            if pop {
+                report_state.accept();
+            }
+        }
+
         if let Some(change) = report_state.layer_update() {
             push_layer_change(change);
         }
@@ -215,7 +232,13 @@ pub fn run_core1(
                 loop_count.reset(now);
             }
         }
-        #[cfg(feature = "hiddev")]
-        hiddev.poll();
     }
+}
+
+/// Safety: Called from the same core that publishes
+#[interrupt]
+#[allow(non_snake_case)]
+#[cfg(feature = "hiddev")]
+unsafe fn USBCTRL_IRQ() {
+    crate::runtime::shared::usb::hiddev_interrup_poll()
 }
