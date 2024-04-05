@@ -1258,12 +1258,16 @@ impl KeyboardButton for LeftRow2Col5 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::F);
             }
             KeymapLayer::Lower => {
-                with_modifier_kc!(
-                    keyboard_report_state,
-                    pressed,
-                    Modifier::RIGHT_ALT,
-                    KeyCode::RIGHT_BRACKET
-                );
+                // ~ Tilde double-tap to get it out immediately
+                if pressed {
+                    keyboard_report_state.push_modifier(Modifier::RIGHT_ALT);
+                    keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
+                    keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
+                    keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
+                } else {
+                    keyboard_report_state.pop_modifier(Modifier::RIGHT_ALT);
+                    keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
+                }
             }
             KeymapLayer::LowerAnsi => {
                 autoshift_kc!(keyboard_report_state, pressed, KeyCode::GRAVE);
@@ -1646,7 +1650,26 @@ impl KeyboardButton for RightRow0Col5 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N6);
             }
             KeymapLayer::Lower => {
-                autoshift_kc!(keyboard_report_state, pressed, KeyCode::RIGHT_BRACKET);
+                // Double-tap to get ^ on one press, not like I ever use circ for anything else
+                if pressed {
+                    if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
+                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
+                        keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
+                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
+                    } else {
+                        keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
+                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
+                        keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
+                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
+                        keyboard_report_state.jank.autoshifted = true;
+                    }
+                } else {
+                    if keyboard_report_state.jank.autoshifted {
+                        keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
+                        keyboard_report_state.jank.autoshifted = false;
+                    }
+                    keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
+                }
             }
             KeymapLayer::LowerAnsi => {
                 autoshift_kc!(keyboard_report_state, pressed, KeyCode::N6);
@@ -1992,7 +2015,23 @@ impl KeyboardButton for RightRow2Col5 {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::N);
             }
             KeymapLayer::Lower => {
-                autoshift_kc!(keyboard_report_state, pressed, KeyCode::EQUALS);
+                if pressed {
+                    if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
+                        keyboard_report_state.push_key(KeyCode::EQUALS);
+                    } else {
+                        keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
+                        keyboard_report_state.push_key(KeyCode::EQUALS);
+                        keyboard_report_state.pop_key(KeyCode::EQUALS);
+                        keyboard_report_state.push_key(KeyCode::EQUALS);
+                        keyboard_report_state.jank.autoshifted = true;
+                    }
+                } else {
+                    if keyboard_report_state.jank.autoshifted {
+                        keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
+                        keyboard_report_state.jank.autoshifted = false;
+                    }
+                    keyboard_report_state.pop_key(KeyCode::EQUALS);
+                }
             }
             KeymapLayer::LowerAnsi => {
                 pressed_push_pop_kc!(keyboard_report_state, pressed, KeyCode::GRAVE);
