@@ -308,28 +308,6 @@ keyboard_key!(
     Right, 4, 1, Right, 4, 2, Right, 4, 3, Right, 4, 4, Right, 4, 5,
 );
 
-macro_rules! simple_push_pop_kc {
-    ($slf: expr, $state: expr, $kc: expr) => {{
-        if let Some(_next) = $slf.0.last_state.take() {
-            $state.pop_key($kc);
-        } else {
-            $state.push_key($kc);
-            $slf.0.update_last_state($state.next_seq(), $state.active_layer);
-        }
-    }};
-}
-
-macro_rules! simple_push_pop_mod {
-    ($slf: expr, $state: expr, $modifier: expr) => {{
-        if let Some(_next) = $slf.0.last_state.take() {
-            $state.pop_modifier($modifier);
-        } else {
-            $state.push_modifier($modifier);
-            $slf.0.update_last_state($state.next_seq(), $state.active_layer);
-        }
-    }};
-}
-
 macro_rules! impl_read_pin_col {
     ($($structure: expr, $row: tt,)*, $col: tt) => {
         paste! {
@@ -665,10 +643,30 @@ fn rotate_layer(clockwise: bool, keyboard_report_state: &mut KeyboardReportState
     }
 }
 
+macro_rules! simple_push_pop_kc {
+    ($slf: expr, $state: expr, $kc: expr) => {{
+        if let Some(_next) = $slf.0.last_state.take() {
+            $state.pop_key($kc);
+        } else {
+            $state.push_key($kc);
+        }
+    }};
+}
+
+macro_rules! simple_push_pop_mod {
+    ($slf: expr, $state: expr, $modifier: expr) => {{
+        if let Some(_next) = $slf.0.last_state.take() {
+            $state.pop_modifier($modifier);
+        } else {
+            $state.push_modifier($modifier);
+        }
+    }};
+}
+
 macro_rules! autoshift_kc {
     ($slf: expr, $state: expr, $kc: expr) => {
         if let Some(prev) = $slf.0.last_state.take() {
-            if $state.seq == prev.seq {
+            if $state.seq == prev.seq + 1 {
                 $state.pop_modifier(Modifier::LEFT_SHIFT);
             }
             $state.pop_key($kc);
@@ -678,7 +676,6 @@ macro_rules! autoshift_kc {
             } else {
                 $state.push_key($kc);
                 $state.push_modifier(Modifier::LEFT_SHIFT);
-                $slf.0.update_last_state($state.next_seq(), $state.active_layer);
             }
         }
     };
@@ -687,7 +684,7 @@ macro_rules! autoshift_kc {
 macro_rules! with_modifier_kc {
     ($slf: expr, $state: expr, $modifier: expr, $kc: expr) => {
         if let Some(prev) = $slf.0.last_state.take() {
-            if $state.seq == prev.seq {
+            if $state.seq == prev.seq + 1 {
                 $state.pop_modifier($modifier);
             }
             $state.pop_key($kc);
@@ -705,6 +702,7 @@ impl KeyboardButton for LeftRow0Col0 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_kc!(self, keyboard_report_state, KeyCode::KC_TAB);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -756,6 +754,7 @@ impl KeyboardButton for LeftRow0Col1 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -817,6 +816,7 @@ impl KeyboardButton for LeftRow0Col2 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -867,6 +867,7 @@ impl KeyboardButton for LeftRow0Col3 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -904,6 +905,7 @@ impl KeyboardButton for LeftRow0Col4 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -932,6 +934,7 @@ impl KeyboardButton for LeftRow0Col5 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -943,6 +946,7 @@ impl KeyboardButton for LeftRow1Col0 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_kc!(self, keyboard_report_state, KeyCode::ESCAPE);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -974,6 +978,7 @@ impl KeyboardButton for LeftRow1Col1 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1007,6 +1012,7 @@ impl KeyboardButton for LeftRow1Col2 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1046,6 +1052,7 @@ impl KeyboardButton for LeftRow1Col3 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1084,6 +1091,7 @@ impl KeyboardButton for LeftRow1Col4 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1118,6 +1126,7 @@ impl KeyboardButton for LeftRow1Col5 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1129,6 +1138,7 @@ impl KeyboardButton for LeftRow2Col0 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_mod!(self, keyboard_report_state, Modifier::LEFT_SHIFT);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1176,6 +1186,7 @@ impl KeyboardButton for LeftRow2Col1 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1207,6 +1218,7 @@ impl KeyboardButton for LeftRow2Col2 {
             KeymapLayer::Raise | KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1238,6 +1250,7 @@ impl KeyboardButton for LeftRow2Col3 {
             KeymapLayer::Raise | KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1269,6 +1282,7 @@ impl KeyboardButton for LeftRow2Col4 {
             KeymapLayer::Raise | KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1307,6 +1321,7 @@ impl KeyboardButton for LeftRow2Col5 {
             KeymapLayer::Raise | KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1318,6 +1333,7 @@ impl KeyboardButton for LeftRow3Col0 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_mod!(self, keyboard_report_state, Modifier::LEFT_CONTROL);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1339,6 +1355,7 @@ impl KeyboardButton for LeftRow3Col1 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1362,6 +1379,7 @@ impl KeyboardButton for LeftRow3Col2 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1402,6 +1420,7 @@ impl KeyboardButton for LeftRow3Col4 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1426,6 +1445,7 @@ impl KeyboardButton for LeftRow3Col5 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1435,11 +1455,12 @@ impl KeyboardButton for LeftRow4Col1 {
     fn update_state(
         &mut self,
         pressed: bool,
-        _keyboard_report_state: &mut KeyboardReportState,
+        keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         if pressed {
             reset_to_usb_boot(0, 0);
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1463,6 +1484,7 @@ impl KeyboardButton for LeftRow4Col2 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1488,6 +1510,7 @@ impl KeyboardButton for LeftRow4Col3 {
             KeymapLayer::Settings => {}
         }
         simple_push_pop_kc!(self, keyboard_report_state, KeyCode::N3);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1510,6 +1533,7 @@ impl KeyboardButton for LeftRow4Col4 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1518,8 +1542,9 @@ impl KeyboardButton for LeftRow4Col5 {
     fn update_state(
         &mut self,
         _pressed: bool,
-        _keyboard_report_state: &mut KeyboardReportState,
+        keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1538,6 +1563,7 @@ impl KeyboardButton for RightRow0Col0 {
 
         }
         simple_push_pop_kc!(self, keyboard_report_state, KeyCode::BACKSPACE);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1570,6 +1596,7 @@ impl KeyboardButton for RightRow0Col1 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1602,6 +1629,7 @@ impl KeyboardButton for RightRow0Col2 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1634,6 +1662,7 @@ impl KeyboardButton for RightRow0Col3 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1666,6 +1695,7 @@ impl KeyboardButton for RightRow0Col4 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1717,6 +1747,7 @@ impl KeyboardButton for RightRow0Col5 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1728,6 +1759,7 @@ impl KeyboardButton for RightRow1Col0 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_kc!(self, keyboard_report_state, KeyCode::ENTER);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1759,6 +1791,7 @@ impl KeyboardButton for RightRow1Col1 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1795,6 +1828,7 @@ impl KeyboardButton for RightRow1Col2 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1831,6 +1865,7 @@ impl KeyboardButton for RightRow1Col3 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1862,6 +1897,7 @@ impl KeyboardButton for RightRow1Col4 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1898,6 +1934,7 @@ impl KeyboardButton for RightRow1Col5 {
             }
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1909,6 +1946,7 @@ impl KeyboardButton for RightRow2Col0 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_mod!(self, keyboard_report_state, Modifier::LEFT_SHIFT);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1939,6 +1977,7 @@ impl KeyboardButton for RightRow2Col1 {
                 }
             }
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1969,6 +2008,7 @@ impl KeyboardButton for RightRow2Col2 {
                 }
             }
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -1999,6 +2039,7 @@ impl KeyboardButton for RightRow2Col3 {
                 }
             }
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2034,6 +2075,7 @@ impl KeyboardButton for RightRow2Col4 {
                 }
             }
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2076,6 +2118,7 @@ impl KeyboardButton for RightRow2Col5 {
             KeymapLayer::Raise | KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2087,6 +2130,7 @@ impl KeyboardButton for RightRow3Col0 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_mod!(self, keyboard_report_state, Modifier::RIGHT_CONTROL);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2116,6 +2160,7 @@ impl KeyboardButton for RightRow3Col1 {
                 }
             }
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2127,6 +2172,7 @@ impl KeyboardButton for RightRow3Col2 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_mod!(self, keyboard_report_state, Modifier::RIGHT_ALT);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2156,6 +2202,7 @@ impl KeyboardButton for RightRow3Col3 {
                 }
             }
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2187,6 +2234,7 @@ impl KeyboardButton for RightRow3Col4 {
                 }
             }
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2210,6 +2258,7 @@ impl KeyboardButton for RightRow3Col5 {
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2225,6 +2274,7 @@ impl KeyboardButton for RightRow4Col2 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_kc!(self, keyboard_report_state, KeyCode::N2);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2236,6 +2286,7 @@ impl KeyboardButton for RightRow4Col3 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_kc!(self, keyboard_report_state, KeyCode::N3);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2247,6 +2298,7 @@ impl KeyboardButton for RightRow4Col4 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_kc!(self, keyboard_report_state, KeyCode::N4);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
@@ -2258,6 +2310,7 @@ impl KeyboardButton for RightRow4Col5 {
         keyboard_report_state: &mut KeyboardReportState,
     ) -> bool {
         simple_push_pop_kc!(self, keyboard_report_state, KeyCode::N5);
+        self.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
         true
     }
 }
