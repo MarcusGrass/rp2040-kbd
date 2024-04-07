@@ -46,7 +46,7 @@ impl KeyCode {
     pub const ENTER: Self = Self(0x28); //Return (ENTER)3 Sel 43 3 3 3 4/101/104
     pub const ESCAPE: Self = Self(0x29); //ESCAPE Sel 110 3 3 3 4/101/104
     pub const BACKSPACE: Self = Self(0x2A); //DELETE (Backspace)4 Sel 15 3 3 3 4/101/104
-    pub const KC_TAB: Self = Self(0x2B); //Tab Sel 16 3 3 3 4/101/104
+    pub const TAB: Self = Self(0x2B); //Tab Sel 16 3 3 3 4/101/104
     pub const SPACE: Self = Self(0x2C); //Spacebar Sel 61 3 3 3 4/101/104
     pub const DASH: Self = Self(0x2D); //- and (underscore)2 Sel 12 3 3 3 4/101/104
     pub const EQUALS: Self = Self(0x2E); //= and +2 Sel 13 3 3 3 4/101/104
