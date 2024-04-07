@@ -26,6 +26,13 @@ pub enum KeymapLayer {
     Settings,
 }
 
+const EMPTY_REPORT: KeyboardReport = KeyboardReport {
+    modifier: 0,
+    reserved: 0,
+    leds: 0,
+    keycodes: [0u8; 6],
+};
+
 fn copy_report(keyboard_report: &KeyboardReport) -> KeyboardReport {
     KeyboardReport {
         modifier: keyboard_report.modifier,
@@ -189,14 +196,19 @@ impl KeyboardReportState {
 
     #[inline]
     fn pop_temp_modifiers(&mut self) {
-        self.temp_mods
-            .take()
-            .map(|tm| self.inner_report.modifier = tm.0);
+        if let Some(temp) = self.temp_mods.take() {
+            self.inner_report.modifier = temp.0;
+            // There's some intereference and weird behaviour if there's only a mod change
+            // causing the key not to go out, send an empty in between
+            self.outbound_reports.push_back(EMPTY_REPORT);
+        }
     }
 
     #[inline]
     fn has_modifier(&self, modifier: Modifier) -> bool {
-        self.inner_report.modifier & modifier.0 != 0
+        self.temp_mods.map(|tm| tm.0 & modifier.0 != 0)
+            .unwrap_or_else(|| self.inner_report.modifier & modifier.0 != 0)
+
     }
 
     #[inline]
