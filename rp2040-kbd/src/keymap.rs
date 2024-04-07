@@ -62,7 +62,6 @@ struct JankState {
     pressing_dot: bool,
     pressing_semicolon: bool,
     pressing_reg_colon: bool,
-    autoshifted: bool,
 }
 
 impl KeyboardReportState {
@@ -88,7 +87,6 @@ impl KeyboardReportState {
                 pressing_dot: false,
                 pressing_semicolon: false,
                 pressing_reg_colon: false,
-                autoshifted: false,
             },
             layer_change: Some(KeymapLayer::DvorakSe),
         }
@@ -146,7 +144,7 @@ impl KeyboardReportState {
         }
     }
 
-    fn temp_modify(&mut self, key_code: &[KeyCode], add_mods: &[Modifier], pop_mods: &[Modifier]) {
+    fn temp_modify(&mut self, key_code: KeyCode, add_mods: &[Modifier], pop_mods: &[Modifier]) {
         self.pop_temp_modifiers();
         self.temp_mods = Some(Modifier(self.inner_report.modifier));
         for md in add_mods {
@@ -155,18 +153,9 @@ impl KeyboardReportState {
         for md in pop_mods {
             self.inner_report.modifier &= !md.0;
         }
-        if key_code.len() > 1 {
-            let mut out_report = copy_report(&self.inner_report);
-            for (ind, kc) in key_code.iter().enumerate() {
-                out_report.keycodes[ind] = kc.0;
-            }
-            self.inner_report.keycodes[0] = key_code[0].0;
-            self.outbound_reports.push_back(out_report);
-        } else {
-            self.inner_report.keycodes[0] = key_code[0].0;
-            self.outbound_reports
-                .push_back(copy_report(&self.inner_report));
-        }
+        self.inner_report.keycodes[0] = key_code.0;
+        self.outbound_reports
+            .push_back(copy_report(&self.inner_report));
     }
 
     fn pop_key(&mut self, key_code: KeyCode) {
@@ -206,13 +195,16 @@ impl KeyboardReportState {
 
     #[inline]
     fn has_modifier(&self, modifier: Modifier) -> bool {
-        self.temp_mods.map(|tm| tm.0 & modifier.0 != 0)
+        self.temp_mods
+            .map(|tm| tm.0 & modifier.0 != 0)
             .unwrap_or_else(|| self.inner_report.modifier & modifier.0 != 0)
-
     }
 
     #[inline]
     fn push_layer_with_fallback(&mut self, keymap_layer: KeymapLayer) {
+        if let Some(old) = self.last_perm_layer.take() {
+            self.active_layer = old;
+        }
         self.last_perm_layer = Some(core::mem::replace(&mut self.active_layer, keymap_layer));
         self.layer_change = Some(self.active_layer);
     }
@@ -1022,7 +1014,7 @@ impl KeyboardButton for LeftRow0Col1 {
                 keyboard_report_state.push_key(KeyCode::N1);
             }
             KeymapLayer::Lower | KeymapLayer::LowerAnsi => {
-                keyboard_report_state.temp_modify(&[KeyCode::N1], &[Modifier::LEFT_SHIFT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::N1, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F1);
@@ -1080,7 +1072,7 @@ impl KeyboardButton for LeftRow0Col2 {
                     // Need to remove shift for this key to go out, not putting it
                     // back after though for reasons that I don't remember and may be a bug
                     keyboard_report_state.temp_modify(
-                        &[KeyCode::NON_US_BACKSLASH],
+                        KeyCode::NON_US_BACKSLASH,
                         &[],
                         &[Modifier::LEFT_SHIFT],
                     );
@@ -1097,10 +1089,10 @@ impl KeyboardButton for LeftRow0Col2 {
                 keyboard_report_state.push_key(KeyCode::N2);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.temp_modify(&[KeyCode::N2], &[Modifier::RIGHT_ALT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::N2, &[Modifier::RIGHT_ALT], &[]);
             }
             KeymapLayer::LowerAnsi => {
-                keyboard_report_state.temp_modify(&[KeyCode::N2], &[Modifier::LEFT_SHIFT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::N2, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F2);
@@ -1139,7 +1131,6 @@ impl KeyboardButton for LeftRow0Col2 {
                 keyboard_report_state.pop_key(KeyCode::N2);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
                 keyboard_report_state.pop_key(KeyCode::N2);
             }
             KeymapLayer::Raise => {
@@ -1174,7 +1165,7 @@ impl KeyboardButton for LeftRow0Col3 {
                 keyboard_report_state.push_key(KeyCode::N3);
             }
             KeymapLayer::Lower | KeymapLayer::LowerAnsi => {
-                keyboard_report_state.temp_modify(&[KeyCode::N3], &[Modifier::LEFT_SHIFT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::N3, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F3);
@@ -1234,10 +1225,10 @@ impl KeyboardButton for LeftRow0Col4 {
                 keyboard_report_state.push_key(KeyCode::N4);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.temp_modify(&[KeyCode::N4], &[Modifier::RIGHT_ALT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::N4, &[Modifier::RIGHT_ALT], &[]);
             }
             KeymapLayer::LowerAnsi => {
-                keyboard_report_state.temp_modify(&[KeyCode::N4], &[Modifier::LEFT_SHIFT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::N4, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F4);
@@ -1289,7 +1280,7 @@ impl KeyboardButton for LeftRow0Col5 {
                 keyboard_report_state.push_key(KeyCode::N5);
             }
             KeymapLayer::Lower | KeymapLayer::LowerAnsi => {
-                keyboard_report_state.temp_modify(&[KeyCode::N5], &[Modifier::LEFT_SHIFT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::N5, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F4);
@@ -1406,7 +1397,7 @@ impl KeyboardButton for LeftRow1Col2 {
                 keyboard_report_state.push_key(KeyCode::Q);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.temp_modify(&[KeyCode::N0], &[Modifier::LEFT_SHIFT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::N0, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::LowerAnsi => {
                 keyboard_report_state.push_key(KeyCode::EQUALS);
@@ -1589,10 +1580,10 @@ impl KeyboardButton for LeftRow1Col5 {
                 keyboard_report_state.push_key(KeyCode::R);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.temp_modify(&[KeyCode::DASH], &[Modifier::LEFT_SHIFT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::DASH, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::LowerAnsi => {
-                keyboard_report_state.temp_modify(&[KeyCode::SLASH], &[Modifier::LEFT_SHIFT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::SLASH, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F11);
@@ -1895,19 +1886,19 @@ impl KeyboardButton for LeftRow2Col5 {
             KeymapLayer::Lower => {
                 // ~ Tilde double-tap to get it out immediately
                 keyboard_report_state.temp_modify(
-                    &[KeyCode::RIGHT_BRACKET],
+                    KeyCode::RIGHT_BRACKET,
                     &[Modifier::RIGHT_ALT],
                     &[],
                 );
                 keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
                 keyboard_report_state.temp_modify(
-                    &[KeyCode::RIGHT_BRACKET],
+                    KeyCode::RIGHT_BRACKET,
                     &[Modifier::RIGHT_ALT],
                     &[],
                 );
             }
             KeymapLayer::LowerAnsi => {
-                keyboard_report_state.temp_modify(&[KeyCode::GRAVE], &[Modifier::LEFT_SHIFT], &[]);
+                keyboard_report_state.temp_modify(KeyCode::GRAVE, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise | KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
@@ -2178,9 +2169,7 @@ impl KeyboardButton for LeftRow4Col3 {
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe | KeymapLayer::DvorakAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::DASH);
+                keyboard_report_state.temp_modify(KeyCode::DASH, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::QwertyAnsi => {}
             KeymapLayer::QwertyGaming => {
@@ -2201,8 +2190,6 @@ impl KeyboardButton for LeftRow4Col3 {
     ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe | KeymapLayer::DvorakAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::DASH);
             }
             KeymapLayer::QwertyAnsi => {}
@@ -2293,14 +2280,10 @@ impl KeyboardButton for RightRow0Col1 {
                 keyboard_report_state.push_key(KeyCode::N0);
             }
             KeymapLayer::Lower => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::BACKSLASH);
+                keyboard_report_state.temp_modify(KeyCode::BACKSLASH, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::N8);
+                keyboard_report_state.temp_modify(KeyCode::BACKSLASH, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F10);
@@ -2326,13 +2309,9 @@ impl KeyboardButton for RightRow0Col1 {
                 keyboard_report_state.pop_key(KeyCode::N0);
             }
             KeymapLayer::Lower => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::BACKSLASH);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::N8);
             }
             KeymapLayer::Raise => {
@@ -2357,14 +2336,10 @@ impl KeyboardButton for RightRow0Col2 {
                 keyboard_report_state.push_key(KeyCode::N9);
             }
             KeymapLayer::Lower => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::N9);
+                keyboard_report_state.temp_modify(KeyCode::N9, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::N0);
+                keyboard_report_state.temp_modify(KeyCode::N8, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F9);
@@ -2390,13 +2365,9 @@ impl KeyboardButton for RightRow0Col2 {
                 keyboard_report_state.pop_key(KeyCode::N9);
             }
             KeymapLayer::Lower => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::N9);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::N0);
             }
             KeymapLayer::Raise => {
@@ -2421,14 +2392,10 @@ impl KeyboardButton for RightRow0Col3 {
                 keyboard_report_state.push_key(KeyCode::N8);
             }
             KeymapLayer::Lower => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::N8);
+                keyboard_report_state.temp_modify(KeyCode::N8, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::N9);
+                keyboard_report_state.temp_modify(KeyCode::N9, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F8);
@@ -2454,13 +2421,9 @@ impl KeyboardButton for RightRow0Col3 {
                 keyboard_report_state.pop_key(KeyCode::N8);
             }
             KeymapLayer::Lower => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::N8);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::N9);
             }
             KeymapLayer::Raise => {
@@ -2485,14 +2448,10 @@ impl KeyboardButton for RightRow0Col4 {
                 keyboard_report_state.push_key(KeyCode::N7);
             }
             KeymapLayer::Lower => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::N6);
+                keyboard_report_state.temp_modify(KeyCode::N6, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::N7);
+                keyboard_report_state.temp_modify(KeyCode::N7, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F7);
@@ -2518,13 +2477,9 @@ impl KeyboardButton for RightRow0Col4 {
                 keyboard_report_state.pop_key(KeyCode::N7);
             }
             KeymapLayer::Lower => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::N6);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::N7);
             }
             KeymapLayer::Raise => {
@@ -2549,34 +2504,27 @@ impl KeyboardButton for RightRow0Col5 {
                 keyboard_report_state.push_key(KeyCode::N6);
             }
             KeymapLayer::Lower => {
-                /*
                 // Double-tap to get ^ on one press, not like I ever use circ for anything else
-                if pressed {
-                    if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
-                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
-                        keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
-                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
-                    } else {
-                        keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
-                        keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
-                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
-                        keyboard_report_state.jank.autoshifted = true;
-                    }
-                } else {
-                    if keyboard_report_state.jank.autoshifted {
-                        keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
-                        keyboard_report_state.jank.autoshifted = false;
-                    }
+                if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
+                    keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
                     keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
+                    keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
+                } else {
+                    keyboard_report_state.temp_modify(
+                        KeyCode::RIGHT_BRACKET,
+                        &[Modifier::LEFT_SHIFT],
+                        &[],
+                    );
+                    keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
+                    keyboard_report_state.temp_modify(
+                        KeyCode::RIGHT_BRACKET,
+                        &[Modifier::LEFT_SHIFT],
+                        &[],
+                    );
                 }
-
-                 */
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::N6);
+                keyboard_report_state.temp_modify(KeyCode::N6, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::F6);
@@ -2602,33 +2550,9 @@ impl KeyboardButton for RightRow0Col5 {
                 keyboard_report_state.pop_key(KeyCode::N6);
             }
             KeymapLayer::Lower => {
-                /*
-                // Double-tap to get ^ on one press, not like I ever use circ for anything else
-                if pressed {
-                    if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
-                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
-                        keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
-                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
-                    } else {
-                        keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
-                        keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
-                        keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
-                        keyboard_report_state.jank.autoshifted = true;
-                    }
-                } else {
-                    if keyboard_report_state.jank.autoshifted {
-                        keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
-                        keyboard_report_state.jank.autoshifted = false;
-                    }
-                    keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
-                }
-
-                 */
+                keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::N6);
             }
             KeymapLayer::Raise => {
@@ -2718,13 +2642,14 @@ impl KeyboardButton for RightRow1Col2 {
                 keyboard_report_state.push_key(KeyCode::L);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.push_modifier(Modifier::RIGHT_ALT);
-                keyboard_report_state.push_key(KeyCode::N0);
+                keyboard_report_state.temp_modify(KeyCode::N0, &[Modifier::RIGHT_ALT], &[]);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::RIGHT_BRACKET);
+                keyboard_report_state.temp_modify(
+                    KeyCode::RIGHT_BRACKET,
+                    &[Modifier::RIGHT_ALT],
+                    &[],
+                );
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::HOME);
@@ -2749,12 +2674,9 @@ impl KeyboardButton for RightRow1Col2 {
                 keyboard_report_state.pop_key(KeyCode::L);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.pop_modifier(Modifier::RIGHT_ALT);
                 keyboard_report_state.pop_key(KeyCode::N0);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
             }
             KeymapLayer::Raise => {
@@ -2778,13 +2700,14 @@ impl KeyboardButton for RightRow1Col3 {
                 keyboard_report_state.push_key(KeyCode::K);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.push_modifier(Modifier::RIGHT_ALT);
-                keyboard_report_state.push_key(KeyCode::N7);
+                keyboard_report_state.temp_modify(KeyCode::N7, &[Modifier::RIGHT_ALT], &[]);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::LEFT_BRACKET);
+                keyboard_report_state.temp_modify(
+                    KeyCode::LEFT_BRACKET,
+                    &[Modifier::LEFT_SHIFT],
+                    &[],
+                );
             }
             KeymapLayer::Raise => {
                 keyboard_report_state.push_key(KeyCode::PAGE_UP);
@@ -2809,12 +2732,9 @@ impl KeyboardButton for RightRow1Col3 {
                 keyboard_report_state.pop_key(KeyCode::K);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.pop_modifier(Modifier::RIGHT_ALT);
                 keyboard_report_state.pop_key(KeyCode::N7);
             }
             KeymapLayer::LowerAnsi => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::LEFT_BRACKET);
             }
             KeymapLayer::Raise => {
@@ -2838,9 +2758,7 @@ impl KeyboardButton for RightRow1Col4 {
                 keyboard_report_state.push_key(KeyCode::J);
             }
             KeymapLayer::Lower => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                keyboard_report_state.push_key(KeyCode::N7);
+                keyboard_report_state.temp_modify(KeyCode::N7, &[Modifier::LEFT_SHIFT], &[]);
             }
             KeymapLayer::LowerAnsi => {
                 keyboard_report_state.push_key(KeyCode::SLASH);
@@ -2868,8 +2786,6 @@ impl KeyboardButton for RightRow1Col4 {
                 keyboard_report_state.pop_key(KeyCode::J);
             }
             KeymapLayer::Lower => {
-                // Todo: temp-mod-shift
-                keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
                 keyboard_report_state.pop_key(KeyCode::N7);
             }
             KeymapLayer::LowerAnsi => {
@@ -2896,8 +2812,7 @@ impl KeyboardButton for RightRow1Col5 {
                 keyboard_report_state.push_key(KeyCode::H);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.push_modifier(Modifier::RIGHT_ALT);
-                keyboard_report_state.push_key(KeyCode::DASH);
+                keyboard_report_state.temp_modify(KeyCode::DASH, &[Modifier::RIGHT_ALT], &[]);
             }
             KeymapLayer::LowerAnsi => {
                 keyboard_report_state.push_key(KeyCode::BACKSLASH);
@@ -2925,7 +2840,6 @@ impl KeyboardButton for RightRow1Col5 {
                 keyboard_report_state.pop_key(KeyCode::H);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.pop_modifier(Modifier::RIGHT_ALT);
                 keyboard_report_state.pop_key(KeyCode::DASH);
             }
             KeymapLayer::LowerAnsi => {
@@ -3104,8 +3018,11 @@ impl KeyboardButton for RightRow2Col4 {
                 keyboard_report_state.push_key(KeyCode::M);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.push_modifier(Modifier::RIGHT_ALT);
-                keyboard_report_state.push_key(KeyCode::NON_US_BACKSLASH);
+                keyboard_report_state.temp_modify(
+                    KeyCode::NON_US_BACKSLASH,
+                    &[Modifier::RIGHT_ALT],
+                    &[],
+                );
             }
             KeymapLayer::LowerAnsi => {
                 keyboard_report_state.push_key(KeyCode::PIPE);
@@ -3130,7 +3047,6 @@ impl KeyboardButton for RightRow2Col4 {
                 keyboard_report_state.pop_key(KeyCode::M);
             }
             KeymapLayer::Lower => {
-                keyboard_report_state.pop_modifier(Modifier::RIGHT_ALT);
                 keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
             }
             KeymapLayer::LowerAnsi => {
@@ -3152,26 +3068,21 @@ impl KeyboardButton for RightRow2Col5 {
                 keyboard_report_state.push_key(KeyCode::N);
             }
             KeymapLayer::Lower => {
-                /*
-                if pressed {
-                    if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
-                        keyboard_report_state.push_key(KeyCode::EQUALS);
-                    } else {
-                        keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                        keyboard_report_state.push_key(KeyCode::EQUALS);
-                        keyboard_report_state.pop_key(KeyCode::EQUALS);
-                        keyboard_report_state.push_key(KeyCode::EQUALS);
-                        keyboard_report_state.jank.autoshifted = true;
-                    }
+                if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
+                    keyboard_report_state.push_key(KeyCode::EQUALS);
                 } else {
-                    if keyboard_report_state.jank.autoshifted {
-                        keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
-                        keyboard_report_state.jank.autoshifted = false;
-                    }
+                    keyboard_report_state.temp_modify(
+                        KeyCode::EQUALS,
+                        &[Modifier::LEFT_SHIFT],
+                        &[],
+                    );
                     keyboard_report_state.pop_key(KeyCode::EQUALS);
+                    keyboard_report_state.temp_modify(
+                        KeyCode::EQUALS,
+                        &[Modifier::LEFT_SHIFT],
+                        &[],
+                    );
                 }
-
-                 */
             }
             KeymapLayer::LowerAnsi => {
                 keyboard_report_state.push_key(KeyCode::GRAVE);
@@ -3194,26 +3105,7 @@ impl KeyboardButton for RightRow2Col5 {
                 keyboard_report_state.pop_key(KeyCode::N);
             }
             KeymapLayer::Lower => {
-                /*
-                if pressed {
-                    if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
-                        keyboard_report_state.push_key(KeyCode::EQUALS);
-                    } else {
-                        keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
-                        keyboard_report_state.push_key(KeyCode::EQUALS);
-                        keyboard_report_state.pop_key(KeyCode::EQUALS);
-                        keyboard_report_state.push_key(KeyCode::EQUALS);
-                        keyboard_report_state.jank.autoshifted = true;
-                    }
-                } else {
-                    if keyboard_report_state.jank.autoshifted {
-                        keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
-                        keyboard_report_state.jank.autoshifted = false;
-                    }
-                    keyboard_report_state.pop_key(KeyCode::EQUALS);
-                }
-
-                 */
+                keyboard_report_state.pop_key(KeyCode::EQUALS);
             }
             KeymapLayer::LowerAnsi => {
                 keyboard_report_state.pop_key(KeyCode::GRAVE);
