@@ -113,6 +113,6 @@ pub unsafe fn try_push_report(keyboard_report: &usbd_hid::descriptor::KeyboardRe
 }
 
 #[cfg(feature = "hiddev")]
-pub unsafe fn hiddev_interrup_poll() {
+pub unsafe fn hiddev_interrupt_poll() {
     USB_HIDDEV.as_mut().map(|hid| hid.poll());
 }

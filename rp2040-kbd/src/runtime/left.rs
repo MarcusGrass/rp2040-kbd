@@ -22,7 +22,7 @@ use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::UsbBusAllocator;
 
-static mut CORE_1_STACK_AREA: [usize; 1024] = [0; 1024];
+static mut CORE_1_STACK_AREA: [usize; 1024 * 4] = [0; 1024 * 4];
 #[inline(never)]
 pub fn run_left<'a>(
     mc: &'a mut Multicore<'a>,
@@ -240,5 +240,5 @@ pub fn run_core1(
 #[allow(non_snake_case)]
 #[cfg(feature = "hiddev")]
 unsafe fn USBCTRL_IRQ() {
-    crate::runtime::shared::usb::hiddev_interrup_poll()
+    crate::runtime::shared::usb::hiddev_interrupt_poll()
 }

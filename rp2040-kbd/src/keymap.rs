@@ -194,16 +194,6 @@ pub trait KeyboardButton {
         keyboard_report_state: &mut KeyboardReportState,
     ) {
     }
-    #[inline(always)]
-    fn update_state(
-        &mut self,
-        _pressed: bool,
-        _keyboard_report_state: &mut KeyboardReportState,
-    ) -> bool {
-        false
-    }
-
-
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -498,7 +488,10 @@ impl KeyboardState {
                                 self.right_row0_col0.on_release(prev, keyboard_report_state)
                             } else {
                                 self.right_row0_col0.on_press(keyboard_report_state);
-                                self.right_row0_col0.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row0_col0.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -508,7 +501,10 @@ impl KeyboardState {
                                 self.right_row0_col1.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row0_col1.on_press(keyboard_report_state);
-                                self.right_row0_col1.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row0_col1.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -518,7 +514,10 @@ impl KeyboardState {
                                 self.right_row0_col2.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row0_col2.on_press(keyboard_report_state);
-                                self.right_row0_col2.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row0_col2.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -528,7 +527,10 @@ impl KeyboardState {
                                 self.right_row0_col3.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row0_col3.on_press(keyboard_report_state);
-                                self.right_row0_col3.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row0_col3.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -538,7 +540,10 @@ impl KeyboardState {
                                 self.right_row0_col4.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row0_col4.on_press(keyboard_report_state);
-                                self.right_row0_col4.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row0_col4.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -548,7 +553,10 @@ impl KeyboardState {
                                 self.right_row0_col5.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row0_col5.on_press(keyboard_report_state);
-                                self.right_row0_col5.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row0_col5.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -558,7 +566,10 @@ impl KeyboardState {
                                 self.right_row1_col0.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row1_col0.on_press(keyboard_report_state);
-                                self.right_row1_col0.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row1_col0.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -568,7 +579,10 @@ impl KeyboardState {
                                 self.right_row1_col1.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row1_col1.on_press(keyboard_report_state);
-                                self.right_row1_col1.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row1_col1.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -578,7 +592,10 @@ impl KeyboardState {
                                 self.right_row1_col2.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row1_col2.on_press(keyboard_report_state);
-                                self.right_row1_col2.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row1_col2.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -588,7 +605,10 @@ impl KeyboardState {
                                 self.right_row1_col3.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row1_col3.on_press(keyboard_report_state);
-                                self.right_row1_col3.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row1_col3.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -598,7 +618,10 @@ impl KeyboardState {
                                 self.right_row1_col4.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row1_col4.on_press(keyboard_report_state);
-                                self.right_row1_col4.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row1_col4.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -608,7 +631,10 @@ impl KeyboardState {
                                 self.right_row1_col5.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row1_col5.on_press(keyboard_report_state);
-                                self.right_row1_col5.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row1_col5.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -618,7 +644,10 @@ impl KeyboardState {
                                 self.right_row2_col0.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row2_col0.on_press(keyboard_report_state);
-                                self.right_row2_col0.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row2_col0.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -628,7 +657,10 @@ impl KeyboardState {
                                 self.right_row2_col1.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row2_col1.on_press(keyboard_report_state);
-                                self.right_row2_col1.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row2_col1.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -638,7 +670,10 @@ impl KeyboardState {
                                 self.right_row2_col2.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row2_col2.on_press(keyboard_report_state);
-                                self.right_row2_col2.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row2_col2.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -648,7 +683,10 @@ impl KeyboardState {
                                 self.right_row2_col3.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row2_col3.on_press(keyboard_report_state);
-                                self.right_row2_col3.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row2_col3.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -658,7 +696,10 @@ impl KeyboardState {
                                 self.right_row2_col4.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row2_col4.on_press(keyboard_report_state);
-                                self.right_row2_col4.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row2_col4.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -668,7 +709,10 @@ impl KeyboardState {
                                 self.right_row2_col5.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row2_col5.on_press(keyboard_report_state);
-                                self.right_row2_col5.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row2_col5.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -678,7 +722,10 @@ impl KeyboardState {
                                 self.right_row3_col0.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row3_col0.on_press(keyboard_report_state);
-                                self.right_row3_col0.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row3_col0.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -688,7 +735,10 @@ impl KeyboardState {
                                 self.right_row3_col1.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row3_col1.on_press(keyboard_report_state);
-                                self.right_row3_col1.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row3_col1.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -698,7 +748,10 @@ impl KeyboardState {
                                 self.right_row3_col2.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row3_col2.on_press(keyboard_report_state);
-                                self.right_row3_col2.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row3_col2.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -708,7 +761,10 @@ impl KeyboardState {
                                 self.right_row3_col3.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row3_col3.on_press(keyboard_report_state);
-                                self.right_row3_col3.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row3_col3.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -718,7 +774,10 @@ impl KeyboardState {
                                 self.right_row3_col4.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row3_col4.on_press(keyboard_report_state);
-                                self.right_row3_col4.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row3_col4.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -728,7 +787,10 @@ impl KeyboardState {
                                 self.right_row3_col5.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row3_col5.on_press(keyboard_report_state);
-                                self.right_row3_col5.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row3_col5.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -738,7 +800,10 @@ impl KeyboardState {
                                 self.right_row4_col1.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row4_col1.on_press(keyboard_report_state);
-                                self.right_row4_col1.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row4_col1.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -748,7 +813,10 @@ impl KeyboardState {
                                 self.right_row4_col2.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row4_col2.on_press(keyboard_report_state);
-                                self.right_row4_col2.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row4_col2.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -758,7 +826,10 @@ impl KeyboardState {
                                 self.right_row4_col3.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row4_col3.on_press(keyboard_report_state);
-                                self.right_row4_col3.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row4_col3.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -768,7 +839,10 @@ impl KeyboardState {
                                 self.right_row4_col4.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row4_col4.on_press(keyboard_report_state);
-                                self.right_row4_col4.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row4_col4.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -778,7 +852,10 @@ impl KeyboardState {
                                 self.right_row4_col5.on_release(prev, keyboard_report_state);
                             } else {
                                 self.right_row4_col5.on_press(keyboard_report_state);
-                                self.right_row4_col5.0.update_last_state(keyboard_report_state.next_seq(), keyboard_report_state.active_layer);
+                                self.right_row4_col5.0.update_last_state(
+                                    keyboard_report_state.next_seq(),
+                                    keyboard_report_state.active_layer,
+                                );
                             }
                         }
                     }
@@ -835,11 +912,15 @@ fn rotate_layer(clockwise: bool, keyboard_report_state: &mut KeyboardReportState
 
 macro_rules! impl_push_pop_kc_all_layers {
     ($kc: expr) => {
-         fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+        fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
             keyboard_report_state.push_key($kc);
-         }
-        fn on_release(&mut self, _last_press_state: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
-             keyboard_report_state.pop_key($kc);
+        }
+        fn on_release(
+            &mut self,
+            _last_press_state: LastPressState,
+            keyboard_report_state: &mut KeyboardReportState,
+        ) {
+            keyboard_report_state.pop_key($kc);
         }
     };
 }
@@ -855,6 +936,7 @@ impl KeyboardButton for LeftRow0Col1 {
                 keyboard_report_state.push_key(KeyCode::COMMA);
             }
             KeymapLayer::DvorakSe => {
+                keyboard_report_state.push_key(KeyCode::COMMA);
                 /*
                 if pressed {
                     if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
@@ -876,7 +958,6 @@ impl KeyboardButton for LeftRow0Col1 {
                         keyboard_report_state.pop_key(KeyCode::BACKSLASH);
                     }
                 }
-
                  */
             }
             KeymapLayer::QwertyAnsi => {
@@ -898,12 +979,17 @@ impl KeyboardButton for LeftRow0Col1 {
         }
     }
 
-    fn on_release(&mut self, _last_press_state: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        _last_press_state: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi => {
                 keyboard_report_state.pop_key(KeyCode::COMMA);
             }
             KeymapLayer::DvorakSe => {
+                keyboard_report_state.pop_key(KeyCode::COMMA);
                 /*
                 if pressed {
                     if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
@@ -1004,7 +1090,11 @@ impl KeyboardButton for LeftRow0Col2 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi => {
                 keyboard_report_state.pop_key(KeyCode::COMMA);
@@ -1109,7 +1199,11 @@ impl KeyboardButton for LeftRow0Col3 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi => {
                 keyboard_report_state.pop_key(KeyCode::DOT);
@@ -1187,7 +1281,11 @@ impl KeyboardButton for LeftRow0Col4 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::P);
@@ -1240,7 +1338,11 @@ impl KeyboardButton for LeftRow0Col5 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::Y);
@@ -1270,7 +1372,11 @@ impl KeyboardButton for LeftRow1Col0 {
         keyboard_report_state.push_key(KeyCode::ESCAPE);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_key(KeyCode::ESCAPE);
     }
 }
@@ -1300,7 +1406,11 @@ impl KeyboardButton for LeftRow1Col1 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe | KeymapLayer::QwertyAnsi => {
                 keyboard_report_state.pop_key(KeyCode::A);
@@ -1354,7 +1464,11 @@ impl KeyboardButton for LeftRow1Col2 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::O);
@@ -1413,7 +1527,11 @@ impl KeyboardButton for LeftRow1Col3 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::E);
@@ -1470,7 +1588,11 @@ impl KeyboardButton for LeftRow1Col4 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::U);
@@ -1531,7 +1653,11 @@ impl KeyboardButton for LeftRow1Col5 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::I);
@@ -1568,7 +1694,11 @@ impl KeyboardButton for LeftRow2Col0 {
         keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
     }
 }
@@ -1617,7 +1747,11 @@ impl KeyboardButton for LeftRow2Col1 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi => {
                 keyboard_report_state.pop_key(KeyCode::SEMICOLON);
@@ -1682,7 +1816,11 @@ impl KeyboardButton for LeftRow2Col2 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::Q);
@@ -1724,7 +1862,11 @@ impl KeyboardButton for LeftRow2Col3 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::J);
@@ -1766,7 +1908,11 @@ impl KeyboardButton for LeftRow2Col4 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::K);
@@ -1824,7 +1970,11 @@ impl KeyboardButton for LeftRow2Col5 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::X);
@@ -1866,7 +2016,11 @@ impl KeyboardButton for LeftRow3Col0 {
         keyboard_report_state.push_modifier(Modifier::LEFT_CONTROL);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_modifier(Modifier::LEFT_CONTROL);
     }
 }
@@ -1886,7 +2040,11 @@ impl KeyboardButton for LeftRow3Col1 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe | KeymapLayer::QwertyAnsi => {
                 keyboard_report_state.pop_modifier(Modifier::LEFT_GUI);
@@ -1918,7 +2076,11 @@ impl KeyboardButton for LeftRow3Col2 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe | KeymapLayer::QwertyGaming => {
                 keyboard_report_state.pop_modifier(Modifier::LEFT_ALT);
@@ -1936,15 +2098,15 @@ impl KeyboardButton for LeftRow3Col2 {
 }
 
 impl KeyboardButton for LeftRow3Col3 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {}
 
-    }
-
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
-
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
     }
 }
-
 
 impl KeyboardButton for LeftRow3Col4 {
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
@@ -1958,22 +2120,22 @@ impl KeyboardButton for LeftRow3Col4 {
             KeymapLayer::QwertyGaming => {
                 keyboard_report_state.push_key(KeyCode::C);
             }
-            KeymapLayer::Lower => {
-            }
-            KeymapLayer::LowerAnsi => {
-            }
+            KeymapLayer::Lower => {}
+            KeymapLayer::LowerAnsi => {}
             KeymapLayer::Raise => {}
             KeymapLayer::Num => {}
             KeymapLayer::Settings => {}
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
-            KeymapLayer::DvorakAnsi | KeymapLayer::QwertyAnsi => {
-            }
-            KeymapLayer::DvorakSe => {
-            }
+            KeymapLayer::DvorakAnsi | KeymapLayer::QwertyAnsi => {}
+            KeymapLayer::DvorakSe => {}
             KeymapLayer::QwertyGaming => {
                 keyboard_report_state.pop_key(KeyCode::C);
             }
@@ -2008,7 +2170,11 @@ impl KeyboardButton for LeftRow3Col5 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::SPACE);
@@ -2032,7 +2198,12 @@ impl KeyboardButton for LeftRow4Col1 {
         reset_to_usb_boot(0, 0);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {}
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
+    }
 }
 
 impl KeyboardButton for LeftRow4Col2 {
@@ -2052,7 +2223,11 @@ impl KeyboardButton for LeftRow4Col2 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe => {}
             KeymapLayer::DvorakAnsi => {}
@@ -2089,7 +2264,11 @@ impl KeyboardButton for LeftRow4Col3 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe | KeymapLayer::DvorakAnsi => {
                 // Todo: temp-mod-shift
@@ -2125,7 +2304,11 @@ impl KeyboardButton for LeftRow4Col4 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe | KeymapLayer::DvorakAnsi => {}
             KeymapLayer::QwertyAnsi => {}
@@ -2142,6 +2325,13 @@ impl KeyboardButton for LeftRow4Col4 {
 }
 
 impl KeyboardButton for LeftRow4Col5 {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {}
+    fn on_release(
+        &mut self,
+        last_press_state: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
+    }
 }
 
 // Right side, goes from right to left
@@ -2151,7 +2341,11 @@ impl KeyboardButton for RightRow0Col0 {
         keyboard_report_state.push_key(KeyCode::BACKSPACE);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_key(KeyCode::BACKSPACE);
     }
 }
@@ -2186,7 +2380,11 @@ impl KeyboardButton for RightRow0Col1 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::L);
@@ -2246,7 +2444,11 @@ impl KeyboardButton for RightRow0Col2 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::R);
@@ -2306,7 +2508,11 @@ impl KeyboardButton for RightRow0Col3 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::C);
@@ -2366,7 +2572,11 @@ impl KeyboardButton for RightRow0Col4 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::G);
@@ -2446,7 +2656,11 @@ impl KeyboardButton for RightRow0Col5 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::F);
@@ -2501,7 +2715,11 @@ impl KeyboardButton for RightRow1Col0 {
         keyboard_report_state.push_key(KeyCode::ENTER);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_key(KeyCode::ENTER);
     }
 }
@@ -2531,7 +2749,11 @@ impl KeyboardButton for RightRow1Col1 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::S);
@@ -2584,7 +2806,11 @@ impl KeyboardButton for RightRow1Col2 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::N);
@@ -2640,7 +2866,11 @@ impl KeyboardButton for RightRow1Col3 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::T);
@@ -2695,7 +2925,11 @@ impl KeyboardButton for RightRow1Col4 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::H);
@@ -2748,7 +2982,11 @@ impl KeyboardButton for RightRow1Col5 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::D);
@@ -2779,7 +3017,11 @@ impl KeyboardButton for RightRow2Col0 {
         keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
     }
 }
@@ -2806,7 +3048,11 @@ impl KeyboardButton for RightRow2Col1 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::Z);
@@ -2848,7 +3094,11 @@ impl KeyboardButton for RightRow2Col2 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::V);
@@ -2863,8 +3113,7 @@ impl KeyboardButton for RightRow2Col2 {
                 keyboard_report_state.pop_key(KeyCode::END);
             }
             KeymapLayer::LowerAnsi | KeymapLayer::Num => {}
-            KeymapLayer::Settings => {
-            }
+            KeymapLayer::Settings => {}
         }
     }
 }
@@ -2891,7 +3140,11 @@ impl KeyboardButton for RightRow2Col3 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::W);
@@ -2906,8 +3159,7 @@ impl KeyboardButton for RightRow2Col3 {
                 keyboard_report_state.pop_key(KeyCode::PAGE_DOWN);
             }
             KeymapLayer::LowerAnsi | KeymapLayer::Num => {}
-            KeymapLayer::Settings => {
-            }
+            KeymapLayer::Settings => {}
         }
     }
 }
@@ -2935,7 +3187,11 @@ impl KeyboardButton for RightRow2Col4 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::M);
@@ -2951,8 +3207,7 @@ impl KeyboardButton for RightRow2Col4 {
                 keyboard_report_state.pop_key(KeyCode::PIPE);
             }
             KeymapLayer::Raise | KeymapLayer::Num => {}
-            KeymapLayer::Settings => {
-            }
+            KeymapLayer::Settings => {}
         }
     }
 }
@@ -2996,7 +3251,11 @@ impl KeyboardButton for RightRow2Col5 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe => {
                 keyboard_report_state.pop_key(KeyCode::B);
@@ -3040,7 +3299,11 @@ impl KeyboardButton for RightRow3Col0 {
         keyboard_report_state.push_modifier(Modifier::RIGHT_CONTROL);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_modifier(Modifier::RIGHT_CONTROL);
     }
 }
@@ -3058,12 +3321,15 @@ impl KeyboardButton for RightRow3Col1 {
             | KeymapLayer::Num => {
                 keyboard_report_state.push_layer_with_fallback(KeymapLayer::Settings);
             }
-            KeymapLayer::Settings => {
-            }
+            KeymapLayer::Settings => {}
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe
             | KeymapLayer::DvorakAnsi
@@ -3072,8 +3338,7 @@ impl KeyboardButton for RightRow3Col1 {
             | KeymapLayer::Lower
             | KeymapLayer::LowerAnsi
             | KeymapLayer::Raise
-            | KeymapLayer::Num => {
-            }
+            | KeymapLayer::Num => {}
             KeymapLayer::Settings => {
                 keyboard_report_state.pop_layer(KeymapLayer::Settings);
             }
@@ -3086,7 +3351,11 @@ impl KeyboardButton for RightRow3Col2 {
         keyboard_report_state.push_modifier(Modifier::RIGHT_ALT);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_modifier(Modifier::RIGHT_ALT);
     }
 }
@@ -3104,12 +3373,15 @@ impl KeyboardButton for RightRow3Col3 {
             | KeymapLayer::Settings => {
                 keyboard_report_state.push_layer_with_fallback(KeymapLayer::Raise);
             }
-            KeymapLayer::Raise => {
-            }
+            KeymapLayer::Raise => {}
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakSe
             | KeymapLayer::DvorakAnsi
@@ -3118,8 +3390,7 @@ impl KeyboardButton for RightRow3Col3 {
             | KeymapLayer::Lower
             | KeymapLayer::LowerAnsi
             | KeymapLayer::Num
-            | KeymapLayer::Settings => {
-            }
+            | KeymapLayer::Settings => {}
             KeymapLayer::Raise => {
                 keyboard_report_state.pop_layer(KeymapLayer::Raise);
             }
@@ -3142,12 +3413,15 @@ impl KeyboardButton for RightRow3Col4 {
             | KeymapLayer::Settings => {
                 keyboard_report_state.push_layer_with_fallback(KeymapLayer::Num);
             }
-            KeymapLayer::Num => {
-            }
+            KeymapLayer::Num => {}
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::QwertyGaming => {
                 keyboard_report_state.push_key(KeyCode::I);
@@ -3158,8 +3432,7 @@ impl KeyboardButton for RightRow3Col4 {
             | KeymapLayer::Lower
             | KeymapLayer::LowerAnsi
             | KeymapLayer::Raise
-            | KeymapLayer::Settings => {
-            }
+            | KeymapLayer::Settings => {}
             KeymapLayer::Num => {
                 keyboard_report_state.pop_layer(KeymapLayer::Num);
             }
@@ -3184,7 +3457,11 @@ impl KeyboardButton for RightRow3Col5 {
         }
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         match keyboard_report_state.active_layer {
             KeymapLayer::DvorakAnsi | KeymapLayer::DvorakSe | KeymapLayer::QwertyAnsi => {
                 keyboard_report_state.pop_key(KeyCode::SPACE);
@@ -3202,12 +3479,13 @@ impl KeyboardButton for RightRow3Col5 {
 }
 
 impl KeyboardButton for RightRow4Col1 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {}
 
-    }
-
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
-
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
     }
     // Rotary encoder is here, no key
 }
@@ -3217,7 +3495,11 @@ impl KeyboardButton for RightRow4Col2 {
         keyboard_report_state.push_key(KeyCode::N2);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_key(KeyCode::N2);
     }
 }
@@ -3227,7 +3509,11 @@ impl KeyboardButton for RightRow4Col3 {
         keyboard_report_state.push_key(KeyCode::N3);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_key(KeyCode::N3);
     }
 }
@@ -3237,7 +3523,11 @@ impl KeyboardButton for RightRow4Col4 {
         keyboard_report_state.push_key(KeyCode::N4);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_key(KeyCode::N4);
     }
 }
@@ -3247,7 +3537,11 @@ impl KeyboardButton for RightRow4Col5 {
         keyboard_report_state.push_key(KeyCode::N5);
     }
 
-    fn on_release(&mut self, prev: LastPressState, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_release(
+        &mut self,
+        prev: LastPressState,
+        keyboard_report_state: &mut KeyboardReportState,
+    ) {
         keyboard_report_state.pop_key(KeyCode::N5);
     }
 }
