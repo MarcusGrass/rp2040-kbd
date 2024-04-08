@@ -946,7 +946,7 @@ dependencies = [
  "cortex-m-rt",
  "critical-section",
  "embedded-graphics",
- "embedded-hal 0.2.7",
+ "embedded-hal 1.0.0",
  "heapless",
  "liatris",
  "nb 1.1.0",

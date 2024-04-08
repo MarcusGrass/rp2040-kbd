@@ -7,7 +7,7 @@ use crate::keyboard::{
 };
 #[cfg(feature = "serial")]
 use core::fmt::Write;
-use embedded_hal::digital::v2::InputPin;
+use embedded_hal::digital::InputPin;
 use rp2040_hal::gpio::bank0::{
     Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8,
     Gpio9,
@@ -208,11 +208,9 @@ fn check_col<
 ) -> bool {
     let col = input.take().unwrap();
     let col = col.into_push_pull_output_in_state(rp2040_hal::gpio::PinState::Low);
-    let mut cd = timer.count_down();
-    embedded_hal::timer::CountDown::start(&mut cd, rp2040_hal::fugit::MicrosDurationU64::micros(1));
-    let _ = nb::block!(embedded_hal::timer::CountDown::wait(&mut cd));
+    crate::timer::wait_nanos(timer, 250);
     let mut changed = false;
-    for (row_ind, row_pin) in rows.iter().enumerate() {
+    for (row_ind, row_pin) in rows.iter_mut().enumerate() {
         let ind = matrix_ind(row_ind, N);
         let state = loop {
             if let Ok(val) = row_pin.is_low() {
@@ -299,7 +297,7 @@ impl RotaryEncoder {
     }
 
     #[inline]
-    fn read_position(&self) -> RotaryPosition {
+    fn read_position(&mut self) -> RotaryPosition {
         let new_pin_a_state = matches!(self.pin_a.is_high(), Ok(true));
         let new_pin_b_state = matches!(self.pin_b.is_high(), Ok(true));
         RotaryPosition::from_state(new_pin_a_state, new_pin_b_state)

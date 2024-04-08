@@ -9,7 +9,7 @@ bitvec = { version = "1.0.1", default-features = false }
 cortex-m-rt = "0.7.3"
 critical-section = "1.1.2"
 embedded-graphics = "0.8.1"
-embedded-hal ="0.2.7"
+embedded-hal = "1.0.0"
 fugit = "0.3.7"
 heapless = "0.8.0"
 nb = "1.1"

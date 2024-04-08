@@ -1,6 +1,6 @@
 #[cfg(feature = "serial")]
 use core::fmt::Write;
-use embedded_hal::digital::v2::InputPin;
+use embedded_hal::digital::InputPin;
 use paste::paste;
 use rp2040_hal::gpio::PinState;
 use rp2040_hal::rom_data::reset_to_usb_boot;
@@ -349,9 +349,8 @@ macro_rules! impl_read_pin_col {
             pub fn [<read_col _ $col _pins>]($([< $structure:snake >]: &mut $structure,)* left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState, timer: Timer) -> bool {
                 let col = left_buttons.cols.$col.take().unwrap();
                 let col = col.into_push_pull_output_in_state(PinState::Low);
-                let mut cd = timer.count_down();
-                embedded_hal::timer::CountDown::start(&mut cd, rp2040_hal::fugit::MicrosDurationU64::micros(1));
-                let _ = nb::block!(embedded_hal::timer::CountDown::wait(&mut cd));
+                // Just pulling chibios defaults of 0.25 micros, could probably be 0
+                crate::timer::wait_nanos(timer, 250);
                 let mut any_change = false;
                 $(
                     if [< $structure:snake >].check_update_state(matches!(left_buttons.rows[$row].is_low(), Ok(true)), keyboard_report_state, timer) {

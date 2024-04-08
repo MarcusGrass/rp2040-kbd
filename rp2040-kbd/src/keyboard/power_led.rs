@@ -1,4 +1,4 @@
-use embedded_hal::digital::v2::{InputPin, OutputPin};
+use embedded_hal::digital::{InputPin, OutputPin};
 use rp2040_hal::gpio::bank0::Gpio24;
 use rp2040_hal::gpio::{FunctionSio, Pin, PullDown, SioOutput};
 
@@ -14,7 +14,7 @@ impl PowerLed {
     #[inline]
     #[allow(dead_code)]
     pub fn is_on(&self) -> bool {
-        matches!(self.pin.is_high(), Ok(true))
+        matches!(self.pin.as_input().is_high(), Ok(true))
     }
 
     #[inline]

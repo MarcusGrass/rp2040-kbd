@@ -18,6 +18,7 @@ pub(crate) mod keyboard;
 #[cfg(feature = "left")]
 mod keymap;
 pub(crate) mod runtime;
+mod timer;
 
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
@@ -43,7 +44,7 @@ use usb_device::class_prelude::*;
 
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
-use embedded_hal::digital::v2::InputPin;
+use embedded_hal::digital::InputPin;
 use rp2040_hal::fugit::RateExtU32;
 use rp2040_hal::multicore::Multicore;
 use ssd1306::mode::DisplayConfig;
@@ -128,7 +129,7 @@ fn main() -> ! {
         &mut pac.RESETS,
     ));
 
-    let side_check_pin = pins.gpio28.into_pull_up_input();
+    let mut side_check_pin = pins.gpio28.into_pull_up_input();
 
     let power_led_pin = pins.power_led.into_push_pull_output();
     let pl = PowerLed::new(power_led_pin);
