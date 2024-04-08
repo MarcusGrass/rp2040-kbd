@@ -21,9 +21,6 @@ impl<'a> UsbHiddev<'a> {
             &allocator,
             usb_device::device::UsbVidPid(0x16c0, 0x27da),
         )
-        .manufacturer("Marcus Grass")
-        .product("Lily58")
-        .serial_number("1")
         .device_class(0)
         .build();
         Self {

@@ -15,7 +15,7 @@ use embedded_graphics::Drawable;
 use heapless::String;
 use liatris::pac::I2C1;
 use rp2040_hal::gpio::bank0::{Gpio2, Gpio3};
-use rp2040_hal::gpio::{FunctionI2c, PullDown};
+use rp2040_hal::gpio::{FunctionI2c, PullUp};
 use ssd1306::mode::BufferedGraphicsMode;
 use ssd1306::prelude::{Brightness, DisplaySize128x32, I2CInterface};
 use ssd1306::Ssd1306;
@@ -58,8 +58,8 @@ pub struct OledHandle {
             rp2040_hal::I2C<
                 I2C1,
                 (
-                    rp2040_hal::gpio::Pin<Gpio2, FunctionI2c, PullDown>,
-                    rp2040_hal::gpio::Pin<Gpio3, FunctionI2c, PullDown>,
+                    rp2040_hal::gpio::Pin<Gpio2, FunctionI2c, PullUp>,
+                    rp2040_hal::gpio::Pin<Gpio3, FunctionI2c, PullUp>,
                 ),
             >,
         >,
@@ -75,8 +75,8 @@ impl OledHandle {
                 rp2040_hal::I2C<
                     I2C1,
                     (
-                        rp2040_hal::gpio::Pin<Gpio2, FunctionI2c, PullDown>,
-                        rp2040_hal::gpio::Pin<Gpio3, FunctionI2c, PullDown>,
+                        rp2040_hal::gpio::Pin<Gpio2, FunctionI2c, PullUp>,
+                        rp2040_hal::gpio::Pin<Gpio3, FunctionI2c, PullUp>,
                     ),
                 >,
             >,
@@ -89,7 +89,7 @@ impl OledHandle {
     }
 
     pub fn clear(&mut self) {
-        self.display.clear();
+        let _ = self.display.clear(BinaryColor::Off);
         let _ = self.display.flush();
     }
 
@@ -126,7 +126,7 @@ impl OledHandle {
     }
 
     pub fn write_bad_boot_msg(&mut self) {
-        let _ = self.display.clear();
+        let _ = self.display.clear(BinaryColor::Off);
         let _ = self.display.flush();
         let _ = self.write(0, "BAD");
         let _ = self.write(9, "IMAGE");

@@ -7,12 +7,12 @@ use crate::keyboard::{
 };
 #[cfg(feature = "serial")]
 use core::fmt::Write;
-use embedded_hal::digital::v2::{InputPin, PinState};
+use embedded_hal::digital::v2::InputPin;
 use rp2040_hal::gpio::bank0::{
     Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8,
     Gpio9,
 };
-use rp2040_hal::gpio::{FunctionSio, Pin, PinId, PullUp, SioInput};
+use rp2040_hal::gpio::{FunctionSio, Pin, PinId, PinState, PullUp, SioInput};
 use rp2040_hal::Timer;
 
 pub struct RightButtons {
@@ -207,7 +207,7 @@ fn check_col<
     timer: Timer,
 ) -> bool {
     let col = input.take().unwrap();
-    let col = col.into_push_pull_output_in_state(PinState::Low);
+    let col = col.into_push_pull_output_in_state(rp2040_hal::gpio::PinState::Low);
     let mut cd = timer.count_down();
     embedded_hal::timer::CountDown::start(&mut cd, rp2040_hal::fugit::MicrosDurationU64::micros(1));
     let _ = nb::block!(embedded_hal::timer::CountDown::wait(&mut cd));

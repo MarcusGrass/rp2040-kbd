@@ -1,0 +1,35 @@
+targets = [
+    { triple = "thumbv6m-none-eabi" },
+]
+
+[advisories]
+vulnerability = "deny"
+unmaintained = "deny"
+unsound = "deny"
+yanked = "deny"
+notice = "deny"
+ignore = []
+
+[bans]
+multiple-versions = "deny"
+deny = []
+skip = []
+
+[sources]
+allow-git = []
+
+[licenses]
+unlicensed = "deny"
+allow-osi-fsf-free = "neither"
+confidence-threshold = 1.0
+# I'd like to know if they pop into my dependency graph
+copyleft = "deny"
+allow = [
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "CC0-1.0",
+    "MIT",
+    "Unicode-DFS-2016",
+]
+exceptions = [
+]

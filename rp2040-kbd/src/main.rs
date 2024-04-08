@@ -19,6 +19,8 @@ pub(crate) mod keyboard;
 mod keymap;
 pub(crate) mod runtime;
 
+use embedded_graphics::draw_target::DrawTarget;
+use embedded_graphics::pixelcolor::BinaryColor;
 // The macro for our start-up function
 use liatris::{entry, Pins};
 
@@ -102,8 +104,8 @@ fn main() -> ! {
 
     let i2c = hal::I2C::i2c1(
         pac.I2C1,
-        sda_pin,
-        scl_pin,
+        sda_pin.reconfigure(),
+        scl_pin.reconfigure(),
         400.kHz(),
         &mut pac.RESETS,
         &clocks.peripheral_clock,
@@ -113,7 +115,7 @@ fn main() -> ! {
     let mut display = Ssd1306::new(interface, DisplaySize128x32, DisplayRotation::Rotate90)
         .into_buffered_graphics_mode();
     display.init().unwrap();
-    display.clear();
+    let _ = display.clear(BinaryColor::Off);
     let _ = display.flush();
     let mut oled = OledHandle::new(display);
 
@@ -126,7 +128,7 @@ fn main() -> ! {
         &mut pac.RESETS,
     ));
 
-    let side_check_pin = pins.gpio28.as_input();
+    let side_check_pin = pins.gpio28.into_pull_up_input();
 
     let power_led_pin = pins.power_led.into_push_pull_output();
     let pl = PowerLed::new(power_led_pin);

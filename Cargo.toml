@@ -8,7 +8,7 @@ arrayvec = { version = "0.7.4", default-features = false }
 bitvec = { version = "1.0.1", default-features = false }
 cortex-m-rt = "0.7.3"
 critical-section = "1.1.2"
-embedded-graphics = "0.7.1"
+embedded-graphics = "0.8.1"
 embedded-hal ="0.2.7"
 fugit = "0.3.7"
 heapless = "0.8.0"
@@ -17,11 +17,11 @@ panic-halt= "0.2.0"
 paste = "1.0.14"
 pio-uart = "0.2.1"
 liatris = {path = "../rp-hal-boards/boards/liatris"}
-rp2040-hal = "0.9.0"
-ssd1306 = "0.7.1"
-usb-device = "0.2.9"
-usbd-hid = "0.5.2"
-usbd-serial = "0.1.1"
+rp2040-hal = "0.10.0"
+ssd1306 = "0.8.4"
+usb-device = "0.3.2"
+usbd-hid = "0.7.0"
+usbd-serial = "0.2.1"
 
 [patch.crates-io]
 pio-uart = { path = "../pio-uart"}
