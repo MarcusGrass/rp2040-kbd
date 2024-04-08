@@ -18,46 +18,54 @@ impl<T, const N: usize> Queue<T, N> {
         };
         N - occ
     }
+
+    #[inline]
     pub fn push_back(&mut self, val: T) -> bool {
         if self.rem() == 0 {
             return false;
         }
+        if self.tail == N {
+            self.tail = 0;
+        }
         // Safety: Tail always in range and points to initialized memory
         unsafe {
-            let cur = self.buffer.get_unchecked_mut(self.tail);
+            let cur = self.buffer.get_mut(self.tail).unwrap();
             cur.as_mut_ptr().write(val);
         }
-        if self.tail >= N - 1 {
-            self.tail = 0;
-        } else {
-            self.tail += 1;
-        }
+        self.tail += 1;
         true
     }
+
+    #[inline]
     pub fn peek(&self) -> Option<&T> {
         if self.head == self.tail {
             return None;
         };
         // Safety: Head always in range (always moves after tail) and points to initialized memory
         let val = unsafe {
-            let cur = self.buffer.get_unchecked(self.head);
+            let cur = self.buffer.get(self.head).unwrap();
             cur.as_ptr().as_ref()
         };
         val
     }
 
+    #[inline]
     pub fn pop_front(&mut self) -> Option<T> {
         if self.head == self.tail {
             return None;
         };
         // Safety: Head always in range (always moves after tail) and points to initialized memory
         let val = unsafe {
-            let cur = self.buffer.get_unchecked_mut(self.head);
+            let cur = self.buffer.get_mut(self.head).unwrap();
             cur.as_ptr().read()
         };
-        self.head += 1;
-        if self.head > N - 1 {
+        if self.head >= N - 1 {
             self.head = 0;
+            if self.tail == N {
+                self.tail = 0;
+            }
+        } else {
+            self.head += 1;
         }
         Some(val)
     }
@@ -95,8 +103,8 @@ mod tests {
             queue.push_back(i);
         }
         for i in 0..128 {
-            let val = queue.pop_front();
-            assert_eq!(Some(i), val);
+            assert_eq!(Some(&i), queue.peek());
+            assert_eq!(Some(i), queue.pop_front());
         }
         assert!(queue.pop_front().is_none());
     }
@@ -104,20 +112,26 @@ mod tests {
     #[test]
     fn wrap() {
         let mut queue: Queue<u8, 128> = Queue::new();
+        assert!(queue.peek().is_none());
         assert!(queue.pop_front().is_none());
         queue.push_back(1);
         queue.push_back(2);
         queue.push_back(3);
+        assert_eq!(&1, queue.peek().unwrap());
         assert_eq!(1, queue.pop_front().unwrap());
+        assert_eq!(&2, queue.peek().unwrap());
         assert_eq!(2, queue.pop_front().unwrap());
+        assert_eq!(&3, queue.peek().unwrap());
         assert_eq!(3, queue.pop_front().unwrap());
         assert!(queue.pop_front().is_none());
         for i in 27..27 + 64 {
             queue.push_back(i);
-            let val = queue.pop_front();
-            assert_eq!(Some(i), val);
+            assert_eq!(Some(&i), queue.peek());
+            assert_eq!(Some(i), queue.pop_front());
+            assert!(queue.peek().is_none());
             assert!(queue.pop_front().is_none());
         }
+        assert!(queue.peek().is_none());
         assert!(queue.pop_front().is_none());
     }
 
