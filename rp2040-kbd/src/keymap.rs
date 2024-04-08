@@ -381,6 +381,9 @@ macro_rules! impl_read_pin_col {
             pub fn [<read_col _ $col _pins>]($([< $structure:snake >]: &mut $structure,)* left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState, timer: Timer) -> bool {
                 let col = left_buttons.cols.$col.take().unwrap();
                 let mut col = col.into_push_pull_output_in_state(PinState::Low);
+                let mut cd = timer.count_down();
+                embedded_hal::timer::CountDown::start(&mut cd, rp2040_hal::fugit::MicrosDurationU64::micros(1));
+                let _ = nb::block!(embedded_hal::timer::CountDown::wait(&mut cd));
                 let mut any_change = false;
                 $(
                     if [< $structure:snake >].check_update_state(matches!(left_buttons.rows[$row].is_low(), Ok(true)), keyboard_report_state, timer) {
@@ -389,8 +392,10 @@ macro_rules! impl_read_pin_col {
                         any_change = true;
                     }
                 )*
-                let _ = col.set_high();
                 left_buttons.cols.$col = Some(col.into_pull_up_input());
+                $(
+                    while !matches!(left_buttons.rows[$row].is_high(), Ok(true)) {}
+                )*
                 any_change
             }
 
