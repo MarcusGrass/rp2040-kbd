@@ -1,6 +1,6 @@
 use crate::runtime::locks::CrossCoreMsgLock;
 use crate::runtime::shared::loop_counter::LoopCount;
-use crate::runtime::shared::ring_buffer::RingBuffer;
+use rp2040_kbd_lib::ring_buffer::RingBuffer;
 
 #[derive(Debug, Copy, Clone)]
 pub enum KeycoreToAdminMessage {
@@ -8,7 +8,7 @@ pub enum KeycoreToAdminMessage {
     Loop(LoopCount),
 }
 
-static mut SHARED_KEY_CORE_TO_ADMIN: RingBuffer<16, KeycoreToAdminMessage> = RingBuffer::new();
+static mut SHARED_KEY_CORE_TO_ADMIN: RingBuffer<KeycoreToAdminMessage, 16> = RingBuffer::new();
 
 pub fn push_touch_to_admin() -> bool {
     let _guard = CrossCoreMsgLock::claim();

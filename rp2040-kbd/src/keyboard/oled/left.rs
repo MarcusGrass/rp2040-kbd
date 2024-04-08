@@ -95,10 +95,12 @@ impl LeftOledDrawer {
         if self.layer_header.needs_redraw {
             let _ = self.handle.clear_line(54);
             let _ = self.handle.write(54, self.layer_header.content.as_str());
+            self.layer_header.needs_redraw = false;
         }
         if self.layer_content.needs_redraw {
             let _ = self.handle.clear_line(63);
             let _ = self.handle.write(63, self.layer_content.content.as_str());
+            self.layer_content.needs_redraw = false;
         }
     }
 

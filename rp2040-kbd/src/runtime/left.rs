@@ -22,7 +22,7 @@ use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::UsbBusAllocator;
 
-static mut CORE_1_STACK_AREA: [usize; 1024 * 4] = [0; 1024 * 4];
+static mut CORE_1_STACK_AREA: [usize; 1024 * 8] = [0; 1024 * 8];
 #[inline(never)]
 pub fn run_left<'a>(
     mc: &'a mut Multicore<'a>,
@@ -190,9 +190,6 @@ pub fn run_core1(
     let mut kbd = crate::keymap::KeyboardState::new();
     let mut report_state = KeyboardReportState::new();
     let mut loop_count: LoopCounter<100_000> = LoopCounter::new(timer.get_counter());
-    if let Some(change) = report_state.layer_update() {
-        push_layer_change(change);
-    }
     #[cfg(feature = "hiddev")]
     unsafe {
         liatris::hal::pac::NVIC::unmask(liatris::pac::Interrupt::USBCTRL_IRQ);
