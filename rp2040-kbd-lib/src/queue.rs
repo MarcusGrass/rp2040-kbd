@@ -29,6 +29,10 @@ impl<T, const N: usize> Queue<T, N> {
         }
         // Safety: Tail always in range and points to initialized memory
         unsafe {
+            #[cfg(test)]
+            {
+                self.buffer.get(self.tail).unwrap();
+            }
             let cur = self.buffer.get_unchecked_mut(self.tail);
             cur.as_mut_ptr().write(val);
         }
@@ -43,6 +47,10 @@ impl<T, const N: usize> Queue<T, N> {
         };
         // Safety: Head always in range (always moves after tail) and points to initialized memory
         let val = unsafe {
+            #[cfg(test)]
+            {
+                self.buffer.get(self.head).unwrap();
+            }
             let cur = self.buffer.get_unchecked(self.head);
             cur.as_ptr().as_ref()
         };
@@ -56,6 +64,10 @@ impl<T, const N: usize> Queue<T, N> {
         };
         // Safety: Head always in range (always moves after tail) and points to initialized memory
         let val = unsafe {
+            #[cfg(test)]
+            {
+                self.buffer.get(self.head).unwrap();
+            }
             let cur = self.buffer.get_unchecked_mut(self.head);
             cur.as_ptr().read()
         };
