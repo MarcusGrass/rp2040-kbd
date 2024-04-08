@@ -15,13 +15,10 @@ heapless = "0.8.0"
 nb = "1.1"
 panic-halt= "0.2.0"
 paste = "1.0.14"
-pio-uart = "0.2.1"
-liatris = {path = "../rp-hal-boards/boards/liatris"}
+pio-uart = { git = "https://github.com/MarcusGrass/pio-uart", rev = "5c8bee6" }
+liatris = { git = "https://github.com/MarcusGrass/rp-hal-boards", rev = "e6a7e03" }
 rp2040-hal = "0.10.0"
 ssd1306 = "0.8.4"
 usb-device = "0.3.2"
 usbd-hid = "0.7.0"
 usbd-serial = "0.2.1"
-
-[patch.crates-io]
-pio-uart = { path = "../pio-uart"}

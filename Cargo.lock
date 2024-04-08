@@ -552,6 +552,7 @@ dependencies = [
 [[package]]
 name = "liatris"
 version = "0.1.0"
+source = "git+https://github.com/MarcusGrass/rp-hal-boards?rev=e6a7e03#e6a7e03f3711d86bf81867c4b9e63f3bb7f6a3cd"
 dependencies = [
  "cortex-m-rt",
  "fugit",
@@ -757,6 +758,7 @@ dependencies = [
 [[package]]
 name = "pio-uart"
 version = "0.2.1"
+source = "git+https://github.com/MarcusGrass/pio-uart?rev=5c8bee6#5c8bee634799f87662d74e3d84f359bb2b3356c8"
 dependencies = [
  "cortex-m",
  "defmt",
