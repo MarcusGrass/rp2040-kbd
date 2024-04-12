@@ -65,32 +65,6 @@ impl MatrixIndex {
 
 #[repr(transparent)]
 #[derive(Debug, Copy, Clone)]
-pub struct MatrixState(u32);
-
-impl MatrixState {
-    #[must_use]
-    pub const fn empty() -> Self {
-        Self(0)
-    }
-
-    #[inline]
-    #[must_use]
-    pub const fn get(&self, matrix_index: MatrixIndex) -> bool {
-        self.0 & (1 << matrix_index.0) != 0
-    }
-
-    #[inline]
-    pub fn set(&mut self, matrix_index: MatrixIndex, state: bool) {
-        if state {
-            self.0 |= 1 << matrix_index.0;
-        } else {
-            self.0 &= !(1 << matrix_index.0);
-        }
-    }
-}
-
-#[repr(transparent)]
-#[derive(Debug, Copy, Clone)]
 pub struct MatrixUpdate(u8);
 
 #[derive(Debug, Copy, Clone)]

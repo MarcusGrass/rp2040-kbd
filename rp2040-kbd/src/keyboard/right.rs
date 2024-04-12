@@ -2,7 +2,7 @@ pub(crate) mod message_serializer;
 
 use crate::keyboard::debounce::PinDebouncer;
 use crate::keyboard::right::message_serializer::MessageSerializer;
-use crate::keyboard::{ButtonPin, RowPin, INITIAL_STATE};
+use crate::keyboard::ButtonPin;
 use crate::runtime::shared::cores_right::push_reboot_and_halt;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
@@ -11,36 +11,173 @@ use rp2040_hal::gpio::bank0::{
     Gpio20, Gpio21, Gpio22, Gpio23, Gpio26, Gpio27, Gpio29, Gpio4, Gpio5, Gpio6, Gpio7, Gpio8,
     Gpio9,
 };
-use rp2040_hal::gpio::{FunctionSio, Pin, PinId, PinState, PullUp, SioInput};
+use rp2040_hal::gpio::{FunctionSio, Pin, PinState, PullUp, SioInput};
 use rp2040_hal::Timer;
-use rp2040_kbd_lib::matrix::{
-    ColIndex, MatrixIndex, MatrixState, MatrixUpdate, RowIndex, NUM_COLS, NUM_ROWS,
-};
+use rp2040_kbd_lib::matrix::{ColIndex, MatrixIndex, MatrixUpdate, RowIndex};
 
-#[derive(Copy, Clone)]
-pub struct PinDebouncers([PinDebouncer; (NUM_ROWS * NUM_COLS) as usize]);
+const ROW0: u32 = 1 << 29;
+const ROW1: u32 = 1 << 4;
+const ROW2: u32 = 1 << 20;
+const ROW3: u32 = 1 << 23;
+const ROW4: u32 = 1 << 21;
+const ROW_MASK: u32 = ROW0 | ROW1 | ROW2 | ROW3 | ROW4;
 
-impl PinDebouncers {
-    pub const fn new() -> Self {
-        Self([PinDebouncer::new(); (NUM_ROWS * NUM_COLS) as usize])
-    }
+struct PinStructState {
+    pressed: bool,
+    debounce: PinDebouncer,
+}
 
-    #[inline]
-    #[cfg(feature = "serial")]
-    pub fn get(&self, matrix_index: MatrixIndex) -> &PinDebouncer {
-        unsafe { self.0.get_unchecked(matrix_index.index()) }
-    }
-
-    #[inline]
-    pub fn get_mut(&mut self, matrix_index: MatrixIndex) -> &mut PinDebouncer {
-        unsafe { self.0.get_unchecked_mut(matrix_index.index()) }
+impl PinStructState {
+    const fn new() -> Self {
+        Self {
+            pressed: false,
+            debounce: PinDebouncer::new(),
+        }
     }
 }
 
+macro_rules! pins_container {
+    ($($row: tt, $col: tt),*,) => {
+        paste::paste! {
+            #[allow(clippy::struct_field_names)]
+            struct RightPinsContainer {
+                $(
+                    [<row _ $row _ col _ $col _ state>] : PinStructState,
+                )*
+            }
+
+            impl RightPinsContainer {
+                const fn new() -> Self {
+                    Self {
+                        $(
+                            [<row _ $row _ col _ $col _ state>] : PinStructState::new(),
+                        )*
+                    }
+                }
+            }
+        }
+
+    };
+}
+
+pins_container!(
+    0, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 1, 0, 1, 1, 1, 2, 1, 3, 1, 4, 1, 5, 2, 0, 2, 1, 2, 2, 2, 3,
+    2, 4, 2, 5, 3, 0, 3, 1, 3, 2, 3, 3, 3, 4, 3, 5, // 4, 0, Does not exist
+    4, 1, 4, 2, 4, 3, 4, 4,
+    // 4, 5, Has a rotary encoder on it
+);
+
+macro_rules! impl_check_rows_by_column {
+    ($($structure: expr, $row: tt,)*, $col: tt) => {
+        paste::paste! {
+            #[inline]
+            pub fn [<read_col _ $col _pins>](right_buttons: &mut RightButtons, serializer: &mut MessageSerializer, timer: Timer, changes: &mut u16) {
+
+                // Safety: Make sure this is properly initialized and restored
+                // at the end of this function, makes a noticeable difference in performance
+                let col = unsafe {right_buttons.cols.$col.0.take().unwrap_unchecked()};
+                let col = col.into_push_pull_output_in_state(PinState::Low);
+                // Just pulling chibios defaults of 0.25 micros, could probably be 0
+                crate::timer::wait_nanos(timer, 250);
+                let bank = rp2040_hal::Sio::read_bank0();
+                $(
+                    {
+                        const PRESSED: MatrixUpdate = MatrixUpdate::from_key_update(MatrixIndex::from_row_col(RowIndex::from_value($row), ColIndex::from_value($col)), true);
+                        const RELEASED: MatrixUpdate = MatrixUpdate::from_key_update(MatrixIndex::from_row_col(RowIndex::from_value($row), ColIndex::from_value($col)), false);
+                        let pressed = bank & [<ROW $row>] == 0;
+                        #[cfg(feature = "serial")]
+                        {
+                            if right_buttons.pin_states.[< $structure:snake >].pressed != pressed {
+                                let _ = crate::runtime::shared::usb::acquire_usb().write_fmt(format_args!(
+                                    "M{}, R{}, C{} -> {} {:?}\r\n",
+                                    MatrixIndex::from_row_col(RowIndex::from_value($row), ColIndex::from_value($col)).byte(),
+                                    $row,
+                                    $col,
+                                    u8::from(pressed),
+                                    right_buttons.pin_states.[< $structure:snake >].debounce.diff_last(timer.get_counter()),
+                                ));
+                            }
+
+                        }
+                        if right_buttons.pin_states.[< $structure:snake >].pressed != pressed && right_buttons.pin_states.[< $structure:snake >].debounce.try_submit(timer.get_counter(), pressed) {
+
+                            serializer.serialize_matrix_state(if pressed {PRESSED} else {RELEASED});
+                            right_buttons.pin_states.[< $structure:snake >].pressed = pressed;
+                            *changes += 1;
+                            if $row == 4 && $col == 2 {
+                                push_reboot_and_halt();
+                            }
+                        }
+                    }
+                )*
+                right_buttons.cols.$col.0 = Some(col.into_pull_up_input());
+                while rp2040_hal::Sio::read_bank0() & ROW_MASK != ROW_MASK {}
+            }
+        }
+    };
+}
+
+impl_check_rows_by_column!(
+    row_0_col_0_state, 0,
+    row_1_col_0_state, 1,
+    row_2_col_0_state, 2,
+    row_3_col_0_state, 3,
+    ,0
+);
+
+impl_check_rows_by_column!(
+    row_0_col_1_state, 0,
+    row_1_col_1_state, 1,
+    row_2_col_1_state, 2,
+    row_3_col_1_state, 3,
+    row_4_col_1_state, 4,
+    ,1
+);
+
+impl_check_rows_by_column!(
+    row_0_col_2_state, 0,
+    row_1_col_2_state, 1,
+    row_2_col_2_state, 2,
+    row_3_col_2_state, 3,
+    row_4_col_2_state, 4,
+    ,2
+);
+
+impl_check_rows_by_column!(
+    row_0_col_3_state, 0,
+    row_1_col_3_state, 1,
+    row_2_col_3_state, 2,
+    row_3_col_3_state, 3,
+    row_4_col_3_state, 4,
+    ,3
+);
+
+impl_check_rows_by_column!(
+    row_0_col_4_state, 0,
+    row_1_col_4_state, 1,
+    row_2_col_4_state, 2,
+    row_3_col_4_state, 3,
+    row_4_col_4_state, 4,
+    ,4
+);
+
+impl_check_rows_by_column!(
+    row_0_col_5_state, 0,
+    row_1_col_5_state, 1,
+    row_2_col_5_state, 2,
+    row_3_col_5_state, 3,
+    ,5
+);
+
 pub struct RightButtons {
-    pub(crate) matrix: MatrixState,
-    pub(crate) changes: PinDebouncers,
-    rows: [(RowPin, RowIndex); 5],
+    pin_states: RightPinsContainer,
+    _rows: (
+        ButtonPin<Gpio29>,
+        ButtonPin<Gpio4>,
+        ButtonPin<Gpio20>,
+        ButtonPin<Gpio23>,
+        ButtonPin<Gpio21>,
+    ),
     cols: (
         (Option<ButtonPin<Gpio22>>, ColIndex),
         (Option<ButtonPin<Gpio5>>, ColIndex),
@@ -51,10 +188,10 @@ pub struct RightButtons {
     ),
     encoder: RotaryEncoder,
 }
-
 impl RightButtons {
     pub fn new(
-        rows: (
+        // Want this supplied owned and in the correct state
+        #[allow(clippy::used_underscore_binding)] _rows: (
             ButtonPin<Gpio29>,
             ButtonPin<Gpio4>,
             ButtonPin<Gpio20>,
@@ -72,15 +209,8 @@ impl RightButtons {
         rotary_encoder: RotaryEncoder,
     ) -> Self {
         Self {
-            matrix: INITIAL_STATE,
-            changes: PinDebouncers::new(),
-            rows: [
-                (rows.0.into_dyn_pin(), RowIndex::from_value(0)),
-                (rows.1.into_dyn_pin(), RowIndex::from_value(1)),
-                (rows.2.into_dyn_pin(), RowIndex::from_value(2)),
-                (rows.3.into_dyn_pin(), RowIndex::from_value(3)),
-                (rows.4.into_dyn_pin(), RowIndex::from_value(4)),
-            ],
+            pin_states: RightPinsContainer::new(),
+            _rows,
             cols: (
                 (
                     Some(
@@ -138,54 +268,12 @@ impl RightButtons {
     #[allow(clippy::cast_lossless, clippy::cast_possible_truncation)]
     pub fn scan_matrix(&mut self, serializer: &mut MessageSerializer, timer: Timer) -> u16 {
         let mut changes = 0;
-        changes += check_col::<0, _>(
-            &mut self.cols.0,
-            &mut self.rows,
-            &mut self.matrix,
-            &mut self.changes,
-            serializer,
-            timer,
-        );
-        changes += check_col::<1, _>(
-            &mut self.cols.1,
-            &mut self.rows,
-            &mut self.matrix,
-            &mut self.changes,
-            serializer,
-            timer,
-        );
-        changes += check_col::<2, _>(
-            &mut self.cols.2,
-            &mut self.rows,
-            &mut self.matrix,
-            &mut self.changes,
-            serializer,
-            timer,
-        );
-        changes += check_col::<3, _>(
-            &mut self.cols.3,
-            &mut self.rows,
-            &mut self.matrix,
-            &mut self.changes,
-            serializer,
-            timer,
-        );
-        changes += check_col::<4, _>(
-            &mut self.cols.4,
-            &mut self.rows,
-            &mut self.matrix,
-            &mut self.changes,
-            serializer,
-            timer,
-        );
-        changes += check_col::<5, _>(
-            &mut self.cols.5,
-            &mut self.rows,
-            &mut self.matrix,
-            &mut self.changes,
-            serializer,
-            timer,
-        );
+        read_col_0_pins(self, serializer, timer, &mut changes);
+        read_col_1_pins(self, serializer, timer, &mut changes);
+        read_col_2_pins(self, serializer, timer, &mut changes);
+        read_col_3_pins(self, serializer, timer, &mut changes);
+        read_col_4_pins(self, serializer, timer, &mut changes);
+        read_col_5_pins(self, serializer, timer, &mut changes);
         changes
     }
 
@@ -205,80 +293,6 @@ impl RightButtons {
             false
         }
     }
-}
-
-#[allow(clippy::cast_lossless, clippy::cast_possible_truncation)]
-fn check_col<
-    const N: usize,
-    Id: PinId
-        + rp2040_hal::gpio::ValidFunction<FunctionSio<SioInput>>
-        + rp2040_hal::gpio::ValidFunction<FunctionSio<rp2040_hal::gpio::SioOutput>>,
->(
-    input: &mut (Option<ButtonPin<Id>>, ColIndex),
-    rows: &mut [(RowPin, RowIndex)],
-    matrix: &mut MatrixState,
-    debouncers: &mut PinDebouncers,
-    serializer: &mut MessageSerializer,
-    timer: Timer,
-) -> u16 {
-    // Safety, ensure this is properly initalized in constructor,
-    // and restore at the end of this function,
-    // makes a noticeable difference vs unwrap
-    let col = unsafe { input.0.take().unwrap_unchecked() };
-    let col = col.into_push_pull_output_in_state(rp2040_hal::gpio::PinState::Low);
-    crate::timer::wait_nanos(timer, 250);
-    let mut changed = 0;
-    for (row_pin, row_ind) in rows.iter_mut() {
-        // This should be known at comptime
-        let ind = MatrixIndex::from_row_col(*row_ind, input.1);
-        let state = loop {
-            if let Ok(val) = row_pin.is_low() {
-                break val;
-            }
-        };
-        if state != matrix.get(ind) {
-            #[cfg(feature = "serial")]
-            {
-                let _ = crate::runtime::shared::usb::acquire_usb().write_fmt(format_args!(
-                    "M{}, R{}, C{} -> {} {:?}\r\n",
-                    ind.byte(),
-                    row_ind.0,
-                    N,
-                    u8::from(state),
-                    debouncers.get(ind).diff_last(timer.get_counter()),
-                ));
-            }
-            if !debouncers
-                .get_mut(ind)
-                .try_submit(timer.get_counter(), state)
-            {
-                #[cfg(feature = "serial")]
-                {
-                    let _ = crate::runtime::shared::usb::acquire_usb().write_fmt(format_args!(
-                        "Quarantine: M{}, R{}, C{} -> {}\r\n",
-                        ind.byte(),
-                        row_ind.0,
-                        N,
-                        u8::from(state),
-                    ));
-                }
-                continue;
-            }
-            serializer.serialize_matrix_state(MatrixUpdate::from_key_update(ind, state));
-            // Todo: Make this less esoteric
-            if N == 2 && row_ind.0 == 4 {
-                push_reboot_and_halt();
-            }
-            changed += 1;
-            matrix.set(ind, state);
-        }
-    }
-    input.0 = Some(col.into_pull_up_input());
-    // Wait for all rows to settle
-    for row in rows {
-        while matches!(row.0.is_low(), Ok(true)) {}
-    }
-    changed
 }
 
 #[derive(Copy, Clone, Debug)]

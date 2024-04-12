@@ -435,8 +435,7 @@ macro_rules! impl_read_pin_col {
                 let mut any_change = false;
                 $(
                     let state = bank & crate::keyboard::left::[<ROW $row>] == 0;
-                    if [< $structure:snake >].0.is_pressed() != state {
-                        [< $structure:snake >].check_update_state(state, keyboard_report_state, timer);
+                    if [< $structure:snake >].0.is_pressed() != state && [< $structure:snake >].check_update_state(state, keyboard_report_state, timer) {
                         any_change = true;
                     }
 
