@@ -22,6 +22,8 @@ usbd-serial = "0.2.1"
 [workspace.lints]
 clippy.pedantic = "warn"
 clippy.module_name_repetitions = "allow"
+clippy.match_same_arms = "allow"
+clippy.unnested_or_patterns = "allow"
 clippy.inline_always = "allow"
 clippy.similar_names = "allow"
 clippy.too_many_arguments = "allow"
