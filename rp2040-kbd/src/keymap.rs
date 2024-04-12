@@ -2,6 +2,7 @@
 use core::fmt::Write;
 use core::hint::unreachable_unchecked;
 use core::ptr;
+use embedded_hal::digital::InputPin;
 use paste::paste;
 use rp2040_hal::gpio::PinState;
 use rp2040_hal::Timer;
@@ -421,7 +422,6 @@ impl_check_update!(LeftRow4Col3);
 impl_check_update!(LeftRow4Col4);
 impl_check_update!(LeftRow4Col5);
 
-
 macro_rules! impl_read_pin_col {
     ($($structure: expr, $row: tt,)*, $col: tt) => {
         paste! {
@@ -435,8 +435,8 @@ macro_rules! impl_read_pin_col {
                 crate::timer::wait_nanos(timer, 250);
                 let mut any_change = false;
                 $(
-                    {
-                        if [< $structure:snake >].check_update_state(left_buttons.row_pin_is_low(rp2040_kbd_lib::matrix::RowIndex::from_value($row)), keyboard_report_state, timer) {
+                    unsafe {
+                        if [< $structure:snake >].check_update_state(left_buttons.rows.$row.is_low().unwrap_unchecked(), keyboard_report_state, timer) {
                             any_change = true;
                         }
                     }
@@ -444,8 +444,8 @@ macro_rules! impl_read_pin_col {
                 )*
                 left_buttons.cols.$col = Some(col.into_pull_up_input());
                 $(
-                    {
-                        while left_buttons.row_pin_is_low(rp2040_kbd_lib::matrix::RowIndex::from_value($row)) {}
+                    unsafe {
+                        while left_buttons.rows.$row.is_low().unwrap_unchecked() {}
                     }
                 )*
                 any_change

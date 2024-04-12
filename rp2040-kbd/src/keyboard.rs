@@ -11,9 +11,10 @@ pub mod split_serial;
 #[cfg(feature = "serial")]
 pub mod usb_serial;
 
-use rp2040_hal::gpio::{DynPinId, FunctionSio, Pin, PullUp, SioInput};
+use rp2040_hal::gpio::{FunctionSio, Pin, PullUp, SioInput};
 
-type RowPin = Pin<DynPinId, FunctionSio<SioInput>, PullUp>;
+#[cfg(feature = "right")]
+type RowPin = Pin<rp2040_hal::gpio::DynPinId, FunctionSio<SioInput>, PullUp>;
 pub type ButtonPin<Id> = Pin<Id, FunctionSio<SioInput>, PullUp>;
 
 #[cfg(all(feature = "serial", feature = "left"))]
