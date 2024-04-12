@@ -300,6 +300,8 @@ impl PinStructState {
         self.last_state.is_some()
     }
 
+    // Keys are individually very rarely pressed compared to the scan-loop latency,
+    // this pretty small function not being inlined makes quite the difference.
     #[inline(never)]
     fn update_last_state(&mut self, current_state: &mut KeyboardReportState) {
         self.last_state = Some(LastPressState {
@@ -318,6 +320,32 @@ impl PinStructState {
     }
 }
 
+macro_rules! impl_check_update {
+    ($entity: ty) => {
+        impl $entity {
+            pub fn check_update_state(
+                &mut self,
+                pressed: bool,
+                keyboard_report_state: &mut KeyboardReportState,
+                timer: Timer,
+            ) -> bool {
+                if pressed != self.0.is_pressed() {
+                    if self.0.jitter.try_submit(timer.get_counter(), pressed) {
+                        if let Some(prev) = self.0.last_state.take() {
+                            self.on_release(prev, keyboard_report_state);
+                        } else {
+                            self.on_press(keyboard_report_state);
+                            self.0.update_last_state(keyboard_report_state);
+                        }
+                        return true;
+                    }
+                }
+                false
+            }
+        }
+    };
+}
+
 macro_rules! keyboard_key {
     ($($side: ident, $row: expr, $col: expr),*,) => {
         paste! {
@@ -328,27 +356,6 @@ macro_rules! keyboard_key {
                 impl [<$side Row $row Col $col>] {
                     pub const fn new() -> Self {
                         Self(PinStructState::new())
-                    }
-
-                    #[allow(dead_code)]
-                    pub fn check_update_state(
-                        &mut self,
-                        pressed: bool,
-                        keyboard_report_state: &mut KeyboardReportState,
-                        timer: Timer,
-                    ) -> bool {
-                        if pressed != self.0.is_pressed() {
-                            if self.0.jitter.try_submit(timer.get_counter(), pressed) {
-                                if let Some(prev) = self.0.last_state.take() {
-                                    self.on_release(prev, keyboard_report_state);
-                                } else {
-                                    self.on_press(keyboard_report_state);
-                                    self.0.update_last_state(keyboard_report_state);
-                                }
-                                return true;
-                            }
-                        }
-                        false
                     }
                 }
             )*
@@ -383,6 +390,37 @@ keyboard_key!(
     Right, 2, 5, Right, 3, 0, Right, 3, 1, Right, 3, 2, Right, 3, 3, Right, 3, 4, Right, 3, 5,
     Right, 4, 1, Right, 4, 2, Right, 4, 3, Right, 4, 4, Right, 4, 5,
 );
+
+impl_check_update!(LeftRow0Col0);
+impl_check_update!(LeftRow0Col1);
+impl_check_update!(LeftRow0Col2);
+impl_check_update!(LeftRow0Col3);
+impl_check_update!(LeftRow0Col4);
+impl_check_update!(LeftRow0Col5);
+impl_check_update!(LeftRow1Col0);
+impl_check_update!(LeftRow1Col1);
+impl_check_update!(LeftRow1Col2);
+impl_check_update!(LeftRow1Col3);
+impl_check_update!(LeftRow1Col4);
+impl_check_update!(LeftRow1Col5);
+impl_check_update!(LeftRow2Col0);
+impl_check_update!(LeftRow2Col1);
+impl_check_update!(LeftRow2Col2);
+impl_check_update!(LeftRow2Col3);
+impl_check_update!(LeftRow2Col4);
+impl_check_update!(LeftRow2Col5);
+impl_check_update!(LeftRow3Col0);
+impl_check_update!(LeftRow3Col1);
+impl_check_update!(LeftRow3Col2);
+impl_check_update!(LeftRow3Col3);
+impl_check_update!(LeftRow3Col4);
+impl_check_update!(LeftRow3Col5);
+impl_check_update!(LeftRow4Col1);
+impl_check_update!(LeftRow4Col2);
+impl_check_update!(LeftRow4Col3);
+impl_check_update!(LeftRow4Col4);
+impl_check_update!(LeftRow4Col5);
+
 
 macro_rules! impl_read_pin_col {
     ($($structure: expr, $row: tt,)*, $col: tt) => {

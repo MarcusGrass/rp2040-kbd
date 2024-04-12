@@ -43,6 +43,7 @@ pub fn push_rx_change(received: u16) -> bool {
     }
 }
 
+#[inline(never)]
 pub fn push_reboot_and_halt() -> ! {
     loop {
         let Some(_guard) = CrossCoreMsgLock::try_claim() else {

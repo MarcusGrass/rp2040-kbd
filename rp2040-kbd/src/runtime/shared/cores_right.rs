@@ -24,6 +24,7 @@ pub fn try_push_tx(transmitted: u16) -> bool {
     }
 }
 
+#[inline(never)]
 pub fn push_reboot_and_halt() -> ! {
     loop {
         let Some(_guard) = CrossCoreMsgLock::try_claim() else {
