@@ -435,18 +435,14 @@ macro_rules! impl_read_pin_col {
                 crate::timer::wait_nanos(timer, 250);
                 let mut any_change = false;
                 $(
-                    unsafe {
-                        if [< $structure:snake >].check_update_state(left_buttons.rows.$row.is_low().unwrap_unchecked(), keyboard_report_state, timer) {
-                            any_change = true;
-                        }
+                    if [< $structure:snake >].check_update_state(left_buttons.rows.$row.is_low().unwrap(), keyboard_report_state, timer) {
+                        any_change = true;
                     }
 
                 )*
                 left_buttons.cols.$col = Some(col.into_pull_up_input());
                 $(
-                    unsafe {
-                        while left_buttons.rows.$row.is_low().unwrap_unchecked() {}
-                    }
+                    while left_buttons.rows.$row.is_low().unwrap() {}
                 )*
                 any_change
             }
