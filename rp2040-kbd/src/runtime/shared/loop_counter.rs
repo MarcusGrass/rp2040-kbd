@@ -1,6 +1,7 @@
 use core::fmt::Write;
 use heapless::String;
 use rp2040_hal::fugit::MicrosDuration;
+use rp2040_hal::rom_data::float_funcs::fdiv;
 use rp2040_hal::timer::Instant;
 
 #[derive(Debug, Copy, Clone)]
@@ -23,7 +24,7 @@ impl LoopCount {
         let micros = self.duration.to_micros();
         if micros < f32::MAX as u64 {
             let dur = micros as f32;
-            let res = dur / count;
+            let res = fdiv(dur, count);
             if res <= 9999.9 {
                 let mut header = String::new();
                 let _ = header.push_str("my");
@@ -37,7 +38,7 @@ impl LoopCount {
             return None;
         }
         let dur = millis as f32;
-        let res = dur / count;
+        let res = fdiv(dur, count);
         if res > 9999.9 {
             return None;
         }
