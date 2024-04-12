@@ -2,7 +2,6 @@
 use core::fmt::Write;
 use core::hint::unreachable_unchecked;
 use core::ptr;
-use embedded_hal::digital::InputPin;
 use paste::paste;
 use rp2040_hal::gpio::PinState;
 use rp2040_hal::Timer;
@@ -324,22 +323,21 @@ impl PinStructState {
 macro_rules! impl_check_update {
     ($entity: ty) => {
         impl $entity {
+            #[inline(never)]
             pub fn check_update_state(
                 &mut self,
                 pressed: bool,
                 keyboard_report_state: &mut KeyboardReportState,
                 timer: Timer,
             ) -> bool {
-                if pressed != self.0.is_pressed() {
-                    if self.0.jitter.try_submit(timer.get_counter(), pressed) {
-                        if let Some(prev) = self.0.last_state.take() {
-                            self.on_release(prev, keyboard_report_state);
-                        } else {
-                            self.on_press(keyboard_report_state);
-                            self.0.update_last_state(keyboard_report_state);
-                        }
-                        return true;
+                if self.0.jitter.try_submit(timer.get_counter(), pressed) {
+                    if let Some(prev) = self.0.last_state.take() {
+                        self.on_release(prev, keyboard_report_state);
+                    } else {
+                        self.on_press(keyboard_report_state);
+                        self.0.update_last_state(keyboard_report_state);
                     }
+                    return true;
                 }
                 false
             }
@@ -433,17 +431,18 @@ macro_rules! impl_read_pin_col {
                 let col = col.into_push_pull_output_in_state(PinState::Low);
                 // Just pulling chibios defaults of 0.25 micros, could probably be 0
                 crate::timer::wait_nanos(timer, 250);
+                let bank = rp2040_hal::Sio::read_bank0();
                 let mut any_change = false;
                 $(
-                    if [< $structure:snake >].check_update_state(left_buttons.rows.$row.is_low().unwrap(), keyboard_report_state, timer) {
+                    let state = bank & crate::keyboard::left::[<ROW $row>] == 0;
+                    if [< $structure:snake >].0.is_pressed() != state {
+                        [< $structure:snake >].check_update_state(state, keyboard_report_state, timer);
                         any_change = true;
                     }
 
                 )*
                 left_buttons.cols.$col = Some(col.into_pull_up_input());
-                $(
-                    while left_buttons.rows.$row.is_low().unwrap() {}
-                )*
+                while rp2040_hal::Sio::read_bank0() & crate::keyboard::left::ROW_MASK != crate::keyboard::left::ROW_MASK {}
                 any_change
             }
 
@@ -704,11 +703,9 @@ macro_rules! base_layer {
 }
 
 impl KeyboardButton for LeftRow0Col0 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_key(KeyCode::TAB);
     }
-    #[inline(never)]
     fn on_release(
         &mut self,
         _last_press_state: LastPressState,
@@ -719,7 +716,6 @@ impl KeyboardButton for LeftRow0Col0 {
 }
 
 impl KeyboardButton for LeftRow0Col1 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -755,7 +751,6 @@ impl KeyboardButton for LeftRow0Col1 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         last_press_state: LastPressState,
@@ -794,7 +789,6 @@ impl KeyboardButton for LeftRow0Col1 {
 }
 
 impl KeyboardButton for LeftRow0Col2 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -839,7 +833,6 @@ impl KeyboardButton for LeftRow0Col2 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -881,7 +874,6 @@ impl KeyboardButton for LeftRow0Col2 {
 }
 
 impl KeyboardButton for LeftRow0Col3 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -918,7 +910,6 @@ impl KeyboardButton for LeftRow0Col3 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -957,7 +948,6 @@ impl KeyboardButton for LeftRow0Col3 {
 }
 
 impl KeyboardButton for LeftRow0Col4 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -989,7 +979,6 @@ impl KeyboardButton for LeftRow0Col4 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1023,7 +1012,6 @@ impl KeyboardButton for LeftRow0Col4 {
     }
 }
 impl KeyboardButton for LeftRow0Col5 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1055,7 +1043,6 @@ impl KeyboardButton for LeftRow0Col5 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1090,12 +1077,10 @@ impl KeyboardButton for LeftRow0Col5 {
 }
 
 impl KeyboardButton for LeftRow1Col0 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_key(KeyCode::ESCAPE);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -1106,7 +1091,6 @@ impl KeyboardButton for LeftRow1Col0 {
 }
 
 impl KeyboardButton for LeftRow1Col1 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1141,7 +1125,6 @@ impl KeyboardButton for LeftRow1Col1 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1178,7 +1161,6 @@ impl KeyboardButton for LeftRow1Col1 {
     }
 }
 impl KeyboardButton for LeftRow1Col2 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1213,7 +1195,6 @@ impl KeyboardButton for LeftRow1Col2 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1251,7 +1232,6 @@ impl KeyboardButton for LeftRow1Col2 {
 }
 
 impl KeyboardButton for LeftRow1Col3 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1286,7 +1266,6 @@ impl KeyboardButton for LeftRow1Col3 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1323,7 +1302,6 @@ impl KeyboardButton for LeftRow1Col3 {
     }
 }
 impl KeyboardButton for LeftRow1Col4 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1358,7 +1336,6 @@ impl KeyboardButton for LeftRow1Col4 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1396,7 +1373,6 @@ impl KeyboardButton for LeftRow1Col4 {
 }
 
 impl KeyboardButton for LeftRow1Col5 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1431,7 +1407,6 @@ impl KeyboardButton for LeftRow1Col5 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1469,12 +1444,10 @@ impl KeyboardButton for LeftRow1Col5 {
 }
 
 impl KeyboardButton for LeftRow2Col0 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -1485,7 +1458,6 @@ impl KeyboardButton for LeftRow2Col0 {
 }
 
 impl KeyboardButton for LeftRow2Col1 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1514,7 +1486,6 @@ impl KeyboardButton for LeftRow2Col1 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1546,7 +1517,6 @@ impl KeyboardButton for LeftRow2Col1 {
 }
 
 impl KeyboardButton for LeftRow2Col2 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1577,7 +1547,6 @@ impl KeyboardButton for LeftRow2Col2 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1609,7 +1578,6 @@ impl KeyboardButton for LeftRow2Col2 {
 }
 
 impl KeyboardButton for LeftRow2Col3 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1638,7 +1606,6 @@ impl KeyboardButton for LeftRow2Col3 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1670,7 +1637,6 @@ impl KeyboardButton for LeftRow2Col3 {
 }
 
 impl KeyboardButton for LeftRow2Col4 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1699,7 +1665,6 @@ impl KeyboardButton for LeftRow2Col4 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1731,7 +1696,6 @@ impl KeyboardButton for LeftRow2Col4 {
 }
 
 impl KeyboardButton for LeftRow2Col5 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1771,7 +1735,6 @@ impl KeyboardButton for LeftRow2Col5 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1803,12 +1766,10 @@ impl KeyboardButton for LeftRow2Col5 {
 }
 
 impl KeyboardButton for LeftRow3Col0 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_modifier(Modifier::LEFT_CONTROL);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -1819,7 +1780,6 @@ impl KeyboardButton for LeftRow3Col0 {
 }
 
 impl KeyboardButton for LeftRow3Col1 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1841,7 +1801,6 @@ impl KeyboardButton for LeftRow3Col1 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1866,7 +1825,6 @@ impl KeyboardButton for LeftRow3Col1 {
 }
 
 impl KeyboardButton for LeftRow3Col2 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1888,7 +1846,6 @@ impl KeyboardButton for LeftRow3Col2 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1913,7 +1870,6 @@ impl KeyboardButton for LeftRow3Col2 {
 }
 
 impl KeyboardButton for LeftRow3Col3 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1929,7 +1885,6 @@ impl KeyboardButton for LeftRow3Col3 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1948,7 +1903,6 @@ impl KeyboardButton for LeftRow3Col3 {
 }
 
 impl KeyboardButton for LeftRow3Col4 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -1970,7 +1924,6 @@ impl KeyboardButton for LeftRow3Col4 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -1996,7 +1949,6 @@ impl KeyboardButton for LeftRow3Col4 {
 }
 
 impl KeyboardButton for LeftRow3Col5 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2018,7 +1970,6 @@ impl KeyboardButton for LeftRow3Col5 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2044,12 +1995,10 @@ impl KeyboardButton for LeftRow3Col5 {
 
 // Row 4 col 0 does not exist
 impl KeyboardButton for LeftRow4Col1 {
-    #[inline(never)]
     fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState) {
         push_reboot_and_halt();
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -2059,7 +2008,6 @@ impl KeyboardButton for LeftRow4Col1 {
 }
 
 impl KeyboardButton for LeftRow4Col2 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2075,7 +2023,6 @@ impl KeyboardButton for LeftRow4Col2 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2094,10 +2041,8 @@ impl KeyboardButton for LeftRow4Col2 {
 }
 
 impl KeyboardButton for LeftRow4Col3 {
-    #[inline(never)]
     fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState) {}
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -2107,7 +2052,6 @@ impl KeyboardButton for LeftRow4Col3 {
 }
 
 impl KeyboardButton for LeftRow4Col4 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2126,7 +2070,6 @@ impl KeyboardButton for LeftRow4Col4 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2147,9 +2090,7 @@ impl KeyboardButton for LeftRow4Col4 {
 }
 
 impl KeyboardButton for LeftRow4Col5 {
-    #[inline(never)]
     fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState) {}
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -2161,12 +2102,10 @@ impl KeyboardButton for LeftRow4Col5 {
 // Right side, goes from right to left
 
 impl KeyboardButton for RightRow0Col0 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_key(KeyCode::BACKSPACE);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -2177,7 +2116,6 @@ impl KeyboardButton for RightRow0Col0 {
 }
 
 impl KeyboardButton for RightRow0Col1 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2209,7 +2147,6 @@ impl KeyboardButton for RightRow0Col1 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2244,7 +2181,6 @@ impl KeyboardButton for RightRow0Col1 {
 }
 
 impl KeyboardButton for RightRow0Col2 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2276,7 +2212,6 @@ impl KeyboardButton for RightRow0Col2 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2311,7 +2246,6 @@ impl KeyboardButton for RightRow0Col2 {
 }
 
 impl KeyboardButton for RightRow0Col3 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2343,7 +2277,6 @@ impl KeyboardButton for RightRow0Col3 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2378,7 +2311,6 @@ impl KeyboardButton for RightRow0Col3 {
 }
 
 impl KeyboardButton for RightRow0Col4 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2410,7 +2342,6 @@ impl KeyboardButton for RightRow0Col4 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2446,7 +2377,6 @@ impl KeyboardButton for RightRow0Col4 {
 }
 
 impl KeyboardButton for RightRow0Col5 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2495,7 +2425,6 @@ impl KeyboardButton for RightRow0Col5 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2531,12 +2460,10 @@ impl KeyboardButton for RightRow0Col5 {
 }
 
 impl KeyboardButton for RightRow1Col0 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_key(KeyCode::ENTER);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -2547,7 +2474,6 @@ impl KeyboardButton for RightRow1Col0 {
 }
 
 impl KeyboardButton for RightRow1Col1 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2582,7 +2508,6 @@ impl KeyboardButton for RightRow1Col1 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2620,7 +2545,6 @@ impl KeyboardButton for RightRow1Col1 {
 }
 
 impl KeyboardButton for RightRow1Col2 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2659,7 +2583,6 @@ impl KeyboardButton for RightRow1Col2 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2697,7 +2620,6 @@ impl KeyboardButton for RightRow1Col2 {
 }
 
 impl KeyboardButton for RightRow1Col3 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2736,7 +2658,6 @@ impl KeyboardButton for RightRow1Col3 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2774,7 +2695,6 @@ impl KeyboardButton for RightRow1Col3 {
 }
 
 impl KeyboardButton for RightRow1Col4 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2809,7 +2729,6 @@ impl KeyboardButton for RightRow1Col4 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2847,7 +2766,6 @@ impl KeyboardButton for RightRow1Col4 {
 }
 
 impl KeyboardButton for RightRow1Col5 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2882,7 +2800,6 @@ impl KeyboardButton for RightRow1Col5 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -2920,12 +2837,10 @@ impl KeyboardButton for RightRow1Col5 {
 }
 
 impl KeyboardButton for RightRow2Col0 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -2936,7 +2851,6 @@ impl KeyboardButton for RightRow2Col0 {
 }
 
 impl KeyboardButton for RightRow2Col1 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -2968,7 +2882,6 @@ impl KeyboardButton for RightRow2Col1 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -3000,7 +2913,6 @@ impl KeyboardButton for RightRow2Col1 {
 }
 
 impl KeyboardButton for RightRow2Col2 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -3032,7 +2944,6 @@ impl KeyboardButton for RightRow2Col2 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -3064,7 +2975,6 @@ impl KeyboardButton for RightRow2Col2 {
 }
 
 impl KeyboardButton for RightRow2Col3 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -3096,7 +3006,6 @@ impl KeyboardButton for RightRow2Col3 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -3128,7 +3037,6 @@ impl KeyboardButton for RightRow2Col3 {
 }
 
 impl KeyboardButton for RightRow2Col4 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -3164,7 +3072,6 @@ impl KeyboardButton for RightRow2Col4 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -3196,7 +3103,6 @@ impl KeyboardButton for RightRow2Col4 {
 }
 
 impl KeyboardButton for RightRow2Col5 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -3239,7 +3145,6 @@ impl KeyboardButton for RightRow2Col5 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -3271,12 +3176,10 @@ impl KeyboardButton for RightRow2Col5 {
 }
 
 impl KeyboardButton for RightRow3Col0 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_modifier(Modifier::LEFT_CONTROL);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -3287,7 +3190,6 @@ impl KeyboardButton for RightRow3Col0 {
 }
 
 impl KeyboardButton for RightRow3Col1 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -3311,7 +3213,6 @@ impl KeyboardButton for RightRow3Col1 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -3332,12 +3233,10 @@ impl KeyboardButton for RightRow3Col1 {
 }
 
 impl KeyboardButton for RightRow3Col2 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_modifier(Modifier::RIGHT_ALT);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -3348,7 +3247,6 @@ impl KeyboardButton for RightRow3Col2 {
 }
 
 impl KeyboardButton for RightRow3Col3 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -3372,7 +3270,6 @@ impl KeyboardButton for RightRow3Col3 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -3393,7 +3290,6 @@ impl KeyboardButton for RightRow3Col3 {
 }
 
 impl KeyboardButton for RightRow3Col4 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -3417,7 +3313,6 @@ impl KeyboardButton for RightRow3Col4 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -3440,7 +3335,6 @@ impl KeyboardButton for RightRow3Col4 {
 }
 
 impl KeyboardButton for RightRow3Col5 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         match (
             keyboard_report_state.last_perm_layer,
@@ -3462,7 +3356,6 @@ impl KeyboardButton for RightRow3Col5 {
         }
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         prev: LastPressState,
@@ -3487,10 +3380,8 @@ impl KeyboardButton for RightRow3Col5 {
 }
 
 impl KeyboardButton for RightRow4Col1 {
-    #[inline(never)]
     fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState) {}
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -3501,12 +3392,10 @@ impl KeyboardButton for RightRow4Col1 {
 }
 
 impl KeyboardButton for RightRow4Col2 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_key(KeyCode::N2);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -3517,12 +3406,10 @@ impl KeyboardButton for RightRow4Col2 {
 }
 
 impl KeyboardButton for RightRow4Col3 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_key(KeyCode::N3);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -3533,12 +3420,10 @@ impl KeyboardButton for RightRow4Col3 {
 }
 
 impl KeyboardButton for RightRow4Col4 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_key(KeyCode::N4);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
@@ -3549,12 +3434,10 @@ impl KeyboardButton for RightRow4Col4 {
 }
 
 impl KeyboardButton for RightRow4Col5 {
-    #[inline(never)]
     fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
         keyboard_report_state.push_key(KeyCode::N5);
     }
 
-    #[inline(never)]
     fn on_release(
         &mut self,
         _prev: LastPressState,
