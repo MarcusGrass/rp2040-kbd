@@ -12,7 +12,7 @@ cortex-m-rt = { workspace = true }
 critical-section = {workspace = true }
 embedded-hal = { workspace = true }
 embedded-graphics = { workspace = true }
-rp2040-hal = {workspace = true, features = ["rt", "rp2040-e5", "rom-func-cache", "critical-section-impl"]}
+rp2040-hal = {workspace = true, features = ["rt", "rp2040-e5", "rom-func-cache", "critical-section-impl", "rom-v2-intrinsics"]}
 liatris = { workspace = true }
 heapless = { workspace = true }
 usb-device = { workspace = true }
@@ -26,12 +26,6 @@ ssd1306 = { workspace = true }
 [features]
 # This is the set of features we enable by default
 default = []
-
-# Disable automatic mapping of language features (like floating point math) to ROM functions
-disable-intrinsics = ["rp2040-hal/disable-intrinsics"]
-
-# This enables ROM functions for f64 math that were not present in the earliest RP2040s
-rom-v2-intrinsics = ["rp2040-hal/rom-v2-intrinsics"]
 
 serial = []
 
