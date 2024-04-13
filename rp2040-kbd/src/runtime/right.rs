@@ -4,8 +4,8 @@ use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::right::RightButtons;
 use crate::runtime::shared::cores_right::{
-    new_shared_queue, pop_message, push_loop_to_admin, try_push_touch, KeycoreToAdminMessage,
-    Producer,
+    new_shared_queue, pop_message, push_loop_to_admin, try_push_touch, Consumer,
+    KeycoreToAdminMessage, Producer,
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
 use crate::runtime::shared::press_latency_counter::PressLatencyCounter;
@@ -27,7 +27,7 @@ pub fn run_right<'a>(
     mut oled_handle: OledHandle,
     uart_driver: crate::keyboard::split_serial::UartRight,
     right_buttons: RightButtons,
-    #[allow(unused_variables, unused_mut)] mut power_led_pin: PowerLed,
+    power_led_pin: PowerLed,
     timer: Timer,
 ) -> ! {
     #[cfg(feature = "serial")]
@@ -40,7 +40,7 @@ pub fn run_right<'a>(
     let (producer, consumer) = new_shared_queue();
     #[allow(static_mut_refs)]
     if let Err(e) = c1.spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
-        run_core1(serializer, right_buttons, timer, producer)
+        run_key_core(serializer, right_buttons, timer, producer)
     }) {
         oled_handle.clear();
         oled_handle.write(0, "ERROR");
@@ -51,6 +51,15 @@ pub fn run_right<'a>(
         reset_to_usb_boot(0, 0);
         panic!();
     }
+    run_admin_core(oled_handle, consumer, timer, power_led_pin)
+}
+#[allow(clippy::needless_pass_by_value)]
+fn run_admin_core(
+    oled_handle: OledHandle,
+    consumer: Consumer,
+    timer: Timer,
+    #[allow(unused_variables, unused_mut)] mut power_led_pin: PowerLed,
+) -> ! {
     let mut oled = RightOledDrawer::new(oled_handle);
     #[cfg(feature = "serial")]
     let mut last_chars = [0u8; 128];
@@ -155,7 +164,7 @@ fn handle_usb(power_led: &mut PowerLed, last_chars: &mut [u8], output_all: &mut 
 }
 
 #[allow(clippy::needless_pass_by_value)]
-fn run_core1(
+fn run_key_core(
     mut serializer: MessageSerializer,
     mut right_buttons: RightButtons,
     timer: Timer,
