@@ -15,7 +15,7 @@ embedded-graphics = { workspace = true }
 rp2040-hal = {workspace = true, features = ["rt", "rp2040-e5", "rom-func-cache", "critical-section-impl", "rom-v2-intrinsics"]}
 liatris = { workspace = true }
 heapless = { workspace = true }
-usb-device = { workspace = true }
+usb-device = { workspace = true, default-features = false }
 usbd-hid = { workspace = true }
 usbd-serial = { workspace = true }
 paste = { workspace = true }

@@ -11,7 +11,7 @@ pub struct UsbHiddev<'a> {
 }
 
 impl<'a> UsbHiddev<'a> {
-    pub fn new(allocator: &'a UsbBusAllocator<UsbBus>) -> Self {
+    pub fn new(buf: &'a mut [u8], allocator: &'a UsbBusAllocator<UsbBus>) -> Self {
         let hid = usbd_hid::hid_class::HIDClass::new_ep_in(
             allocator,
             usbd_hid::descriptor::KeyboardReport::desc(),
@@ -20,6 +20,7 @@ impl<'a> UsbHiddev<'a> {
         let dev = usb_device::device::UsbDeviceBuilder::new(
             allocator,
             usb_device::device::UsbVidPid(0x16c0, 0x27da),
+            buf,
         )
         .strings(&[StringDescriptors::default()
             .product("lily58")
@@ -27,7 +28,8 @@ impl<'a> UsbHiddev<'a> {
             .serial_number("1")])
         .unwrap()
         .device_class(0)
-        .build();
+        .build()
+        .unwrap();
         Self {
             hid,
             dev,

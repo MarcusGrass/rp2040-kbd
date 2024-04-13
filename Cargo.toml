@@ -15,7 +15,7 @@ pio-uart = { git = "https://github.com/MarcusGrass/pio-uart", rev = "68e3f30855f
 liatris = { git = "https://github.com/MarcusGrass/rp-hal-boards", rev = "b587acaff463b7de6fa9d8c35c3db49fca26d263" }
 rp2040-hal = "0.10.0"
 ssd1306 = "0.8.4"
-usb-device = "0.3.2"
+usb-device = { version = "0.3.2", default-features = false}
 usbd-hid = "0.7.0"
 usbd-serial = "0.2.1"
 
@@ -28,3 +28,6 @@ clippy.inline_always = "allow"
 clippy.similar_names = "allow"
 clippy.too_many_arguments = "allow"
 clippy.type_complexity = "allow"
+
+[patch.crates-io]
+usb-device = { git = "https://github.com/MarcusGrass/usb-device", rev = "780fa48a8a6cbed88e0456d744651b5983d212bd" }

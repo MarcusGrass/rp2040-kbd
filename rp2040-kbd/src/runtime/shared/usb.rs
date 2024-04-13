@@ -43,7 +43,10 @@ static USB_OUTPUT: SyncUnsafeOnce<bool> = SyncUnsafeOnce::new();
 #[cfg(feature = "hiddev")]
 static USB_HIDDEV: SyncUnsafeOnce<crate::hid::usb_hiddev::UsbHiddev> = SyncUnsafeOnce::new();
 
+static mut USB_CONTROL_BUFFER: [u8; 256] = [0u8; 256];
+
 #[cfg(feature = "serial")]
+#[allow(static_mut_refs)]
 pub unsafe fn init_usb(allocator: usb_device::bus::UsbBusAllocator<liatris::hal::usb::UsbBus>) {
     let _ = USB_BUS.0.set(allocator);
     USB_OUTPUT.set(false);
@@ -52,6 +55,7 @@ pub unsafe fn init_usb(allocator: usb_device::bus::UsbBusAllocator<liatris::hal:
         USB_BUS.0.get().unwrap(),
     ));
     USB_DEVICE.set(crate::keyboard::usb_serial::UsbSerialDevice::new(
+        unsafe { &mut USB_CONTROL_BUFFER },
         USB_BUS.0.get().unwrap(),
     ));
 }
@@ -93,11 +97,13 @@ impl<'a> core::fmt::Write for UsbGuard<'a> {
 }
 
 #[cfg(feature = "hiddev")]
+#[allow(static_mut_refs)]
 pub unsafe fn init_usb_hiddev(
     allocator: usb_device::bus::UsbBusAllocator<liatris::hal::usb::UsbBus>,
 ) {
     let _ = USB_BUS.0.set(allocator);
     USB_HIDDEV.set(crate::hid::usb_hiddev::UsbHiddev::new(
+        unsafe { &mut USB_CONTROL_BUFFER },
         USB_BUS.0.get().unwrap(),
     ));
 }

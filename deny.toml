@@ -24,6 +24,7 @@ skip = [
 allow-git = [
     "https://github.com/MarcusGrass/rp-hal-boards",
     "https://github.com/MarcusGrass/pio-uart",
+    "https://github.com/MarcusGrass/usb-device",
 ]
 
 [licenses]

@@ -56,15 +56,16 @@ pub struct UsbSerialDevice<'a> {
 }
 
 impl<'a> UsbSerialDevice<'a> {
-    pub fn new(usb_bus: &'a UsbBusAllocator<UsbBus>) -> Self {
-        let inner = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x16c0, 0x27dd))
+    pub fn new(control_buffer: &'a mut [u8], usb_bus: &'a UsbBusAllocator<UsbBus>) -> Self {
+        let inner = UsbDeviceBuilder::new(usb_bus, UsbVidPid(0x16c0, 0x27dd), control_buffer)
             .strings(&[StringDescriptors::default()
                 .product("lily58")
                 .manufacturer("splitkb")
                 .serial_number("1")])
             .unwrap()
             .device_class(2) // from: https://www.usb.org/defined-class-codes
-            .build();
+            .build()
+            .unwrap();
         Self { inner }
     }
 }
