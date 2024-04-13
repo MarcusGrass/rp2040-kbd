@@ -6,7 +6,7 @@ use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
 use crate::keymap::{KeyboardReportState, KeymapLayer};
 use crate::runtime::shared::cores_left::{
-    pop_message, push_loop_to_admin, push_rx_change, push_touch_left_to_admin,
+    new_shared_queue, pop_message, push_loop_to_admin, push_rx_change, push_touch_left_to_admin,
     push_touch_right_to_admin, KeycoreToAdminMessage, Producer,
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
@@ -16,20 +16,15 @@ use crate::runtime::shared::sleep::SleepCountdown;
 use crate::runtime::shared::usb::init_usb;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
-use core::sync::atomic::AtomicUsize;
 #[cfg(feature = "hiddev")]
 use liatris::pac::interrupt;
 use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
-use rp2040_kbd_lib::queue::new_atomic_producer_consumer;
 use usb_device::bus::UsbBusAllocator;
 
 static mut CORE_1_STACK_AREA: [usize; 1024 * 8] = [0; 1024 * 8];
 
-static mut ATOMIC_QUEUE_MEM_AREA: [KeycoreToAdminMessage; 32] = [KeycoreToAdminMessage::Reboot; 32];
-static mut ATOMIC_QUEUE_HEAD: AtomicUsize = AtomicUsize::new(0);
-static mut ATOMIC_QUEUE_TAIL: AtomicUsize = AtomicUsize::new(0);
 #[inline(never)]
 #[allow(clippy::too_many_lines)]
 pub fn run_left<'a>(
@@ -46,14 +41,7 @@ pub fn run_left<'a>(
         init_usb(usb_bus);
     }
     let receiver = MessageReceiver::new(uart_driver);
-    #[allow(static_mut_refs)]
-    let (producer, consumer) = unsafe {
-        new_atomic_producer_consumer(
-            &mut ATOMIC_QUEUE_MEM_AREA,
-            &mut ATOMIC_QUEUE_HEAD,
-            &mut ATOMIC_QUEUE_TAIL,
-        )
-    };
+    let (producer, consumer) = new_shared_queue();
     #[allow(static_mut_refs)]
     if let Err(_e) = mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
         run_core1(

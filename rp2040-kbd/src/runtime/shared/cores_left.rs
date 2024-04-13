@@ -1,7 +1,10 @@
 use crate::keymap::KeymapLayer;
 use crate::runtime::shared::loop_counter::LoopCount;
+use core::sync::atomic::AtomicUsize;
 use rp2040_hal::fugit::MicrosDurationU64;
-use rp2040_kbd_lib::queue::{AtomicQueueConsumer, AtomicQueueProducer};
+use rp2040_kbd_lib::queue::{
+    new_atomic_producer_consumer, AtomicQueueConsumer, AtomicQueueProducer,
+};
 
 #[derive(Debug, Copy, Clone)]
 pub enum KeycoreToAdminMessage {
@@ -17,8 +20,25 @@ pub enum KeycoreToAdminMessage {
     // Write a boot message then trigger usb-boot
     Reboot,
 }
+const QUEUE_CAPACITY: usize = 8;
 
-pub type Producer = AtomicQueueProducer<'static, KeycoreToAdminMessage, 32>;
+pub type Producer = AtomicQueueProducer<'static, KeycoreToAdminMessage, QUEUE_CAPACITY>;
+
+pub type Consumer = AtomicQueueConsumer<'static, KeycoreToAdminMessage, QUEUE_CAPACITY>;
+static mut ATOMIC_QUEUE_MEM_AREA: [KeycoreToAdminMessage; QUEUE_CAPACITY] =
+    [KeycoreToAdminMessage::Reboot; QUEUE_CAPACITY];
+static mut ATOMIC_QUEUE_HEAD: AtomicUsize = AtomicUsize::new(0);
+static mut ATOMIC_QUEUE_TAIL: AtomicUsize = AtomicUsize::new(0);
+pub fn new_shared_queue() -> (Producer, Consumer) {
+    #[allow(static_mut_refs)]
+    unsafe {
+        new_atomic_producer_consumer(
+            &mut ATOMIC_QUEUE_MEM_AREA,
+            &mut ATOMIC_QUEUE_HEAD,
+            &mut ATOMIC_QUEUE_TAIL,
+        )
+    }
+}
 
 pub fn push_touch_left_to_admin(
     atomic_queue_producer: &Producer,
@@ -56,8 +76,6 @@ pub fn push_reboot_and_halt(atomic_queue_producer: &Producer) -> ! {
     panic!("HALT AFTER PUSHING REBOOT");
 }
 
-pub fn pop_message(
-    atomic_queue_consumer: &AtomicQueueConsumer<'static, KeycoreToAdminMessage, 32>,
-) -> Option<KeycoreToAdminMessage> {
+pub fn pop_message(atomic_queue_consumer: &Consumer) -> Option<KeycoreToAdminMessage> {
     atomic_queue_consumer.pop_front()
 }
