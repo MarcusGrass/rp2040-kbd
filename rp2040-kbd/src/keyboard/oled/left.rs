@@ -14,7 +14,10 @@ pub struct LeftOledDrawer {
     dbg_rx: DrawUnit,
     dbg_queue: DrawUnit,
     layer_header: DrawUnit,
-    layer_content: DrawUnit,
+    perm_layer_header: DrawUnit,
+    temp_layer_header: DrawUnit,
+    perm_layer: DrawUnit,
+    temp_layer: DrawUnit,
     underscores_need_redraw: bool,
 }
 
@@ -28,7 +31,9 @@ impl LeftOledDrawer {
         let dbg_header = static_draw_unit_string!("DEBUG");
         let dbg_rx = static_draw_unit_string!("R ...");
         let dbg_queue = static_draw_unit_string!("Q ...");
-        let layer_header = static_draw_unit_string!("LAYER");
+        let layer_header = static_draw_unit_string!("LAYERS");
+        let layer_header1 = static_draw_unit_string!("DFL");
+        let layer_header2 = static_draw_unit_string!("TMP");
         Self {
             handle,
             hidden: false,
@@ -41,7 +46,10 @@ impl LeftOledDrawer {
             dbg_rx: DrawUnit::new(dbg_rx, true),
             dbg_queue: DrawUnit::new(dbg_queue, true),
             layer_header: DrawUnit::new(layer_header, true),
-            layer_content: DrawUnit::new(static_draw_unit_string!(""), false),
+            perm_layer_header: DrawUnit::new(layer_header1, true),
+            temp_layer_header: DrawUnit::new(layer_header2, true),
+            perm_layer: DrawUnit::new(static_draw_unit_string!("..."), true),
+            temp_layer: DrawUnit::new(static_draw_unit_string!("NONE"), true),
             underscores_need_redraw: true,
         }
     }
@@ -62,7 +70,10 @@ impl LeftOledDrawer {
             self.dbg_rx.needs_redraw = true;
             self.dbg_queue.needs_redraw = true;
             self.layer_header.needs_redraw = true;
-            self.layer_content.needs_redraw = true;
+            self.perm_layer_header.needs_redraw = true;
+            self.perm_layer.needs_redraw = true;
+            self.temp_layer_header.needs_redraw = true;
+            self.temp_layer.needs_redraw = true;
             self.underscores_need_redraw = true;
         }
         self.hidden = false;
@@ -95,9 +106,19 @@ impl LeftOledDrawer {
         self.press_right_loop_content.needs_redraw = true;
     }
 
-    pub fn update_layer(&mut self, layer_content: OledLineString) {
-        self.layer_content.content = layer_content;
-        self.layer_content.needs_redraw = true;
+    pub fn update_layer(
+        &mut self,
+        default_layer: OledLineString,
+        temp_layer: Option<OledLineString>,
+    ) {
+        self.perm_layer.content = default_layer;
+        self.perm_layer.needs_redraw = true;
+        if let Some(tmp) = temp_layer {
+            self.temp_layer.content = tmp;
+        } else {
+            self.temp_layer.content = static_draw_unit_string!("NONE");
+        }
+        self.temp_layer.needs_redraw = true;
     }
 
     pub fn update_rx(&mut self, count: u16) {
@@ -175,12 +196,33 @@ impl LeftOledDrawer {
                 .write_header(76, self.layer_header.content.as_str());
             self.layer_header.needs_redraw = false;
         }
-        if self.layer_content.needs_redraw {
+        if self.perm_layer_header.needs_redraw {
             let _ = self.handle.clear_line(84);
             let _ = self
                 .handle
-                .write_header(84, self.layer_content.content.as_str());
-            self.layer_content.needs_redraw = false;
+                .write_header(84, self.perm_layer_header.content.as_str());
+            self.perm_layer_header.needs_redraw = false;
+        }
+        if self.perm_layer.needs_redraw {
+            let _ = self.handle.clear_line(92);
+            let _ = self
+                .handle
+                .write_header(92, self.perm_layer.content.as_str());
+            self.perm_layer.needs_redraw = false;
+        }
+        if self.temp_layer_header.needs_redraw {
+            let _ = self.handle.clear_line(100);
+            let _ = self
+                .handle
+                .write_header(100, self.temp_layer_header.content.as_str());
+            self.temp_layer_header.needs_redraw = false;
+        }
+        if self.temp_layer.needs_redraw {
+            let _ = self.handle.clear_line(108);
+            let _ = self
+                .handle
+                .write_header(108, self.temp_layer.content.as_str());
+            self.temp_layer.needs_redraw = false;
         }
         if self.underscores_need_redraw {
             // Header
@@ -190,7 +232,7 @@ impl LeftOledDrawer {
             // Rx
             let _ = self.handle.write_underscored_at(72);
             // Layer
-            let _ = self.handle.write_underscored_at(92);
+            let _ = self.handle.write_underscored_at(116);
             self.underscores_need_redraw = false;
         }
     }

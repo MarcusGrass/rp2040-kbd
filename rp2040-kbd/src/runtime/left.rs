@@ -1,12 +1,12 @@
 use crate::keyboard::left::message_receiver::MessageReceiver;
 use crate::keyboard::left::LeftButtons;
 use crate::keyboard::oled::left::LeftOledDrawer;
-use crate::keyboard::oled::OledHandle;
+use crate::keyboard::oled::{layer_to_string, OledHandle};
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
 use crate::keymap::{KeyboardReportState, KeymapLayer};
 use crate::runtime::shared::cores_left::{
-    pop_message, push_layer_change, push_loop_to_admin, push_rx_change, push_touch_left_to_admin,
+    pop_message, push_loop_to_admin, push_rx_change, push_touch_left_to_admin,
     push_touch_right_to_admin, KeycoreToAdminMessage, Producer,
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
@@ -17,7 +17,6 @@ use crate::runtime::shared::usb::init_usb;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
 use core::sync::atomic::AtomicUsize;
-use heapless::String;
 #[cfg(feature = "hiddev")]
 use liatris::pac::interrupt;
 use rp2040_hal::multicore::Multicore;
@@ -88,6 +87,7 @@ pub fn run_left<'a>(
     let mut left_counter: PressLatencyCounter = PressLatencyCounter::new();
     let mut right_counter: PressLatencyCounter = PressLatencyCounter::new();
     let mut last_avail = 0;
+    oled_left.update_layer(layer_to_string(KeymapLayer::DvorakSe), None);
     loop {
         let avail = consumer.available();
         let now = timer.get_counter();
@@ -107,38 +107,10 @@ pub fn run_left<'a>(
                     oled_left.update_scan_loop(lc.as_micros_fraction());
                 }
             }
-            Some(KeycoreToAdminMessage::LayerChange(km)) => {
-                let mut s = String::new();
-                match km {
-                    KeymapLayer::DvorakSe => {
-                        let _ = s.push_str("DV-SE");
-                    }
-                    KeymapLayer::DvorakAnsi => {
-                        let _ = s.push_str("DV-AN");
-                    }
-                    KeymapLayer::QwertyAnsi => {
-                        let _ = s.push_str("QW-AN");
-                    }
-                    KeymapLayer::QwertyGaming => {
-                        let _ = s.push_str("QW-GM");
-                    }
-                    KeymapLayer::Lower => {
-                        let _ = s.push_str("LO");
-                    }
-                    KeymapLayer::LowerAnsi => {
-                        let _ = s.push_str("LO-AN");
-                    }
-                    KeymapLayer::Raise => {
-                        let _ = s.push_str("RA");
-                    }
-                    KeymapLayer::Num => {
-                        let _ = s.push_str("NUM");
-                    }
-                    KeymapLayer::Settings => {
-                        let _ = s.push_str("SET");
-                    }
-                }
-                oled_left.update_layer(s);
+            Some(KeycoreToAdminMessage::LayerChange(default, temp)) => {
+                let dfl_out = layer_to_string(default);
+                let tmp_out = temp.map(layer_to_string);
+                oled_left.update_layer(dfl_out, tmp_out);
             }
             Some(KeycoreToAdminMessage::Rx(incr)) => {
                 rx += incr;
@@ -270,11 +242,6 @@ pub fn run_core1(
                 report_state.accept();
             }
         }
-
-        if let Some(change) = report_state.layer_update() {
-            push_layer_change(&producer, change);
-        }
-
         if rx > 0 && push_rx_change(&producer, rx) {
             rx = 0;
         }

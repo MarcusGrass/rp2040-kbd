@@ -11,7 +11,7 @@ pub enum KeycoreToAdminMessage {
     // Send loop count to calculate scan latency
     Loop(LoopCount),
     // Output which layer is active
-    LayerChange(KeymapLayer),
+    LayerChange(KeymapLayer, Option<KeymapLayer>),
     // Output bytes received over UART
     Rx(u16),
     // Write a boot message then trigger usb-boot
@@ -38,8 +38,12 @@ pub fn push_loop_to_admin(atomic_queue_producer: &Producer, loop_count: LoopCoun
     atomic_queue_producer.push_back(KeycoreToAdminMessage::Loop(loop_count))
 }
 
-pub fn push_layer_change(atomic_queue_producer: &Producer, new_layer: KeymapLayer) -> bool {
-    atomic_queue_producer.push_back(KeycoreToAdminMessage::LayerChange(new_layer))
+pub fn push_layer_change(
+    atomic_queue_producer: &Producer,
+    new_layer: KeymapLayer,
+    new_tmp: Option<KeymapLayer>,
+) -> bool {
+    atomic_queue_producer.push_back(KeycoreToAdminMessage::LayerChange(new_layer, new_tmp))
 }
 
 pub fn push_rx_change(atomic_queue_producer: &Producer, received: u16) -> bool {
