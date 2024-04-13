@@ -1,37 +1,39 @@
 use crate::keyboard::oled::{DrawUnit, OledHandle};
 use crate::static_draw_unit_string;
 use core::fmt::Write;
-use heapless::String;
 
 pub struct RightOledDrawer {
     handle: OledHandle,
     hidden: bool,
     header: DrawUnit,
     scan_loop_header: DrawUnit,
-    scan_loop_unit: DrawUnit,
     scan_loop_content: DrawUnit,
-    tx_header: DrawUnit,
-    tx_content: DrawUnit,
+    press_loop_content: DrawUnit,
+    dbg_header: DrawUnit,
+    dbg_tx: DrawUnit,
+    dbg_queue: DrawUnit,
     underscores_need_redraw: bool,
 }
 
 impl RightOledDrawer {
     pub fn new(handle: OledHandle) -> Self {
         let header_content = static_draw_unit_string!("RIGHT");
-        let scan_loop_header_content = static_draw_unit_string!("SCAN");
-        let scan_loop_unit = static_draw_unit_string!("...");
-        let scan_loop_content = static_draw_unit_string!("...");
-        let tx_header = static_draw_unit_string!("TX");
-        let tx_content = static_draw_unit_string!("0");
+        let scan_loop_header_content = static_draw_unit_string!("PERF");
+        let scan_loop_content = static_draw_unit_string!("S ...");
+        let press_loop_content = static_draw_unit_string!("P ...");
+        let dbg_header = static_draw_unit_string!("DEBUG");
+        let dbg_tx = static_draw_unit_string!("T ...");
+        let dbg_queue = static_draw_unit_string!("Q ...");
         Self {
             handle,
             hidden: false,
             header: DrawUnit::new(header_content, true),
             scan_loop_header: DrawUnit::new(scan_loop_header_content, true),
-            scan_loop_unit: DrawUnit::new(scan_loop_unit, true),
             scan_loop_content: DrawUnit::new(scan_loop_content, true),
-            tx_header: DrawUnit::new(tx_header, true),
-            tx_content: DrawUnit::new(tx_content, true),
+            press_loop_content: DrawUnit::new(press_loop_content, true),
+            dbg_header: DrawUnit::new(dbg_header, true),
+            dbg_tx: DrawUnit::new(dbg_tx, true),
+            dbg_queue: DrawUnit::new(dbg_queue, true),
             underscores_need_redraw: true,
         }
     }
@@ -48,26 +50,42 @@ impl RightOledDrawer {
             self.header.needs_redraw = true;
             self.scan_loop_header.needs_redraw = true;
             self.scan_loop_content.needs_redraw = true;
-            self.scan_loop_unit.needs_redraw = true;
-            self.tx_header.needs_redraw = true;
-            self.tx_content.needs_redraw = true;
+            self.press_loop_content.needs_redraw = true;
+            self.dbg_header.needs_redraw = true;
+            self.dbg_tx.needs_redraw = true;
+            self.dbg_queue.needs_redraw = true;
             self.underscores_need_redraw = true;
         }
         self.hidden = false;
     }
 
-    #[inline]
-    pub fn update_scan_loop(&mut self, scan_loop_unit: String<5>, scan_loop_content: String<5>) {
-        self.scan_loop_unit.content = scan_loop_unit;
-        self.scan_loop_unit.needs_redraw = true;
-        self.scan_loop_content.content = scan_loop_content;
+    pub fn update_scan_loop(&mut self, avg_scan_latency: f32) {
+        self.scan_loop_content.content.clear();
+        let _ = self
+            .scan_loop_content
+            .content
+            .write_fmt(format_args!("S {avg_scan_latency:.1}"));
         self.scan_loop_content.needs_redraw = true;
     }
 
-    pub fn update_tx(&mut self, count: u16) {
-        self.tx_content.content.clear();
-        let _ = self.tx_content.content.write_fmt(format_args!("{count}"));
-        self.tx_content.needs_redraw = true;
+    pub fn update_touch(&mut self, transmitted: u16, avg_latency: f32) {
+        self.press_loop_content.content.clear();
+        let _ = self
+            .press_loop_content
+            .content
+            .write_fmt(format_args!("P {avg_latency:.1}"));
+        self.press_loop_content.needs_redraw = true;
+        self.dbg_tx.content.clear();
+        let _ = self
+            .dbg_tx
+            .content
+            .write_fmt(format_args!("T {transmitted}"));
+        self.dbg_tx.needs_redraw = true;
+    }
+    pub fn update_queue(&mut self, count: usize) {
+        self.dbg_queue.content.clear();
+        let _ = self.dbg_queue.content.write_fmt(format_args!("Q {count}"));
+        self.dbg_queue.needs_redraw = true;
     }
 
     pub fn render(&mut self) {
@@ -76,45 +94,56 @@ impl RightOledDrawer {
         }
         if self.header.needs_redraw {
             let _ = self.handle.clear_line(0);
-            let _ = self.handle.write(0, self.header.content.as_str());
+            let _ = self.handle.write_header(0, self.header.content.as_str());
             self.header.needs_redraw = false;
         }
         if self.scan_loop_header.needs_redraw {
-            let _ = self.handle.clear_line(18);
+            let _ = self.handle.clear_line(12);
             let _ = self
                 .handle
-                .write(18, self.scan_loop_header.content.as_str());
+                .write_header(12, self.scan_loop_header.content.as_str());
             self.scan_loop_header.needs_redraw = false;
         }
         if self.scan_loop_content.needs_redraw {
-            let _ = self.handle.clear_line(27);
+            let _ = self.handle.clear_line(20);
             let _ = self
                 .handle
-                .write(27, self.scan_loop_content.content.as_str());
+                .write_header(20, self.scan_loop_content.content.as_str());
             self.scan_loop_content.needs_redraw = false;
         }
-        if self.scan_loop_unit.needs_redraw {
-            let _ = self.handle.clear_line(36);
-            let _ = self.handle.write(36, self.scan_loop_unit.content.as_str());
-            self.scan_loop_unit.needs_redraw = false;
+        if self.press_loop_content.needs_redraw {
+            let _ = self.handle.clear_line(28);
+            let _ = self
+                .handle
+                .write_header(28, self.press_loop_content.content.as_str());
+            self.press_loop_content.needs_redraw = false;
         }
-        if self.tx_header.needs_redraw {
-            let _ = self.handle.clear_line(54);
-            let _ = self.handle.write(54, self.tx_header.content.as_str());
-            self.tx_header.needs_redraw = false;
+        if self.dbg_header.needs_redraw {
+            let _ = self.handle.clear_line(40);
+            let _ = self
+                .handle
+                .write_header(40, self.dbg_header.content.as_str());
+            self.dbg_header.needs_redraw = false;
         }
-        if self.tx_content.needs_redraw {
-            let _ = self.handle.clear_line(63);
-            let _ = self.handle.write(63, self.tx_content.content.as_str());
-            self.tx_content.needs_redraw = false;
+        if self.dbg_tx.needs_redraw {
+            let _ = self.handle.clear_line(48);
+            let _ = self.handle.write_header(48, self.dbg_tx.content.as_str());
+            self.dbg_tx.needs_redraw = false;
+        }
+        if self.dbg_queue.needs_redraw {
+            let _ = self.handle.clear_line(56);
+            let _ = self
+                .handle
+                .write_header(56, self.dbg_queue.content.as_str());
+            self.dbg_queue.needs_redraw = false;
         }
         if self.underscores_need_redraw {
             // Header
-            let _ = self.handle.write_underscored_at(12);
-            // Scan
-            let _ = self.handle.write_underscored_at(48);
-            // Tx
-            let _ = self.handle.write_underscored_at(75);
+            let _ = self.handle.write_underscored_at(8);
+            // Perf
+            let _ = self.handle.write_underscored_at(36);
+            // Dbg
+            let _ = self.handle.write_underscored_at(64);
             self.underscores_need_redraw = false;
         }
     }

@@ -4,24 +4,21 @@ use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::right::RightButtons;
 use crate::runtime::shared::cores_right::{
-    pop_message, push_loop_to_admin, try_push_tx, KeycoreToAdminMessage, Producer,
+    new_shared_queue, pop_message, push_loop_to_admin, try_push_touch, KeycoreToAdminMessage,
+    Producer,
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
+use crate::runtime::shared::press_latency_counter::PressLatencyCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
-use core::sync::atomic::AtomicUsize;
 use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
-use rp2040_kbd_lib::queue::new_atomic_producer_consumer;
 use usb_device::bus::UsbBusAllocator;
 
 static mut CORE_1_STACK_AREA: [usize; 2048] = [0; 2048];
 // Boot loop if the queue is bugged, not bothering with MemUninit here
-static mut ATOMIC_QUEUE_MEM_AREA: [KeycoreToAdminMessage; 32] = [KeycoreToAdminMessage::Reboot; 32];
-static mut ATOMIC_QUEUE_HEAD: AtomicUsize = AtomicUsize::new(0);
-static mut ATOMIC_QUEUE_TAIL: AtomicUsize = AtomicUsize::new(0);
 #[inline(never)]
 #[allow(unused_variables, clippy::needless_pass_by_value)]
 pub fn run_right<'a>(
@@ -40,14 +37,7 @@ pub fn run_right<'a>(
     let cores = mc.cores();
     let c1 = &mut cores[1];
     let serializer = MessageSerializer::new(uart_driver);
-    #[allow(static_mut_refs)]
-    let (producer, consumer) = unsafe {
-        new_atomic_producer_consumer(
-            &mut ATOMIC_QUEUE_MEM_AREA,
-            &mut ATOMIC_QUEUE_HEAD,
-            &mut ATOMIC_QUEUE_TAIL,
-        )
-    };
+    let (producer, consumer) = new_shared_queue();
     #[allow(static_mut_refs)]
     if let Err(e) = c1.spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
         run_core1(serializer, right_buttons, timer, producer)
@@ -69,21 +59,28 @@ pub fn run_right<'a>(
     #[cfg(feature = "serial")]
     let mut has_dumped = false;
     let mut sleep = SleepCountdown::new();
+    let mut press_counter = PressLatencyCounter::new();
     let mut tx: u16 = 0;
+    let mut last_avail = 0;
     loop {
         let now = timer.get_counter();
+        let avail = consumer.available();
         match pop_message(&consumer) {
             Some(KeycoreToAdminMessage::Loop(lc)) => {
                 if sleep.is_awake() {
-                    if let Some((header, body)) = lc.as_micros_fraction() {
-                        oled.update_scan_loop(header, body);
-                    }
+                    oled.update_scan_loop(lc.as_micros_fraction());
                 }
             }
-            Some(KeycoreToAdminMessage::Tx(transmitted)) => {
-                tx = tx.wrapping_add(transmitted);
+            Some(KeycoreToAdminMessage::Touch {
+                tx_bytes,
+                loop_duration,
+            }) => {
                 sleep.touch(now);
-                oled.update_tx(tx);
+                tx += tx_bytes;
+                if tx > 9999 {
+                    tx = tx_bytes;
+                }
+                oled.update_touch(tx, press_counter.increment_get_avg(loop_duration));
                 oled.show();
             }
             Some(KeycoreToAdminMessage::Reboot) => {
@@ -92,6 +89,10 @@ pub fn run_right<'a>(
                 panic!("HALT POST RESET");
             }
             _ => {}
+        }
+        if avail != last_avail {
+            oled.update_queue(avail);
+            last_avail = avail;
         }
         if sleep.should_sleep(now) {
             sleep.set_sleeping();
@@ -164,18 +165,24 @@ fn run_core1(
     right_buttons.scan_encoder(&mut serializer);
     let mut tx = 0;
     loop {
+        let loop_timer = timer.get_counter();
         tx += right_buttons.scan_matrix(&mut serializer, timer, &producer);
         if right_buttons.scan_encoder(&mut serializer) {
             tx += 1;
         }
-        if tx > 0 && try_push_tx(&producer, tx) {
-            tx = 0;
-        }
+
         if loop_count.increment() {
             let now = timer.get_counter();
             let lc = loop_count.value(now);
             if push_loop_to_admin(&producer, lc) {
                 loop_count.reset(now);
+            }
+        }
+        if tx > 0 {
+            if let Some(dur) = timer.get_counter().checked_duration_since(loop_timer) {
+                if try_push_touch(&producer, tx, dur) {
+                    tx = 0;
+                }
             }
         }
     }

@@ -1,7 +1,7 @@
 use crate::keyboard::left::message_receiver::MessageReceiver;
 use crate::keyboard::left::LeftButtons;
-use crate::keyboard::oled::left::LeftOledDrawer;
-use crate::keyboard::oled::{layer_to_string, OledHandle};
+use crate::keyboard::oled::left::{layer_to_string, LeftOledDrawer};
+use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
 use crate::keymap::{KeyboardReportState, KeymapLayer};

@@ -3,7 +3,6 @@ pub mod left;
 #[cfg(feature = "right")]
 pub mod right;
 
-use crate::keymap::KeymapLayer;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::Point;
 use embedded_graphics::mono_font::iso_8859_4::{FONT_4X6, FONT_5X7};
@@ -13,7 +12,6 @@ use embedded_graphics::prelude::Size;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::text::{Baseline, Text};
 use embedded_graphics::Drawable;
-use heapless::String;
 use liatris::pac::I2C1;
 use rp2040_hal::gpio::bank0::{Gpio2, Gpio3};
 use rp2040_hal::gpio::{FunctionI2c, PullUp};
@@ -35,39 +33,6 @@ pub type OledLineString = heapless::String<8>;
 pub const OLED_LINE_HEIGHT: u32 = 8;
 pub const OLED_LINE_WIDTH: u32 = 32;
 
-pub fn layer_to_string(keymap_layer: KeymapLayer) -> OledLineString {
-    let mut s = String::new();
-    match keymap_layer {
-        KeymapLayer::DvorakSe => {
-            let _ = s.push_str("DV-SE");
-        }
-        KeymapLayer::DvorakAnsi => {
-            let _ = s.push_str("DV-AN");
-        }
-        KeymapLayer::QwertyAnsi => {
-            let _ = s.push_str("QW-AN");
-        }
-        KeymapLayer::QwertyGaming => {
-            let _ = s.push_str("QW-GM");
-        }
-        KeymapLayer::Lower => {
-            let _ = s.push_str("LO");
-        }
-        KeymapLayer::LowerAnsi => {
-            let _ = s.push_str("LO-AN");
-        }
-        KeymapLayer::Raise => {
-            let _ = s.push_str("RA");
-        }
-        KeymapLayer::Num => {
-            let _ = s.push_str("NUM");
-        }
-        KeymapLayer::Settings => {
-            let _ = s.push_str("SET");
-        }
-    }
-    s
-}
 pub struct DrawUnit {
     pub content: OledLineString,
     pub needs_redraw: bool,

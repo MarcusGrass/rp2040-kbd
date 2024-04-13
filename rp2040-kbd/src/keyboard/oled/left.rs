@@ -227,9 +227,9 @@ impl LeftOledDrawer {
         if self.underscores_need_redraw {
             // Header
             let _ = self.handle.write_underscored_at(8);
-            // Scan
+            // Perf
             let _ = self.handle.write_underscored_at(44);
-            // Rx
+            // Dbg
             let _ = self.handle.write_underscored_at(72);
             // Layer
             let _ = self.handle.write_underscored_at(116);
@@ -245,4 +245,38 @@ impl LeftOledDrawer {
         let _ = self.handle.write_header(27, "USB");
         let _ = self.handle.write_header(36, "BOOT");
     }
+}
+
+pub fn layer_to_string(keymap_layer: crate::keymap::KeymapLayer) -> OledLineString {
+    let mut s = heapless::String::new();
+    match keymap_layer {
+        crate::keymap::KeymapLayer::DvorakSe => {
+            let _ = s.push_str("DV-SE");
+        }
+        crate::keymap::KeymapLayer::DvorakAnsi => {
+            let _ = s.push_str("DV-AN");
+        }
+        crate::keymap::KeymapLayer::QwertyAnsi => {
+            let _ = s.push_str("QW-AN");
+        }
+        crate::keymap::KeymapLayer::QwertyGaming => {
+            let _ = s.push_str("QW-GM");
+        }
+        crate::keymap::KeymapLayer::Lower => {
+            let _ = s.push_str("LO");
+        }
+        crate::keymap::KeymapLayer::LowerAnsi => {
+            let _ = s.push_str("LO-AN");
+        }
+        crate::keymap::KeymapLayer::Raise => {
+            let _ = s.push_str("RA");
+        }
+        crate::keymap::KeymapLayer::Num => {
+            let _ = s.push_str("NUM");
+        }
+        crate::keymap::KeymapLayer::Settings => {
+            let _ = s.push_str("SET");
+        }
+    }
+    s
 }
