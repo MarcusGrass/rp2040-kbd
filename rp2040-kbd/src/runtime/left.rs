@@ -7,7 +7,7 @@ use crate::keyboard::split_serial::UartLeft;
 use crate::keymap::{KeyboardReportState, KeymapLayer};
 use crate::runtime::shared::cores_left::{
     pop_message, push_layer_change, push_loop_to_admin, push_rx_change, push_touch_to_admin,
-    KeycoreToAdminMessage,
+    KeycoreToAdminMessage, Producer,
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
@@ -15,15 +15,21 @@ use crate::runtime::shared::sleep::SleepCountdown;
 use crate::runtime::shared::usb::init_usb;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
+use core::sync::atomic::AtomicUsize;
 use heapless::String;
 #[cfg(feature = "hiddev")]
 use liatris::pac::interrupt;
 use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
+use rp2040_kbd_lib::queue::new_atomic_producer_consumer;
 use usb_device::bus::UsbBusAllocator;
 
 static mut CORE_1_STACK_AREA: [usize; 1024 * 8] = [0; 1024 * 8];
+
+static mut ATOMIC_QUEUE_MEM_AREA: [KeycoreToAdminMessage; 32] = [KeycoreToAdminMessage::Touch; 32];
+static mut ATOMIC_QUEUE_HEAD: AtomicUsize = AtomicUsize::new(0);
+static mut ATOMIC_QUEUE_TAIL: AtomicUsize = AtomicUsize::new(0);
 #[inline(never)]
 #[allow(clippy::too_many_lines)]
 pub fn run_left<'a>(
@@ -41,11 +47,20 @@ pub fn run_left<'a>(
     }
     let receiver = MessageReceiver::new(uart_driver);
     #[allow(static_mut_refs)]
+    let (producer, consumer) = unsafe {
+        new_atomic_producer_consumer(
+            &mut ATOMIC_QUEUE_MEM_AREA,
+            &mut ATOMIC_QUEUE_HEAD,
+            &mut ATOMIC_QUEUE_TAIL,
+        )
+    };
+    #[allow(static_mut_refs)]
     if let Err(_e) = mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
         run_core1(
             receiver,
             left_buttons,
             timer,
+            producer,
             #[cfg(feature = "hiddev")]
             usb_bus,
         )
@@ -71,7 +86,7 @@ pub fn run_left<'a>(
     let mut rx: u16 = 0;
     loop {
         let now = timer.get_counter();
-        match pop_message() {
+        match pop_message(&consumer) {
             Some(KeycoreToAdminMessage::Touch) => {
                 sleep.touch(now);
                 oled_left.show();
@@ -187,11 +202,12 @@ fn handle_usb(
     }
     Some(())
 }
-
+#[allow(clippy::needless_pass_by_value)]
 pub fn run_core1(
     mut receiver: MessageReceiver,
     mut left_buttons: LeftButtons,
     timer: Timer,
+    producer: Producer,
     #[cfg(feature = "hiddev")] allocator: usb_device::bus::UsbBusAllocator<
         liatris::hal::usb::UsbBus,
     >,
@@ -214,15 +230,15 @@ pub fn run_core1(
             // Right side sent an update
             rx += 1;
             // Update report state
-            kbd.update_right(update, &mut report_state);
+            kbd.update_right(update, &mut report_state, &producer);
             any_change = true;
         }
         // Check left side gpio and update report state
-        if kbd.scan_left(&mut left_buttons, &mut report_state, timer) {
+        if kbd.scan_left(&mut left_buttons, &mut report_state, timer, &producer) {
             any_change = true;
         }
         if any_change {
-            push_touch_to_admin();
+            push_touch_to_admin(&producer);
         }
         #[cfg(feature = "hiddev")]
         {
@@ -240,16 +256,16 @@ pub fn run_core1(
         }
 
         if let Some(change) = report_state.layer_update() {
-            push_layer_change(change);
+            push_layer_change(&producer, change);
         }
 
-        if rx > 0 && push_rx_change(rx) {
+        if rx > 0 && push_rx_change(&producer, rx) {
             rx = 0;
         }
         if loop_count.increment() {
             let now = timer.get_counter();
             let lc = loop_count.value(now);
-            if push_loop_to_admin(lc) {
+            if push_loop_to_admin(&producer, lc) {
                 loop_count.reset(now);
             }
         }

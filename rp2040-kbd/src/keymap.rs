@@ -10,7 +10,7 @@ use usbd_hid::descriptor::KeyboardReport;
 
 use crate::keyboard::debounce::PinDebouncer;
 use crate::keyboard::left::LeftButtons;
-use crate::runtime::shared::cores_left::push_reboot_and_halt;
+use crate::runtime::shared::cores_left::{push_reboot_and_halt, Producer};
 use rp2040_kbd_lib::keycodes::{KeyCode, Modifier};
 use rp2040_kbd_lib::matrix::{MatrixChange, MatrixUpdate};
 
@@ -273,12 +273,14 @@ where
 }
 
 pub trait KeyboardButton {
-    fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState) {}
+    fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
+    }
 
     fn on_release(
         &mut self,
         _last_press_state: LastPressState,
         _keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
     }
 }
@@ -329,12 +331,13 @@ macro_rules! impl_check_update {
                 pressed: bool,
                 keyboard_report_state: &mut KeyboardReportState,
                 timer: Timer,
+                producer: &Producer,
             ) -> bool {
                 if self.0.jitter.try_submit(timer.get_counter(), pressed) {
                     if let Some(prev) = self.0.last_state.take() {
-                        self.on_release(prev, keyboard_report_state);
+                        self.on_release(prev, keyboard_report_state, producer);
                     } else {
-                        self.on_press(keyboard_report_state);
+                        self.on_press(keyboard_report_state, producer);
                         self.0.update_last_state(keyboard_report_state);
                     }
                     return true;
@@ -424,7 +427,7 @@ macro_rules! impl_read_pin_col {
     ($($structure: expr, $row: tt,)*, $col: tt) => {
         paste! {
             #[inline]
-            pub fn [<read_col _ $col _pins>]($([< $structure:snake >]: &mut $structure,)* left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState, timer: Timer) -> bool {
+            pub fn [<read_col _ $col _pins>]($([< $structure:snake >]: &mut $structure,)* left_buttons: &mut LeftButtons, keyboard_report_state: &mut KeyboardReportState, timer: Timer, producer: &Producer) -> bool {
                 // Safety: Make sure this is properly initialized and restored
                 // at the end of this function, makes a noticeable difference in performance
                 let col = unsafe {left_buttons.cols.$col.take().unwrap_unchecked()};
@@ -435,7 +438,7 @@ macro_rules! impl_read_pin_col {
                 let mut any_change = false;
                 $(
                     let state = bank & crate::keyboard::left::[<ROW $row>] == 0;
-                    if [< $structure:snake >].0.is_pressed() != state && [< $structure:snake >].check_update_state(state, keyboard_report_state, timer) {
+                    if [< $structure:snake >].0.is_pressed() != state && [< $structure:snake >].check_update_state(state, keyboard_report_state, timer, producer) {
                         any_change = true;
                     }
 
@@ -507,12 +510,12 @@ impl_read_pin_col!(
 );
 
 macro_rules! handle_update_right {
-    ($change: expr, $field: expr, $state: expr) => {{
+    ($change: expr, $field: expr, $state: expr, $producer: expr) => {{
         if $change != $field.0.is_pressed() {
             if let Some(prev) = $field.0.last_state.take() {
-                $field.on_release(prev, $state);
+                $field.on_release(prev, $state, $producer);
             } else {
-                $field.on_press($state);
+                $field.on_press($state, $producer);
                 $field.0.update_last_state($state);
             }
         }
@@ -526,6 +529,7 @@ impl KeyboardState {
         left_buttons: &mut LeftButtons,
         keyboard_report_state: &mut KeyboardReportState,
         timer: Timer,
+        producer: &Producer,
     ) -> bool {
         let col0_change = read_col_0_pins(
             &mut self.left_row0_col0,
@@ -535,6 +539,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
             timer,
+            producer,
         );
         let col1_change = read_col_1_pins(
             &mut self.left_row0_col1,
@@ -545,6 +550,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
             timer,
+            producer,
         );
         let col2_change = read_col_2_pins(
             &mut self.left_row0_col2,
@@ -555,6 +561,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
             timer,
+            producer,
         );
         let col3_change = read_col_3_pins(
             &mut self.left_row0_col3,
@@ -565,6 +572,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
             timer,
+            producer,
         );
         let col4_change = read_col_4_pins(
             &mut self.left_row0_col4,
@@ -575,6 +583,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
             timer,
+            producer,
         );
         let col5_change = read_col_5_pins(
             &mut self.left_row0_col5,
@@ -585,6 +594,7 @@ impl KeyboardState {
             left_buttons,
             keyboard_report_state,
             timer,
+            producer,
         );
         col0_change || col1_change || col2_change || col3_change || col4_change || col5_change
     }
@@ -594,6 +604,7 @@ impl KeyboardState {
         &mut self,
         update: MatrixUpdate,
         keyboard_report_state: &mut KeyboardReportState,
+        producer: &Producer,
     ) {
         match update.interpret_byte() {
             MatrixChange::EncoderUpdate(enc) => {
@@ -609,35 +620,180 @@ impl KeyboardState {
                     );
                 }
                 match ind.byte() {
-                    0 => handle_update_right!(change, self.right_row0_col0, keyboard_report_state),
-                    1 => handle_update_right!(change, self.right_row0_col1, keyboard_report_state),
-                    2 => handle_update_right!(change, self.right_row0_col2, keyboard_report_state),
-                    3 => handle_update_right!(change, self.right_row0_col3, keyboard_report_state),
-                    4 => handle_update_right!(change, self.right_row0_col4, keyboard_report_state),
-                    5 => handle_update_right!(change, self.right_row0_col5, keyboard_report_state),
-                    6 => handle_update_right!(change, self.right_row1_col0, keyboard_report_state),
-                    7 => handle_update_right!(change, self.right_row1_col1, keyboard_report_state),
-                    8 => handle_update_right!(change, self.right_row1_col2, keyboard_report_state),
-                    9 => handle_update_right!(change, self.right_row1_col3, keyboard_report_state),
-                    10 => handle_update_right!(change, self.right_row1_col4, keyboard_report_state),
-                    11 => handle_update_right!(change, self.right_row1_col5, keyboard_report_state),
-                    12 => handle_update_right!(change, self.right_row2_col0, keyboard_report_state),
-                    13 => handle_update_right!(change, self.right_row2_col1, keyboard_report_state),
-                    14 => handle_update_right!(change, self.right_row2_col2, keyboard_report_state),
-                    15 => handle_update_right!(change, self.right_row2_col3, keyboard_report_state),
-                    16 => handle_update_right!(change, self.right_row2_col4, keyboard_report_state),
-                    17 => handle_update_right!(change, self.right_row2_col5, keyboard_report_state),
-                    18 => handle_update_right!(change, self.right_row3_col0, keyboard_report_state),
-                    19 => handle_update_right!(change, self.right_row3_col1, keyboard_report_state),
-                    20 => handle_update_right!(change, self.right_row3_col2, keyboard_report_state),
-                    21 => handle_update_right!(change, self.right_row3_col3, keyboard_report_state),
-                    22 => handle_update_right!(change, self.right_row3_col4, keyboard_report_state),
-                    23 => handle_update_right!(change, self.right_row3_col5, keyboard_report_state),
-                    25 => handle_update_right!(change, self.right_row4_col1, keyboard_report_state),
-                    26 => handle_update_right!(change, self.right_row4_col2, keyboard_report_state),
-                    27 => handle_update_right!(change, self.right_row4_col3, keyboard_report_state),
-                    28 => handle_update_right!(change, self.right_row4_col4, keyboard_report_state),
-                    29 => handle_update_right!(change, self.right_row4_col5, keyboard_report_state),
+                    0 => handle_update_right!(
+                        change,
+                        self.right_row0_col0,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    1 => handle_update_right!(
+                        change,
+                        self.right_row0_col1,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    2 => handle_update_right!(
+                        change,
+                        self.right_row0_col2,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    3 => handle_update_right!(
+                        change,
+                        self.right_row0_col3,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    4 => handle_update_right!(
+                        change,
+                        self.right_row0_col4,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    5 => handle_update_right!(
+                        change,
+                        self.right_row0_col5,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    6 => handle_update_right!(
+                        change,
+                        self.right_row1_col0,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    7 => handle_update_right!(
+                        change,
+                        self.right_row1_col1,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    8 => handle_update_right!(
+                        change,
+                        self.right_row1_col2,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    9 => handle_update_right!(
+                        change,
+                        self.right_row1_col3,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    10 => handle_update_right!(
+                        change,
+                        self.right_row1_col4,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    11 => handle_update_right!(
+                        change,
+                        self.right_row1_col5,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    12 => handle_update_right!(
+                        change,
+                        self.right_row2_col0,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    13 => handle_update_right!(
+                        change,
+                        self.right_row2_col1,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    14 => handle_update_right!(
+                        change,
+                        self.right_row2_col2,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    15 => handle_update_right!(
+                        change,
+                        self.right_row2_col3,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    16 => handle_update_right!(
+                        change,
+                        self.right_row2_col4,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    17 => handle_update_right!(
+                        change,
+                        self.right_row2_col5,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    18 => handle_update_right!(
+                        change,
+                        self.right_row3_col0,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    19 => handle_update_right!(
+                        change,
+                        self.right_row3_col1,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    20 => handle_update_right!(
+                        change,
+                        self.right_row3_col2,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    21 => handle_update_right!(
+                        change,
+                        self.right_row3_col3,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    22 => handle_update_right!(
+                        change,
+                        self.right_row3_col4,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    23 => handle_update_right!(
+                        change,
+                        self.right_row3_col5,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    25 => handle_update_right!(
+                        change,
+                        self.right_row4_col1,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    26 => handle_update_right!(
+                        change,
+                        self.right_row4_col2,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    27 => handle_update_right!(
+                        change,
+                        self.right_row4_col3,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    28 => handle_update_right!(
+                        change,
+                        self.right_row4_col4,
+                        keyboard_report_state,
+                        producer
+                    ),
+                    29 => handle_update_right!(
+                        change,
+                        self.right_row4_col5,
+                        keyboard_report_state,
+                        producer
+                    ),
                     _ => {}
                 }
             }
@@ -702,20 +858,21 @@ macro_rules! base_layer {
 }
 
 impl KeyboardButton for LeftRow0Col0 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_key(KeyCode::TAB);
     }
     fn on_release(
         &mut self,
         _last_press_state: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_key(KeyCode::TAB);
     }
 }
 
 impl KeyboardButton for LeftRow0Col1 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -754,6 +911,7 @@ impl KeyboardButton for LeftRow0Col1 {
         &mut self,
         last_press_state: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (last_press_state.last_perm_layer, last_press_state.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -788,7 +946,7 @@ impl KeyboardButton for LeftRow0Col1 {
 }
 
 impl KeyboardButton for LeftRow0Col2 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -836,6 +994,7 @@ impl KeyboardButton for LeftRow0Col2 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -873,7 +1032,7 @@ impl KeyboardButton for LeftRow0Col2 {
 }
 
 impl KeyboardButton for LeftRow0Col3 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -913,6 +1072,7 @@ impl KeyboardButton for LeftRow0Col3 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -947,7 +1107,7 @@ impl KeyboardButton for LeftRow0Col3 {
 }
 
 impl KeyboardButton for LeftRow0Col4 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -982,6 +1142,7 @@ impl KeyboardButton for LeftRow0Col4 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -1011,7 +1172,7 @@ impl KeyboardButton for LeftRow0Col4 {
     }
 }
 impl KeyboardButton for LeftRow0Col5 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1046,6 +1207,7 @@ impl KeyboardButton for LeftRow0Col5 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -1076,7 +1238,7 @@ impl KeyboardButton for LeftRow0Col5 {
 }
 
 impl KeyboardButton for LeftRow1Col0 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_key(KeyCode::ESCAPE);
     }
 
@@ -1084,13 +1246,14 @@ impl KeyboardButton for LeftRow1Col0 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_key(KeyCode::ESCAPE);
     }
 }
 
 impl KeyboardButton for LeftRow1Col1 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1128,6 +1291,7 @@ impl KeyboardButton for LeftRow1Col1 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Num) => {
@@ -1160,7 +1324,7 @@ impl KeyboardButton for LeftRow1Col1 {
     }
 }
 impl KeyboardButton for LeftRow1Col2 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1198,6 +1362,7 @@ impl KeyboardButton for LeftRow1Col2 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Num) => {
@@ -1231,7 +1396,7 @@ impl KeyboardButton for LeftRow1Col2 {
 }
 
 impl KeyboardButton for LeftRow1Col3 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1269,6 +1434,7 @@ impl KeyboardButton for LeftRow1Col3 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Num) => {
@@ -1301,7 +1467,7 @@ impl KeyboardButton for LeftRow1Col3 {
     }
 }
 impl KeyboardButton for LeftRow1Col4 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1339,6 +1505,7 @@ impl KeyboardButton for LeftRow1Col4 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Num) => {
@@ -1372,7 +1539,7 @@ impl KeyboardButton for LeftRow1Col4 {
 }
 
 impl KeyboardButton for LeftRow1Col5 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1410,6 +1577,7 @@ impl KeyboardButton for LeftRow1Col5 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Num) => {
@@ -1443,7 +1611,7 @@ impl KeyboardButton for LeftRow1Col5 {
 }
 
 impl KeyboardButton for LeftRow2Col0 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
     }
 
@@ -1451,13 +1619,14 @@ impl KeyboardButton for LeftRow2Col0 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
     }
 }
 
 impl KeyboardButton for LeftRow2Col1 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1489,6 +1658,7 @@ impl KeyboardButton for LeftRow2Col1 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             base_layer!(KeymapLayer::DvorakAnsi) => {
@@ -1516,7 +1686,7 @@ impl KeyboardButton for LeftRow2Col1 {
 }
 
 impl KeyboardButton for LeftRow2Col2 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1550,6 +1720,7 @@ impl KeyboardButton for LeftRow2Col2 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::LowerAnsi) => {
@@ -1577,7 +1748,7 @@ impl KeyboardButton for LeftRow2Col2 {
 }
 
 impl KeyboardButton for LeftRow2Col3 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1609,6 +1780,7 @@ impl KeyboardButton for LeftRow2Col3 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::LowerAnsi) => {
@@ -1636,7 +1808,7 @@ impl KeyboardButton for LeftRow2Col3 {
 }
 
 impl KeyboardButton for LeftRow2Col4 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1668,6 +1840,7 @@ impl KeyboardButton for LeftRow2Col4 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::LowerAnsi) => {
@@ -1695,7 +1868,7 @@ impl KeyboardButton for LeftRow2Col4 {
 }
 
 impl KeyboardButton for LeftRow2Col5 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1738,6 +1911,7 @@ impl KeyboardButton for LeftRow2Col5 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::LowerAnsi) => {
@@ -1765,7 +1939,7 @@ impl KeyboardButton for LeftRow2Col5 {
 }
 
 impl KeyboardButton for LeftRow3Col0 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_modifier(Modifier::LEFT_CONTROL);
     }
 
@@ -1773,13 +1947,14 @@ impl KeyboardButton for LeftRow3Col0 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_modifier(Modifier::LEFT_CONTROL);
     }
 }
 
 impl KeyboardButton for LeftRow3Col1 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1804,6 +1979,7 @@ impl KeyboardButton for LeftRow3Col1 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             base_layer!(KeymapLayer::DvorakAnsi) => {
@@ -1824,7 +2000,7 @@ impl KeyboardButton for LeftRow3Col1 {
 }
 
 impl KeyboardButton for LeftRow3Col2 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1849,6 +2025,7 @@ impl KeyboardButton for LeftRow3Col2 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             base_layer!(KeymapLayer::DvorakAnsi) => {
@@ -1869,7 +2046,7 @@ impl KeyboardButton for LeftRow3Col2 {
 }
 
 impl KeyboardButton for LeftRow3Col3 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1888,6 +2065,7 @@ impl KeyboardButton for LeftRow3Col3 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1902,7 +2080,7 @@ impl KeyboardButton for LeftRow3Col3 {
 }
 
 impl KeyboardButton for LeftRow3Col4 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1927,6 +2105,7 @@ impl KeyboardButton for LeftRow3Col4 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::LowerAnsi) => {
@@ -1948,7 +2127,7 @@ impl KeyboardButton for LeftRow3Col4 {
 }
 
 impl KeyboardButton for LeftRow3Col5 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -1973,6 +2152,7 @@ impl KeyboardButton for LeftRow3Col5 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             base_layer!(KeymapLayer::DvorakAnsi) => {
@@ -1994,20 +2174,21 @@ impl KeyboardButton for LeftRow3Col5 {
 
 // Row 4 col 0 does not exist
 impl KeyboardButton for LeftRow4Col1 {
-    fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState) {
-        push_reboot_and_halt();
+    fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState, producer: &Producer) {
+        push_reboot_and_halt(producer);
     }
 
     fn on_release(
         &mut self,
         _prev: LastPressState,
         _keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
     }
 }
 
 impl KeyboardButton for LeftRow4Col2 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2026,6 +2207,7 @@ impl KeyboardButton for LeftRow4Col2 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2040,18 +2222,20 @@ impl KeyboardButton for LeftRow4Col2 {
 }
 
 impl KeyboardButton for LeftRow4Col3 {
-    fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState) {}
+    fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
+    }
 
     fn on_release(
         &mut self,
         _prev: LastPressState,
         _keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
     }
 }
 
 impl KeyboardButton for LeftRow4Col4 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2073,6 +2257,7 @@ impl KeyboardButton for LeftRow4Col4 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2089,11 +2274,13 @@ impl KeyboardButton for LeftRow4Col4 {
 }
 
 impl KeyboardButton for LeftRow4Col5 {
-    fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState) {}
+    fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
+    }
     fn on_release(
         &mut self,
         _prev: LastPressState,
         _keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
     }
 }
@@ -2101,7 +2288,7 @@ impl KeyboardButton for LeftRow4Col5 {
 // Right side, goes from right to left
 
 impl KeyboardButton for RightRow0Col0 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_key(KeyCode::BACKSPACE);
     }
 
@@ -2109,13 +2296,14 @@ impl KeyboardButton for RightRow0Col0 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_key(KeyCode::BACKSPACE);
     }
 }
 
 impl KeyboardButton for RightRow0Col1 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2150,6 +2338,7 @@ impl KeyboardButton for RightRow0Col1 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -2180,7 +2369,7 @@ impl KeyboardButton for RightRow0Col1 {
 }
 
 impl KeyboardButton for RightRow0Col2 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2215,6 +2404,7 @@ impl KeyboardButton for RightRow0Col2 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -2245,7 +2435,7 @@ impl KeyboardButton for RightRow0Col2 {
 }
 
 impl KeyboardButton for RightRow0Col3 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2280,6 +2470,7 @@ impl KeyboardButton for RightRow0Col3 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -2310,7 +2501,7 @@ impl KeyboardButton for RightRow0Col3 {
 }
 
 impl KeyboardButton for RightRow0Col4 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2345,6 +2536,7 @@ impl KeyboardButton for RightRow0Col4 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -2376,7 +2568,7 @@ impl KeyboardButton for RightRow0Col4 {
 }
 
 impl KeyboardButton for RightRow0Col5 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2428,6 +2620,7 @@ impl KeyboardButton for RightRow0Col5 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -2459,7 +2652,7 @@ impl KeyboardButton for RightRow0Col5 {
 }
 
 impl KeyboardButton for RightRow1Col0 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_key(KeyCode::ENTER);
     }
 
@@ -2467,13 +2660,14 @@ impl KeyboardButton for RightRow1Col0 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_key(KeyCode::ENTER);
     }
 }
 
 impl KeyboardButton for RightRow1Col1 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2511,6 +2705,7 @@ impl KeyboardButton for RightRow1Col1 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Num) => {
@@ -2544,7 +2739,7 @@ impl KeyboardButton for RightRow1Col1 {
 }
 
 impl KeyboardButton for RightRow1Col2 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2586,6 +2781,7 @@ impl KeyboardButton for RightRow1Col2 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Num) => {
@@ -2619,7 +2815,7 @@ impl KeyboardButton for RightRow1Col2 {
 }
 
 impl KeyboardButton for RightRow1Col3 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2661,6 +2857,7 @@ impl KeyboardButton for RightRow1Col3 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Num) => {
@@ -2694,7 +2891,7 @@ impl KeyboardButton for RightRow1Col3 {
 }
 
 impl KeyboardButton for RightRow1Col4 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2732,6 +2929,7 @@ impl KeyboardButton for RightRow1Col4 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Lower) => {
@@ -2765,7 +2963,7 @@ impl KeyboardButton for RightRow1Col4 {
 }
 
 impl KeyboardButton for RightRow1Col5 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2803,6 +3001,7 @@ impl KeyboardButton for RightRow1Col5 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Num) => {
@@ -2836,7 +3035,7 @@ impl KeyboardButton for RightRow1Col5 {
 }
 
 impl KeyboardButton for RightRow2Col0 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_modifier(Modifier::LEFT_SHIFT);
     }
 
@@ -2844,13 +3043,14 @@ impl KeyboardButton for RightRow2Col0 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_modifier(Modifier::LEFT_SHIFT);
     }
 }
 
 impl KeyboardButton for RightRow2Col1 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2885,6 +3085,7 @@ impl KeyboardButton for RightRow2Col1 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -2912,7 +3113,7 @@ impl KeyboardButton for RightRow2Col1 {
 }
 
 impl KeyboardButton for RightRow2Col2 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -2947,6 +3148,7 @@ impl KeyboardButton for RightRow2Col2 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -2974,7 +3176,7 @@ impl KeyboardButton for RightRow2Col2 {
 }
 
 impl KeyboardButton for RightRow2Col3 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -3009,6 +3211,7 @@ impl KeyboardButton for RightRow2Col3 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -3036,7 +3239,7 @@ impl KeyboardButton for RightRow2Col3 {
 }
 
 impl KeyboardButton for RightRow2Col4 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -3075,6 +3278,7 @@ impl KeyboardButton for RightRow2Col4 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::LowerAnsi) => {
@@ -3102,7 +3306,7 @@ impl KeyboardButton for RightRow2Col4 {
 }
 
 impl KeyboardButton for RightRow2Col5 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -3148,6 +3352,7 @@ impl KeyboardButton for RightRow2Col5 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::LowerAnsi) => {
@@ -3175,7 +3380,7 @@ impl KeyboardButton for RightRow2Col5 {
 }
 
 impl KeyboardButton for RightRow3Col0 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_modifier(Modifier::LEFT_CONTROL);
     }
 
@@ -3183,13 +3388,14 @@ impl KeyboardButton for RightRow3Col0 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_modifier(Modifier::LEFT_CONTROL);
     }
 }
 
 impl KeyboardButton for RightRow3Col1 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -3216,6 +3422,7 @@ impl KeyboardButton for RightRow3Col1 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Settings) => {
@@ -3232,7 +3439,7 @@ impl KeyboardButton for RightRow3Col1 {
 }
 
 impl KeyboardButton for RightRow3Col2 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_modifier(Modifier::RIGHT_ALT);
     }
 
@@ -3240,13 +3447,14 @@ impl KeyboardButton for RightRow3Col2 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_modifier(Modifier::RIGHT_ALT);
     }
 }
 
 impl KeyboardButton for RightRow3Col3 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -3273,6 +3481,7 @@ impl KeyboardButton for RightRow3Col3 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Raise) => {
@@ -3289,7 +3498,7 @@ impl KeyboardButton for RightRow3Col3 {
 }
 
 impl KeyboardButton for RightRow3Col4 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -3316,6 +3525,7 @@ impl KeyboardButton for RightRow3Col4 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             temp_layer!(KeymapLayer::Num) => {
@@ -3334,7 +3544,7 @@ impl KeyboardButton for RightRow3Col4 {
 }
 
 impl KeyboardButton for RightRow3Col5 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
@@ -3359,6 +3569,7 @@ impl KeyboardButton for RightRow3Col5 {
         &mut self,
         prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         match (prev.last_perm_layer, prev.layer) {
             base_layer!(KeymapLayer::DvorakAnsi) => {
@@ -3379,19 +3590,21 @@ impl KeyboardButton for RightRow3Col5 {
 }
 
 impl KeyboardButton for RightRow4Col1 {
-    fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState) {}
+    fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
+    }
 
     fn on_release(
         &mut self,
         _prev: LastPressState,
         _keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
     }
     // Rotary encoder is here, no key
 }
 
 impl KeyboardButton for RightRow4Col2 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_key(KeyCode::N2);
     }
 
@@ -3399,13 +3612,14 @@ impl KeyboardButton for RightRow4Col2 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_key(KeyCode::N2);
     }
 }
 
 impl KeyboardButton for RightRow4Col3 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_key(KeyCode::N3);
     }
 
@@ -3413,13 +3627,14 @@ impl KeyboardButton for RightRow4Col3 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_key(KeyCode::N3);
     }
 }
 
 impl KeyboardButton for RightRow4Col4 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_key(KeyCode::N4);
     }
 
@@ -3427,13 +3642,14 @@ impl KeyboardButton for RightRow4Col4 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_key(KeyCode::N4);
     }
 }
 
 impl KeyboardButton for RightRow4Col5 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
         keyboard_report_state.push_key(KeyCode::N5);
     }
 
@@ -3441,6 +3657,7 @@ impl KeyboardButton for RightRow4Col5 {
         &mut self,
         _prev: LastPressState,
         keyboard_report_state: &mut KeyboardReportState,
+        _producer: &Producer,
     ) {
         keyboard_report_state.pop_key(KeyCode::N5);
     }
