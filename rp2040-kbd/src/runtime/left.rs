@@ -7,7 +7,7 @@ use crate::keyboard::split_serial::UartLeft;
 use crate::keymap::{KeyboardReportState, KeymapLayer};
 use crate::runtime::shared::cores_left::{
     new_shared_queue, pop_message, push_loop_to_admin, push_rx_change, push_touch_left_to_admin,
-    push_touch_right_to_admin, KeycoreToAdminMessage, Producer,
+    push_touch_right_to_admin, Consumer, KeycoreToAdminMessage, Producer,
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
 use crate::runtime::shared::press_latency_counter::PressLatencyCounter;
@@ -33,7 +33,7 @@ pub fn run_left<'a>(
     mut oled_handle: OledHandle,
     uart_driver: UartLeft,
     left_buttons: LeftButtons,
-    #[allow(unused_variables, unused_mut)] mut power_led_pin: PowerLed,
+    power_led_pin: PowerLed,
     timer: Timer,
 ) -> ! {
     #[cfg(feature = "serial")]
@@ -44,7 +44,7 @@ pub fn run_left<'a>(
     let (producer, consumer) = new_shared_queue();
     #[allow(static_mut_refs)]
     if let Err(_e) = mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
-        run_core1(
+        run_key_processsing_core(
             receiver,
             left_buttons,
             timer,
@@ -62,7 +62,16 @@ pub fn run_left<'a>(
         reset_to_usb_boot(0, 0);
         panic!();
     }
+    run_admin_core(oled_handle, consumer, timer, power_led_pin)
+}
 
+#[allow(clippy::needless_pass_by_value)]
+pub fn run_admin_core(
+    oled_handle: OledHandle,
+    consumer: Consumer,
+    timer: Timer,
+    #[allow(unused_variables, unused_mut)] mut power_led_pin: PowerLed,
+) -> ! {
     let mut oled_left = LeftOledDrawer::new(oled_handle);
     #[cfg(feature = "serial")]
     let mut last_chars = [0u8; 128];
@@ -135,6 +144,7 @@ pub fn run_left<'a>(
         }
     }
 }
+
 #[cfg(feature = "serial")]
 fn handle_usb(
     power_led: &mut PowerLed,
@@ -178,8 +188,9 @@ fn handle_usb(
     }
     Some(())
 }
+
 #[allow(clippy::needless_pass_by_value)]
-pub fn run_core1(
+pub fn run_key_processsing_core(
     mut receiver: MessageReceiver,
     mut left_buttons: LeftButtons,
     timer: Timer,
