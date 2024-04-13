@@ -426,6 +426,9 @@ macro_rules! impl_read_pin_col {
                 // Just pulling chibios defaults of 0.25 micros, could probably be 0
                 crate::timer::wait_nanos(timer, 250);
                 let bank = rp2040_hal::Sio::read_bank0();
+                // Can immediately restore column, pins settle while we're reading the state that's
+                // now in mem
+                left_buttons.cols.$col = Some(col.into_pull_up_input());
                 let mut any_change = false;
                 $(
                     let state = bank & crate::keyboard::left::[<ROW $row>] == 0;
@@ -434,7 +437,7 @@ macro_rules! impl_read_pin_col {
                     }
 
                 )*
-                left_buttons.cols.$col = Some(col.into_pull_up_input());
+                // Wait for pins to settle
                 while rp2040_hal::Sio::read_bank0() & crate::keyboard::left::ROW_MASK != crate::keyboard::left::ROW_MASK {}
                 any_change
             }

@@ -80,6 +80,7 @@ macro_rules! impl_check_rows_by_column {
                 // Just pulling chibios defaults of 0.25 micros, could probably be 0
                 crate::timer::wait_nanos(timer, 250);
                 let bank = rp2040_hal::Sio::read_bank0();
+                right_buttons.cols.$col.0 = Some(col.into_pull_up_input());
                 $(
                     {
                         const PRESSED: MatrixUpdate = MatrixUpdate::from_key_update(MatrixIndex::from_row_col(RowIndex::from_value($row), ColIndex::from_value($col)), true);
@@ -110,7 +111,6 @@ macro_rules! impl_check_rows_by_column {
                         }
                     }
                 )*
-                right_buttons.cols.$col.0 = Some(col.into_pull_up_input());
                 while rp2040_hal::Sio::read_bank0() & ROW_MASK != ROW_MASK {}
             }
         }
