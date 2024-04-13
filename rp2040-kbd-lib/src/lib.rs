@@ -2,4 +2,3 @@
 pub mod keycodes;
 pub mod matrix;
 pub mod queue;
-pub mod ring_buffer;

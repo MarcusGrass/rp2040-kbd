@@ -1,6 +1,5 @@
-use crate::runtime::locks::CrossCoreMsgLock;
 use crate::runtime::shared::loop_counter::LoopCount;
-use rp2040_kbd_lib::ring_buffer::RingBuffer;
+use rp2040_kbd_lib::queue::{AtomicQueueConsumer, AtomicQueueProducer};
 
 #[derive(Debug, Copy, Clone)]
 pub enum KeycoreToAdminMessage {
@@ -9,39 +8,24 @@ pub enum KeycoreToAdminMessage {
     Reboot,
 }
 
-static mut SHARED_KEY_CORE_TO_ADMIN: RingBuffer<KeycoreToAdminMessage, 16> = RingBuffer::new();
+pub type Producer = AtomicQueueProducer<'static, KeycoreToAdminMessage, 32>;
 
-pub fn push_loop_to_admin(loop_count: LoopCount) -> bool {
-    let _guard = CrossCoreMsgLock::claim();
-    unsafe { SHARED_KEY_CORE_TO_ADMIN.try_push(KeycoreToAdminMessage::Loop(loop_count)) }
+pub fn push_loop_to_admin(producer: &Producer, loop_count: LoopCount) -> bool {
+    producer.push_back(KeycoreToAdminMessage::Loop(loop_count))
 }
 
-pub fn try_push_tx(transmitted: u16) -> bool {
-    if let Some(_guard) = CrossCoreMsgLock::try_claim() {
-        unsafe { SHARED_KEY_CORE_TO_ADMIN.try_push(KeycoreToAdminMessage::Tx(transmitted)) }
-    } else {
-        false
-    }
+pub fn try_push_tx(producer: &Producer, transmitted: u16) -> bool {
+    producer.push_back(KeycoreToAdminMessage::Tx(transmitted))
 }
 
 #[inline(never)]
-pub fn push_reboot_and_halt() -> ! {
-    loop {
-        let Some(_guard) = CrossCoreMsgLock::try_claim() else {
-            continue;
-        };
-        unsafe {
-            if !SHARED_KEY_CORE_TO_ADMIN.try_push(KeycoreToAdminMessage::Reboot) {
-                continue;
-            }
-            break;
-        }
-    }
+pub fn push_reboot_and_halt(producer: &Producer) -> ! {
+    while !producer.push_back(KeycoreToAdminMessage::Reboot) {}
     panic!("HALT AFTER PUSHING REBOOT");
 }
 
-pub fn pop_message() -> Option<KeycoreToAdminMessage> {
-    let _guard = CrossCoreMsgLock::claim();
-    // Safety: Exclusive access through lock
-    unsafe { SHARED_KEY_CORE_TO_ADMIN.try_pop() }
+pub fn pop_message(
+    consumer: &AtomicQueueConsumer<'static, KeycoreToAdminMessage, 32>,
+) -> Option<KeycoreToAdminMessage> {
+    consumer.pop_front()
 }

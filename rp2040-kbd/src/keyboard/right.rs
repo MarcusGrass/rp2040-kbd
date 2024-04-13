@@ -3,7 +3,7 @@ pub(crate) mod message_serializer;
 use crate::keyboard::debounce::PinDebouncer;
 use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::ButtonPin;
-use crate::runtime::shared::cores_right::push_reboot_and_halt;
+use crate::runtime::shared::cores_right::{push_reboot_and_halt, Producer};
 #[cfg(feature = "serial")]
 use core::fmt::Write;
 use embedded_hal::digital::InputPin;
@@ -71,7 +71,7 @@ macro_rules! impl_check_rows_by_column {
     ($($structure: expr, $row: tt,)*, $col: tt) => {
         paste::paste! {
             #[inline]
-            pub fn [<read_col _ $col _pins>](right_buttons: &mut RightButtons, serializer: &mut MessageSerializer, timer: Timer, changes: &mut u16) {
+            pub fn [<read_col _ $col _pins>](right_buttons: &mut RightButtons, serializer: &mut MessageSerializer, timer: Timer, changes: &mut u16, producer: &Producer) {
 
                 // Safety: Make sure this is properly initialized and restored
                 // at the end of this function, makes a noticeable difference in performance
@@ -105,7 +105,7 @@ macro_rules! impl_check_rows_by_column {
                             right_buttons.pin_states.[< $structure:snake >].pressed = pressed;
                             *changes += 1;
                             if $row == 4 && $col == 2 {
-                                push_reboot_and_halt();
+                                push_reboot_and_halt(producer);
                             }
                         }
                     }
@@ -266,14 +266,19 @@ impl RightButtons {
     }
 
     #[allow(clippy::cast_lossless, clippy::cast_possible_truncation)]
-    pub fn scan_matrix(&mut self, serializer: &mut MessageSerializer, timer: Timer) -> u16 {
+    pub fn scan_matrix(
+        &mut self,
+        serializer: &mut MessageSerializer,
+        timer: Timer,
+        producer: &Producer,
+    ) -> u16 {
         let mut changes = 0;
-        read_col_0_pins(self, serializer, timer, &mut changes);
-        read_col_1_pins(self, serializer, timer, &mut changes);
-        read_col_2_pins(self, serializer, timer, &mut changes);
-        read_col_3_pins(self, serializer, timer, &mut changes);
-        read_col_4_pins(self, serializer, timer, &mut changes);
-        read_col_5_pins(self, serializer, timer, &mut changes);
+        read_col_0_pins(self, serializer, timer, &mut changes, producer);
+        read_col_1_pins(self, serializer, timer, &mut changes, producer);
+        read_col_2_pins(self, serializer, timer, &mut changes, producer);
+        read_col_3_pins(self, serializer, timer, &mut changes, producer);
+        read_col_4_pins(self, serializer, timer, &mut changes, producer);
+        read_col_5_pins(self, serializer, timer, &mut changes, producer);
         changes
     }
 

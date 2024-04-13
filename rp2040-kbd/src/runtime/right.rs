@@ -4,19 +4,24 @@ use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::right::message_serializer::MessageSerializer;
 use crate::keyboard::right::RightButtons;
 use crate::runtime::shared::cores_right::{
-    pop_message, push_loop_to_admin, try_push_tx, KeycoreToAdminMessage,
+    pop_message, push_loop_to_admin, try_push_tx, KeycoreToAdminMessage, Producer,
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
+use core::sync::atomic::AtomicUsize;
 use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
+use rp2040_kbd_lib::queue::new_atomic_producer_consumer;
 use usb_device::bus::UsbBusAllocator;
 
 static mut CORE_1_STACK_AREA: [usize; 2048] = [0; 2048];
-
+// Boot loop if the queue is bugged, not bothering with MemUninit here
+static mut ATOMIC_QUEUE_MEM_AREA: [KeycoreToAdminMessage; 32] = [KeycoreToAdminMessage::Reboot; 32];
+static mut ATOMIC_QUEUE_HEAD: AtomicUsize = AtomicUsize::new(0);
+static mut ATOMIC_QUEUE_TAIL: AtomicUsize = AtomicUsize::new(0);
 #[inline(never)]
 #[allow(unused_variables, clippy::needless_pass_by_value)]
 pub fn run_right<'a>(
@@ -36,8 +41,16 @@ pub fn run_right<'a>(
     let c1 = &mut cores[1];
     let serializer = MessageSerializer::new(uart_driver);
     #[allow(static_mut_refs)]
+    let (producer, consumer) = unsafe {
+        new_atomic_producer_consumer(
+            &mut ATOMIC_QUEUE_MEM_AREA,
+            &mut ATOMIC_QUEUE_HEAD,
+            &mut ATOMIC_QUEUE_TAIL,
+        )
+    };
+    #[allow(static_mut_refs)]
     if let Err(e) = c1.spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
-        run_core1(serializer, right_buttons, timer)
+        run_core1(serializer, right_buttons, timer, producer)
     }) {
         oled_handle.clear();
         oled_handle.write(0, "ERROR");
@@ -59,7 +72,7 @@ pub fn run_right<'a>(
     let mut tx: u16 = 0;
     loop {
         let now = timer.get_counter();
-        match pop_message() {
+        match pop_message(&consumer) {
             Some(KeycoreToAdminMessage::Loop(lc)) => {
                 if sleep.is_awake() {
                     if let Some((header, body)) = lc.as_display() {
@@ -140,26 +153,28 @@ fn handle_usb(power_led: &mut PowerLed, last_chars: &mut [u8], output_all: &mut 
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn run_core1(
     mut serializer: MessageSerializer,
     mut right_buttons: RightButtons,
     timer: Timer,
+    producer: Producer,
 ) -> ! {
     let mut loop_count: LoopCounter<10_000> = LoopCounter::new(timer.get_counter());
     right_buttons.scan_encoder(&mut serializer);
     let mut tx = 0;
     loop {
-        tx += right_buttons.scan_matrix(&mut serializer, timer);
+        tx += right_buttons.scan_matrix(&mut serializer, timer, &producer);
         if right_buttons.scan_encoder(&mut serializer) {
             tx += 1;
         }
-        if tx > 0 && try_push_tx(tx) {
+        if tx > 0 && try_push_tx(&producer, tx) {
             tx = 0;
         }
         if loop_count.increment() {
             let now = timer.get_counter();
             let lc = loop_count.value(now);
-            if push_loop_to_admin(lc) {
+            if push_loop_to_admin(&producer, lc) {
                 loop_count.reset(now);
             }
         }

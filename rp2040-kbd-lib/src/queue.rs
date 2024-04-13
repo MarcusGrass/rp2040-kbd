@@ -92,6 +92,11 @@ impl<T, const N: usize> Queue<T, N> {
     }
 }
 
+/// Retrofitted the above queue into something atomic, [looked to heapless](https://github.com/rust-embedded/heapless/blob/7bb2f71/src/spsc.rs#L3)
+/// for inspiration, largely a subset of that implementation, although I don't think
+/// any atomics are required except Load/Store which exists, gotta ask.
+///
+/// [According to the docs, the original idea came from here](https://www.codeproject.com/Articles/43510/Lock-Free-Single-Producer-Single-Consumer-Circular).
 pub struct AtomicQueueProducer<'a, T, const N: usize> {
     buffer: *mut T, // Length N
     head: &'a AtomicUsize,
