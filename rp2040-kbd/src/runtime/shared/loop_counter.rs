@@ -1,5 +1,3 @@
-use core::fmt::Write;
-use heapless::String;
 use rp2040_hal::fugit::MicrosDuration;
 use rp2040_hal::rom_data::float_funcs::{fdiv, uint64_to_float, uint_to_float};
 use rp2040_hal::timer::Instant;
@@ -11,18 +9,14 @@ pub struct LoopCount {
 }
 
 impl LoopCount {
-    pub fn as_display(&self) -> Option<(String<5>, String<5>)> {
+    pub fn as_micros_fraction(&self) -> f32 {
         let count = uint_to_float(self.count);
         let micros = uint64_to_float(self.duration.to_micros());
         let res = fdiv(micros, count);
         if res <= 999.9 {
-            let mut header = String::new();
-            let _ = header.push_str("my");
-            let mut body = String::new();
-            let _ = body.write_fmt(format_args!("{res:.1}"));
-            Some((header, body))
+            res
         } else {
-            None
+            999.9
         }
     }
 }

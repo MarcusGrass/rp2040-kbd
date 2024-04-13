@@ -6,10 +6,11 @@ use crate::keyboard::power_led::PowerLed;
 use crate::keyboard::split_serial::UartLeft;
 use crate::keymap::{KeyboardReportState, KeymapLayer};
 use crate::runtime::shared::cores_left::{
-    pop_message, push_layer_change, push_loop_to_admin, push_rx_change, push_touch_to_admin,
-    KeycoreToAdminMessage, Producer,
+    pop_message, push_layer_change, push_loop_to_admin, push_rx_change, push_touch_left_to_admin,
+    push_touch_right_to_admin, KeycoreToAdminMessage, Producer,
 };
 use crate::runtime::shared::loop_counter::LoopCounter;
+use crate::runtime::shared::press_latency_counter::PressLatencyCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
 #[cfg(feature = "serial")]
 use crate::runtime::shared::usb::init_usb;
@@ -27,7 +28,7 @@ use usb_device::bus::UsbBusAllocator;
 
 static mut CORE_1_STACK_AREA: [usize; 1024 * 8] = [0; 1024 * 8];
 
-static mut ATOMIC_QUEUE_MEM_AREA: [KeycoreToAdminMessage; 32] = [KeycoreToAdminMessage::Touch; 32];
+static mut ATOMIC_QUEUE_MEM_AREA: [KeycoreToAdminMessage; 32] = [KeycoreToAdminMessage::Reboot; 32];
 static mut ATOMIC_QUEUE_HEAD: AtomicUsize = AtomicUsize::new(0);
 static mut ATOMIC_QUEUE_TAIL: AtomicUsize = AtomicUsize::new(0);
 #[inline(never)]
@@ -84,18 +85,26 @@ pub fn run_left<'a>(
     let mut has_dumped = false;
     let mut sleep = SleepCountdown::new();
     let mut rx: u16 = 0;
+    let mut left_counter: PressLatencyCounter = PressLatencyCounter::new();
+    let mut right_counter: PressLatencyCounter = PressLatencyCounter::new();
+    let mut last_avail = 0;
     loop {
+        let avail = consumer.available();
         let now = timer.get_counter();
         match pop_message(&consumer) {
-            Some(KeycoreToAdminMessage::Touch) => {
+            Some(KeycoreToAdminMessage::TouchLeft(micros)) => {
+                oled_left.update_left_counter(left_counter.increment_get_avg(micros));
+                sleep.touch(now);
+                oled_left.show();
+            }
+            Some(KeycoreToAdminMessage::TouchRight(micros)) => {
+                oled_left.update_right_counter(right_counter.increment_get_avg(micros));
                 sleep.touch(now);
                 oled_left.show();
             }
             Some(KeycoreToAdminMessage::Loop(lc)) => {
                 if sleep.is_awake() {
-                    if let Some((header, body)) = lc.as_display() {
-                        oled_left.update_scan_loop(header, body);
-                    }
+                    oled_left.update_scan_loop(lc.as_micros_fraction());
                 }
             }
             Some(KeycoreToAdminMessage::LayerChange(km)) => {
@@ -132,7 +141,10 @@ pub fn run_left<'a>(
                 oled_left.update_layer(s);
             }
             Some(KeycoreToAdminMessage::Rx(incr)) => {
-                rx = rx.wrapping_add(incr);
+                rx += incr;
+                if rx > 9999 {
+                    rx = incr;
+                }
                 sleep.touch(now);
                 oled_left.update_rx(rx);
             }
@@ -142,6 +154,10 @@ pub fn run_left<'a>(
                 panic!("HALT POST RESET");
             }
             _ => {}
+        }
+        if avail != last_avail {
+            oled_left.update_queue(avail);
+            last_avail = avail;
         }
         if sleep.should_sleep(now) {
             oled_left.hide();
@@ -225,21 +241,21 @@ pub fn run_core1(
     }
     let mut rx = 0;
     loop {
-        let mut any_change = false;
+        let loop_timer = timer.get_counter();
+        let mut changed_left = false;
+        let mut changed_right = false;
         if let Some(update) = receiver.try_read() {
             // Right side sent an update
             rx += 1;
             // Update report state
             kbd.update_right(update, &mut report_state, &producer);
-            any_change = true;
+            changed_right = true;
         }
         // Check left side gpio and update report state
         if kbd.scan_left(&mut left_buttons, &mut report_state, timer, &producer) {
-            any_change = true;
+            changed_left = true;
         }
-        if any_change {
-            push_touch_to_admin(&producer);
-        }
+
         #[cfg(feature = "hiddev")]
         {
             let mut pop = false;
@@ -267,6 +283,14 @@ pub fn run_core1(
             let lc = loop_count.value(now);
             if push_loop_to_admin(&producer, lc) {
                 loop_count.reset(now);
+            }
+        }
+        if let Some(dur) = timer.get_counter().checked_duration_since(loop_timer) {
+            if changed_left {
+                push_touch_left_to_admin(&producer, dur);
+            }
+            if changed_right {
+                push_touch_right_to_admin(&producer, dur);
             }
         }
     }

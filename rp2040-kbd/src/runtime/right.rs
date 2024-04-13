@@ -75,7 +75,7 @@ pub fn run_right<'a>(
         match pop_message(&consumer) {
             Some(KeycoreToAdminMessage::Loop(lc)) => {
                 if sleep.is_awake() {
-                    if let Some((header, body)) = lc.as_display() {
+                    if let Some((header, body)) = lc.as_micros_fraction() {
                         oled.update_scan_loop(header, body);
                     }
                 }

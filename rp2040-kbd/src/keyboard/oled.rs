@@ -5,14 +5,13 @@ pub mod right;
 
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::Point;
-use embedded_graphics::mono_font::iso_8859_2::FONT_6X9;
+use embedded_graphics::mono_font::iso_8859_4::{FONT_4X6, FONT_5X7};
 use embedded_graphics::mono_font::MonoTextStyleBuilder;
 use embedded_graphics::pixelcolor::BinaryColor;
 use embedded_graphics::prelude::Size;
 use embedded_graphics::primitives::Rectangle;
 use embedded_graphics::text::{Baseline, Text};
 use embedded_graphics::Drawable;
-use heapless::String;
 use liatris::pac::I2C1;
 use rp2040_hal::gpio::bank0::{Gpio2, Gpio3};
 use rp2040_hal::gpio::{FunctionI2c, PullUp};
@@ -23,20 +22,24 @@ use ssd1306::Ssd1306;
 #[macro_export]
 macro_rules! static_draw_unit_string {
     ($raw: literal) => {{
-        const _CHECK: () = assert!($raw.len() <= 5, "String too long to fit heapless string 5");
-        let mut s: heapless::String<5> = heapless::String::new();
+        const _CHECK: () = assert!($raw.len() <= 8, "String too long to fit heapless string 5");
+        let mut s: heapless::String<8> = heapless::String::new();
         let _ = s.push_str($raw);
         s
     }};
 }
 
+pub type OledLineString = heapless::String<8>;
+pub const OLED_LINE_HEIGHT: u32 = 8;
+pub const OLED_LINE_WIDTH: u32 = 32;
+
 pub struct DrawUnit {
-    pub content: String<5>,
+    pub content: OledLineString,
     pub needs_redraw: bool,
 }
 
 impl DrawUnit {
-    pub fn new(content: String<5>, needs_redraw: bool) -> Self {
+    pub fn new(content: OledLineString, needs_redraw: bool) -> Self {
         Self {
             content,
             needs_redraw,
@@ -85,9 +88,10 @@ impl OledHandle {
         let _ = self.display.flush();
     }
 
-    pub fn write(&mut self, l: i32, s: &str) -> bool {
+    #[inline(never)]
+    pub fn write_header(&mut self, l: i32, s: &str) -> bool {
         let text_style = MonoTextStyleBuilder::new()
-            .font(&FONT_6X9)
+            .font(&FONT_5X7)
             .text_color(BinaryColor::On)
             .build();
         if Text::with_baseline(s, Point::new(0, l), text_style, Baseline::Top)
@@ -99,13 +103,29 @@ impl OledHandle {
         false
     }
 
+    #[inline(never)]
+    pub fn write(&mut self, l: i32, s: &str) -> bool {
+        let text_style = MonoTextStyleBuilder::new()
+            .font(&FONT_4X6)
+            .text_color(BinaryColor::On)
+            .build();
+        if Text::with_baseline(s, Point::new(0, l), text_style, Baseline::Top)
+            .draw(&mut self.display)
+            .is_ok()
+        {
+            return self.display.flush().is_ok();
+        }
+        false
+    }
+
+    #[inline(never)]
     pub fn clear_line(&mut self, l: i32) -> bool {
         if self
             .display
             .fill_solid(
                 &Rectangle {
                     top_left: Point::new(0, l),
-                    size: Size::new(32, 9),
+                    size: Size::new(OLED_LINE_WIDTH, OLED_LINE_HEIGHT),
                 },
                 BinaryColor::Off,
             )
@@ -117,13 +137,14 @@ impl OledHandle {
         }
     }
 
+    #[inline(never)]
     pub fn write_underscored_at(&mut self, l: i32) -> bool {
         if self
             .display
             .fill_solid(
                 &Rectangle {
                     top_left: Point::new(0, l),
-                    size: Size::new(32, 1),
+                    size: Size::new(OLED_LINE_WIDTH, 1),
                 },
                 BinaryColor::On,
             )
@@ -134,7 +155,7 @@ impl OledHandle {
             false
         }
     }
-
+    #[inline(never)]
     pub fn write_bad_boot_msg(&mut self) {
         let _ = self.display.clear(BinaryColor::Off);
         let _ = self.display.flush();
