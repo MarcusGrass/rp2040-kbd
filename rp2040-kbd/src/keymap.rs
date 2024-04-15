@@ -949,6 +949,7 @@ impl KeyboardButton for LeftRow0Col1 {
                 keyboard_report_state.pop_key(KeyCode::F1);
             }
             temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerAnsi) => {
+                keyboard_report_state.pop_temp_modifiers();
                 keyboard_report_state.pop_key(KeyCode::N1);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
