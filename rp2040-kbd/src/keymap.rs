@@ -112,8 +112,18 @@ impl KeyboardReportState {
         }
         // Overflow, pop first, unlikely
         unsafe {
+            #[cfg(feature = "serial")]
+            {
+                let _ = crate::runtime::shared::usb::acquire_usb()
+                    .write_fmt(format_args!("Pre: {:?}\r\n", self.inner_report.keycodes));
+            }
             copy_within_unchecked(&mut self.inner_report.keycodes, 1, 5, 0);
             *self.inner_report.keycodes.get_unchecked_mut(5) = key_code.0;
+            #[cfg(feature = "serial")]
+            {
+                let _ = crate::runtime::shared::usb::acquire_usb()
+                    .write_fmt(format_args!("Post: {:?}\r\n", self.inner_report.keycodes));
+            }
         }
         self.inner_report_has_change = true;
     }
@@ -131,10 +141,19 @@ impl KeyboardReportState {
         }
         if let Some(ind) = at_ind {
             unsafe {
+                #[cfg(feature = "serial")]
+                {
+                    let _ = crate::runtime::shared::usb::acquire_usb()
+                        .write_fmt(format_args!("Pre: {:?}\r\n", self.inner_report.keycodes));
+                }
                 self.pop_copy_back(ind);
+                #[cfg(feature = "serial")]
+                {
+                    let _ = crate::runtime::shared::usb::acquire_usb()
+                        .write_fmt(format_args!("Post: {:?}\r\n", self.inner_report.keycodes));
+                }
             }
-            self.outbound_reports
-                .push_back(copy_report(&self.inner_report));
+            self.inner_report_has_change = true;
         }
     }
 
@@ -143,19 +162,25 @@ impl KeyboardReportState {
         match ind {
             0 => {
                 copy_within_unchecked(&mut self.inner_report.keycodes, 1, 5, 0);
+                // Keys are shifted back by one, need to clear last or there'll be a duplication
+                *self.inner_report.keycodes.get_unchecked_mut(5) = 0;
             }
             1 => {
                 copy_within_unchecked(&mut self.inner_report.keycodes, 2, 4, 1);
+                *self.inner_report.keycodes.get_unchecked_mut(5) = 0;
             }
             2 => {
                 copy_within_unchecked(&mut self.inner_report.keycodes, 3, 3, 2);
+                *self.inner_report.keycodes.get_unchecked_mut(5) = 0;
             }
             3 => {
                 copy_within_unchecked(&mut self.inner_report.keycodes, 4, 2, 3);
+                *self.inner_report.keycodes.get_unchecked_mut(5) = 0;
             }
             4 => {
                 let old = *self.inner_report.keycodes.get_unchecked(5);
                 *self.inner_report.keycodes.get_unchecked_mut(4) = old;
+                *self.inner_report.keycodes.get_unchecked_mut(5) = 0;
             }
             5 => {}
             _ => unreachable_unchecked(),
