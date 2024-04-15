@@ -1032,9 +1032,11 @@ impl KeyboardButton for LeftRow0Col2 {
                 keyboard_report_state.pop_key(KeyCode::F2);
             }
             temp_layer!(KeymapLayer::LowerAnsi) => {
+                keyboard_report_state.pop_temp_modifiers();
                 keyboard_report_state.pop_key(KeyCode::N2);
             }
             temp_layer!(KeymapLayer::Lower) => {
+                keyboard_report_state.pop_temp_modifiers();
                 keyboard_report_state.pop_key(KeyCode::N2);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
@@ -1044,6 +1046,7 @@ impl KeyboardButton for LeftRow0Col2 {
                 if keyboard_report_state.jank.pressing_left_bracket {
                     // These are on the same button and interfere with each other
                     if !keyboard_report_state.jank.pressing_right_bracket {
+                        keyboard_report_state.pop_temp_modifiers();
                         keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
                     }
                     keyboard_report_state.jank.pressing_left_bracket = false;
@@ -1116,6 +1119,7 @@ impl KeyboardButton for LeftRow0Col3 {
                 keyboard_report_state.pop_key(KeyCode::F3);
             }
             temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerAnsi) => {
+                keyboard_report_state.pop_temp_modifiers();
                 keyboard_report_state.pop_key(KeyCode::N3);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
