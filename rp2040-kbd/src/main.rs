@@ -134,12 +134,17 @@ fn main() -> ! {
     let is_left = side_check_pin.is_high().unwrap();
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
     // I want this high, but also as a clean divisor of the system clock
-    // 125_000_000 / 8 / 20 = 781_250
-    // 781_250bps / 8 = 97656.25 kilobytes per second
-    // = 97.65625 bytes per ms
-    // 1000 / 97.65625 = 10.24 microseconds per byte transferred, which becomes the right-to-left
-    // transmission latency
-    let uart_baud = 781_250.Hz();
+    // I'm using some weird protocol now with a header and footer on the message,
+    // stretching it to 16 bits, to account for connects/disconnects of the right side
+    // producing faulty messages.
+    // The 'fake-uart' clock divisor is the baud-rate * 16, and can at most be 1,
+    // I'm putting it at 1, so that's 125_000_000 / 16 => 7_812_500.
+    // That's going to be 125_000_000 / 8 = 15 625 000 bits per second
+    // or 1 925 125 bytes per second
+    // which is 512 nanos per byte, two bytes per message is around 1 microsecond per message
+    // of latency. Clock speed is 8 nanos per cycle, each bit is therefore held for 64 nanos (8 cycles),
+    // each byte is transferred in 64 * 8 = 512 nanos, which adds up with the above.
+    let uart_baud = 7_812_500.Hz();
     if is_left {
         #[cfg(feature = "left")]
         {

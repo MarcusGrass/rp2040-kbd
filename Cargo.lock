@@ -702,7 +702,7 @@ dependencies = [
 [[package]]
 name = "pio-uart"
 version = "0.2.1"
-source = "git+https://github.com/MarcusGrass/pio-uart?rev=68e3f30855fe2a94450a8b17a1303c1e642a068f#68e3f30855fe2a94450a8b17a1303c1e642a068f"
+source = "git+https://github.com/MarcusGrass/pio-uart?rev=1c100eb4b5db2c49ed0cae94f5e338d267918695#1c100eb4b5db2c49ed0cae94f5e338d267918695"
 dependencies = [
  "cortex-m",
  "embedded-io",

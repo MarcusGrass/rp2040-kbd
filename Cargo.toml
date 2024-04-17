@@ -11,7 +11,7 @@ embedded-hal = "1.0.0"
 fugit = "0.3.7"
 heapless = "0.8.0"
 paste = "1.0.14"
-pio-uart = { git = "https://github.com/MarcusGrass/pio-uart", rev = "68e3f30855fe2a94450a8b17a1303c1e642a068f" }
+pio-uart = { git = "https://github.com/MarcusGrass/pio-uart", rev = "1c100eb4b5db2c49ed0cae94f5e338d267918695" }
 liatris = { git = "https://github.com/MarcusGrass/rp-hal-boards", rev = "b587acaff463b7de6fa9d8c35c3db49fca26d263" }
 rp2040-hal = "0.10.0"
 ssd1306 = "0.8.4"
