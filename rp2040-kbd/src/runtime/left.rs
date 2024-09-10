@@ -264,6 +264,7 @@ pub fn run_key_processsing_core(
     }
 }
 
+/// Todo: Change to 'expect' after [this PR](https://github.com/rust-embedded/cortex-m/pull/557)
 /// Safety: Called from the same core that publishes
 #[interrupt]
 #[allow(clippy::allow_attributes, non_snake_case)]
