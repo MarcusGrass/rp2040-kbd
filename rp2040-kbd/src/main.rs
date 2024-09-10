@@ -36,9 +36,6 @@ use liatris::hal::pac;
 // higher-level drivers.
 use liatris::hal;
 
-// USB Device support
-use usb_device::class_prelude::*;
-
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use embedded_hal::digital::InputPin;
@@ -119,7 +116,8 @@ fn main() -> ! {
     let mut oled = OledHandle::new(display);
 
     // Set up the USB driver
-    let usb_bus = UsbBusAllocator::new(hal::usb::UsbBus::new(
+    #[cfg(any(feature = "serial", feature = "left"))]
+    let usb_bus = usb_device::bus::UsbBusAllocator::new(hal::usb::UsbBus::new(
         pac.USBCTRL_REGS,
         pac.USBCTRL_DPRAM,
         clocks.usb_clock,
@@ -213,7 +211,16 @@ fn main() -> ! {
                     pins.gpio27.into_pull_up_input(),
                 ),
             );
-            runtime::right::run_right(&mut mc, usb_bus, oled, uart, right, pl, timer);
+            runtime::right::run_right(
+                &mut mc,
+                #[cfg(feature = "serial")]
+                usb_bus,
+                oled,
+                uart,
+                right,
+                pl,
+                timer,
+            );
         }
         #[cfg(not(feature = "right"))]
         {

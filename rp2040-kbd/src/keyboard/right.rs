@@ -39,7 +39,7 @@ impl PinStructState {
 macro_rules! pins_container {
     ($($row: tt, $col: tt),*,) => {
         paste::paste! {
-            #[allow(clippy::struct_field_names)]
+            #[expect(clippy::struct_field_names)]
             struct RightPinsContainer {
                 $(
                     [<row _ $row _ col _ $col _ state>] : PinStructState,
@@ -191,7 +191,7 @@ pub struct RightButtons {
 impl RightButtons {
     pub fn new(
         // Want this supplied owned and in the correct state
-        #[allow(clippy::used_underscore_binding)] _rows: (
+        #[expect(clippy::used_underscore_binding)] _rows: (
             ButtonPin<Gpio29>,
             ButtonPin<Gpio4>,
             ButtonPin<Gpio20>,
@@ -265,7 +265,6 @@ impl RightButtons {
         }
     }
 
-    #[allow(clippy::cast_lossless, clippy::cast_possible_truncation)]
     pub fn scan_matrix(
         &mut self,
         serializer: &mut MessageSerializer,

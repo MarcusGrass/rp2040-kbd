@@ -65,12 +65,12 @@ pub fn run_left<'a>(
     run_admin_core(oled_handle, consumer, timer, power_led_pin)
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 pub fn run_admin_core(
     oled_handle: OledHandle,
     consumer: Consumer,
     timer: Timer,
-    #[allow(unused_variables, unused_mut)] mut power_led_pin: PowerLed,
+    mut power_led_pin: PowerLed,
 ) -> ! {
     let mut oled_left = LeftOledDrawer::new(oled_handle);
     #[cfg(feature = "serial")]
@@ -92,11 +92,13 @@ pub fn run_admin_core(
             Some(KeycoreToAdminMessage::TouchLeft(micros)) => {
                 oled_left.update_left_counter(left_counter.increment_get_avg(micros));
                 sleep.touch(now);
+                power_led_pin.turn_on();
                 oled_left.show();
             }
             Some(KeycoreToAdminMessage::TouchRight(micros)) => {
                 oled_left.update_right_counter(right_counter.increment_get_avg(micros));
                 sleep.touch(now);
+                power_led_pin.turn_on();
                 oled_left.show();
             }
             Some(KeycoreToAdminMessage::Loop(lc)) => {
@@ -130,6 +132,7 @@ pub fn run_admin_core(
         }
         if sleep.should_sleep(now) {
             oled_left.hide();
+            power_led_pin.turn_off();
             sleep.set_sleeping();
         }
         oled_left.render();

@@ -46,7 +46,7 @@ static USB_HIDDEV: SyncUnsafeOnce<crate::hid::usb_hiddev::UsbHiddev> = SyncUnsaf
 static mut USB_CONTROL_BUFFER: [u8; 256] = [0u8; 256];
 
 #[cfg(feature = "serial")]
-#[allow(static_mut_refs)]
+#[expect(static_mut_refs)]
 pub unsafe fn init_usb(allocator: usb_device::bus::UsbBusAllocator<liatris::hal::usb::UsbBus>) {
     let _ = USB_BUS.0.set(allocator);
     USB_OUTPUT.set(false);

@@ -3,29 +3,35 @@ use rp2040_hal::gpio::bank0::Gpio24;
 use rp2040_hal::gpio::{FunctionSio, Pin, PullDown, SioOutput};
 
 pub struct PowerLed {
+    state: bool,
     pin: Pin<Gpio24, FunctionSio<SioOutput>, PullDown>,
 }
 
 impl PowerLed {
     pub fn new(pin: Pin<Gpio24, FunctionSio<SioOutput>, PullDown>) -> Self {
-        Self { pin }
+        let state = matches!(pin.as_input().is_low(), Ok(true));
+        Self { state, pin }
     }
 
     #[inline]
-    #[allow(dead_code)]
+    #[cfg(feature = "serial")]
     pub fn is_on(&self) -> bool {
-        matches!(self.pin.as_input().is_high(), Ok(true))
+        self.state
     }
 
     #[inline]
-    #[allow(dead_code)]
     pub fn turn_on(&mut self) {
-        let _ = self.pin.set_high();
+        if !self.state {
+            let _ = self.pin.set_low();
+            self.state = true;
+        }
     }
 
     #[inline]
-    #[allow(dead_code)]
     pub fn turn_off(&mut self) {
-        let _ = self.pin.set_low();
+        if self.state {
+            let _ = self.pin.set_high();
+            self.state = false;
+        }
     }
 }

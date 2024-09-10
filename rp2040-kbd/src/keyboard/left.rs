@@ -13,7 +13,7 @@ pub const ROW4: u32 = 1 << 8;
 pub const ROW_MASK: u32 = ROW0 | ROW1 | ROW2 | ROW3 | ROW4;
 
 pub struct LeftButtons {
-    pub rows: (
+    pub _rows: (
         ButtonPin<Gpio29>,
         ButtonPin<Gpio27>,
         ButtonPin<Gpio6>,
@@ -48,6 +48,6 @@ impl LeftButtons {
             Option<ButtonPin<Gpio21>>,
         ),
     ) -> Self {
-        Self { rows, cols }
+        Self { _rows: rows, cols }
     }
 }

@@ -15,15 +15,13 @@ use core::fmt::Write;
 use rp2040_hal::multicore::Multicore;
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
-use usb_device::bus::UsbBusAllocator;
 
 static mut CORE_1_STACK_AREA: [usize; 2048] = [0; 2048];
 // Boot loop if the queue is bugged, not bothering with MemUninit here
 #[inline(never)]
-#[allow(unused_variables, clippy::needless_pass_by_value)]
 pub fn run_right<'a>(
     mc: &'a mut Multicore<'a>,
-    usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>,
+    #[cfg(feature = "serial")] usb_bus: usb_device::bus::UsbBusAllocator<rp2040_hal::usb::UsbBus>,
     mut oled_handle: OledHandle,
     uart_driver: crate::keyboard::split_serial::UartRight,
     right_buttons: RightButtons,
@@ -38,8 +36,8 @@ pub fn run_right<'a>(
     let c1 = &mut cores[1];
     let serializer = MessageSerializer::new(uart_driver);
     let (producer, consumer) = new_shared_queue();
-    #[allow(static_mut_refs)]
-    if let Err(e) = c1.spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
+    #[expect(static_mut_refs)]
+    if let Err(_e) = c1.spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
         run_key_core(serializer, right_buttons, timer, producer)
     }) {
         oled_handle.clear();
@@ -53,12 +51,12 @@ pub fn run_right<'a>(
     }
     run_admin_core(oled_handle, consumer, timer, power_led_pin)
 }
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 fn run_admin_core(
     oled_handle: OledHandle,
     consumer: Consumer,
     timer: Timer,
-    #[allow(unused_variables, unused_mut)] mut power_led_pin: PowerLed,
+    mut power_led_pin: PowerLed,
 ) -> ! {
     let mut oled = RightOledDrawer::new(oled_handle);
     #[cfg(feature = "serial")]
@@ -91,6 +89,7 @@ fn run_admin_core(
                 }
                 oled.update_touch(tx, press_counter.increment_get_avg(loop_duration));
                 oled.show();
+                power_led_pin.turn_on();
             }
             Some(KeycoreToAdminMessage::Reboot) => {
                 oled.render_boot_msg();
@@ -106,6 +105,7 @@ fn run_admin_core(
         if sleep.should_sleep(now) {
             sleep.set_sleeping();
             oled.hide();
+            power_led_pin.turn_off();
         }
         oled.render();
         #[cfg(feature = "serial")]
@@ -163,7 +163,7 @@ fn handle_usb(power_led: &mut PowerLed, last_chars: &mut [u8], output_all: &mut 
     }
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 fn run_key_core(
     mut serializer: MessageSerializer,
     mut right_buttons: RightButtons,

@@ -268,25 +268,6 @@ unsafe fn copy_within_unchecked(buf: &mut [u8; 6], src: usize, count: usize, des
     }
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct LeftSide;
-
-#[derive(Copy, Clone, Debug)]
-pub struct RightSide;
-
-pub trait KeyboardSide {}
-
-impl KeyboardSide for LeftSide {}
-impl KeyboardSide for RightSide {}
-
-pub trait KeyboardPosition {}
-
-pub trait StateChangeHandler<S, R, C>
-where
-    S: KeyboardSide,
-{
-}
-
 pub trait KeyboardButton {
     fn on_press(&mut self, _keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
     }
