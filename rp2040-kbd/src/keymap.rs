@@ -52,7 +52,7 @@ pub struct KeyboardReportState {
     jank: JankState,
 }
 
-#[allow(clippy::struct_excessive_bools)]
+#[expect(clippy::struct_excessive_bools)]
 struct JankState {
     pressing_double_quote: bool,
     pressing_single_quote: bool,
@@ -598,7 +598,7 @@ impl KeyboardState {
         col0_change || col1_change || col2_change || col3_change || col4_change || col5_change
     }
 
-    #[allow(clippy::too_many_lines)]
+    #[expect(clippy::too_many_lines)]
     pub fn update_right(
         &mut self,
         update: MatrixUpdate,

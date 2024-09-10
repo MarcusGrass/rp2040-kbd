@@ -27,9 +27,6 @@ Creates a picocom connection to interface with the kbd.
 2. `mount /dev/sdb1 /mnt/rp2040 && cp code/rust/rp2040-kbd/target/thumbv6m-none-eabi/lto/rp2040-kbd.uf2 /mnt/rp2040 && umount /mnt/rp2040`
 3. `picocom -b 115200 -l /dev/ttyACM0`
 
-
-
-
 ## License
 
 [GPLV3, see here](LICENSE)

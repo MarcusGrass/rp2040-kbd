@@ -39,7 +39,11 @@ use liatris::hal;
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use embedded_hal::digital::InputPin;
-use rp2040_hal::fugit::RateExtU32;
+use liatris::pac::I2C1;
+use rp2040_hal::clocks::PeripheralClock;
+use rp2040_hal::fugit::{Rate, RateExtU32};
+use rp2040_hal::gpio::bank0::{Gpio2, Gpio3};
+use rp2040_hal::gpio::{FunctionI2C, Pin, PullDown};
 use rp2040_hal::multicore::Multicore;
 use ssd1306::mode::DisplayConfig;
 use ssd1306::prelude::DisplayRotation;
@@ -55,6 +59,21 @@ const _ILLEGAL_SIDES: () = assert!(false, "Can't compile as both right and left"
 #[cfg(all(feature = "hiddev", feature = "right"))]
 const _RIGHT_HIDDEN: () = assert!(false, "Can't compile right as hiddev");
 
+/// I want this high, but also as a clean divisor of the system clock
+/// I'm using some weird protocol now with a header and footer on the message,
+/// stretching it to 16 bits, to account for connects/disconnects of the right side
+/// producing faulty messages.
+/// The 'fake-uart' clock divisor is the baud-rate * 16, and can at most be 1,
+/// I'm putting it at 1, so that's `125_000_000 / 16 => 7_812_500`.
+/// That's going to be `125_000_000 / 8 = 15_625_000` bits per second
+/// or 1 925 125 bytes per second
+/// which is 512 nanos per byte, two bytes per message is around 1 microsecond per message
+/// of latency. Clock speed is 8 nanos per cycle, each bit is therefore held for 64 nanos (8 cycles),
+/// each byte is transferred in 64 * 8 = 512 nanos, which adds up with the above.
+const UART_BAUD: Rate<u32, 1, 1> = Rate::<u32, 1, 1>::Hz(7_812_500);
+
+const SYSTEM_FREQ: Rate<u32, 1, 1> = Rate::<u32, 1, 1>::MHz(125);
+
 /// Entry point to our bare-metal application.
 ///
 /// The `#[entry]` macro ensures the Cortex-M start-up code calls this function
@@ -63,8 +82,12 @@ const _RIGHT_HIDDEN: () = assert!(false, "Can't compile right as hiddev");
 /// The function configures the RP2040 peripherals, then echoes any characters
 /// received over USB Serial.
 #[entry]
-#[allow(clippy::too_many_lines)]
 fn main() -> ! {
+    setup_kbd()
+}
+
+#[expect(clippy::too_many_lines)]
+fn setup_kbd() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
 
@@ -97,23 +120,13 @@ fn main() -> ! {
 
     let sda_pin = pins.gpio2.into_function::<hal::gpio::FunctionI2C>();
     let scl_pin = pins.gpio3.into_function::<hal::gpio::FunctionI2C>();
-
-    let i2c = hal::I2C::i2c1(
+    let mut oled = setup_oled(
         pac.I2C1,
-        sda_pin.reconfigure(),
-        scl_pin.reconfigure(),
-        400.kHz(),
         &mut pac.RESETS,
+        sda_pin,
+        scl_pin,
         &clocks.peripheral_clock,
     );
-
-    let interface = ssd1306::I2CDisplayInterface::new(i2c);
-    let mut display = Ssd1306::new(interface, DisplaySize128x32, DisplayRotation::Rotate90)
-        .into_buffered_graphics_mode();
-    display.init().unwrap();
-    let _ = display.clear(BinaryColor::Off);
-    let _ = display.flush();
-    let mut oled = OledHandle::new(display);
 
     // Set up the USB driver
     #[cfg(any(feature = "serial", feature = "left"))]
@@ -131,26 +144,14 @@ fn main() -> ! {
     let pl = PowerLed::new(power_led_pin);
     let is_left = side_check_pin.is_high().unwrap();
     let mut mc = Multicore::new(&mut pac.PSM, &mut pac.PPB, &mut sio.fifo);
-    // I want this high, but also as a clean divisor of the system clock
-    // I'm using some weird protocol now with a header and footer on the message,
-    // stretching it to 16 bits, to account for connects/disconnects of the right side
-    // producing faulty messages.
-    // The 'fake-uart' clock divisor is the baud-rate * 16, and can at most be 1,
-    // I'm putting it at 1, so that's 125_000_000 / 16 => 7_812_500.
-    // That's going to be 125_000_000 / 8 = 15 625 000 bits per second
-    // or 1 925 125 bytes per second
-    // which is 512 nanos per byte, two bytes per message is around 1 microsecond per message
-    // of latency. Clock speed is 8 nanos per cycle, each bit is therefore held for 64 nanos (8 cycles),
-    // each byte is transferred in 64 * 8 = 512 nanos, which adds up with the above.
-    let uart_baud = 7_812_500.Hz();
     if is_left {
         #[cfg(feature = "left")]
         {
             // Left side flips tx/rx, check qmk for proton-c in kyria for reference
             let uart = keyboard::split_serial::UartLeft::new(
                 pins.gpio1,
-                uart_baud,
-                125.MHz(),
+                UART_BAUD,
+                SYSTEM_FREQ,
                 pac.PIO0,
                 &mut pac.RESETS,
             );
@@ -185,8 +186,8 @@ fn main() -> ! {
         {
             let uart = keyboard::split_serial::UartRight::new(
                 pins.gpio1.reconfigure(),
-                uart_baud,
-                125.MHz(),
+                UART_BAUD,
+                SYSTEM_FREQ,
                 pac.PIO0,
                 &mut pac.RESETS,
             );
@@ -230,6 +231,31 @@ fn main() -> ! {
             unreachable!("Should have gone into boot");
         }
     }
+}
+
+fn setup_oled(
+    i2c: I2C1,
+    r: &mut pac::RESETS,
+    sda: Pin<Gpio2, FunctionI2C, PullDown>,
+    scl: Pin<Gpio3, FunctionI2C, PullDown>,
+    clock: &PeripheralClock,
+) -> OledHandle {
+    let i2c = hal::I2C::i2c1(
+        i2c,
+        sda.reconfigure(),
+        scl.reconfigure(),
+        400.kHz(),
+        r,
+        clock,
+    );
+
+    let interface = ssd1306::I2CDisplayInterface::new(i2c);
+    let mut display = Ssd1306::new(interface, DisplaySize128x32, DisplayRotation::Rotate90)
+        .into_buffered_graphics_mode();
+    display.init().unwrap();
+    let _ = display.clear(BinaryColor::Off);
+    let _ = display.flush();
+    OledHandle::new(display)
 }
 
 #[panic_handler]

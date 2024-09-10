@@ -26,7 +26,6 @@ use usb_device::bus::UsbBusAllocator;
 static mut CORE_1_STACK_AREA: [usize; 1024 * 8] = [0; 1024 * 8];
 
 #[inline(never)]
-#[allow(clippy::too_many_lines)]
 pub fn run_left<'a>(
     mc: &'a mut Multicore<'a>,
     usb_bus: UsbBusAllocator<rp2040_hal::usb::UsbBus>,
@@ -42,7 +41,7 @@ pub fn run_left<'a>(
     }
     let receiver = MessageReceiver::new(uart_driver);
     let (producer, consumer) = new_shared_queue();
-    #[allow(static_mut_refs)]
+    #[expect(static_mut_refs)]
     if let Err(_e) = mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
         run_key_processsing_core(
             receiver,
@@ -192,7 +191,7 @@ fn handle_usb(
     Some(())
 }
 
-#[allow(clippy::needless_pass_by_value)]
+#[expect(clippy::needless_pass_by_value)]
 pub fn run_key_processsing_core(
     mut receiver: MessageReceiver,
     mut left_buttons: LeftButtons,
@@ -267,7 +266,7 @@ pub fn run_key_processsing_core(
 
 /// Safety: Called from the same core that publishes
 #[interrupt]
-#[allow(non_snake_case)]
+#[allow(clippy::allow_attributes, non_snake_case)]
 #[cfg(feature = "hiddev")]
 unsafe fn USBCTRL_IRQ() {
     crate::runtime::shared::usb::hiddev_interrupt_poll();

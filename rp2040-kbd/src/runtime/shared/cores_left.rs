@@ -30,7 +30,7 @@ static mut ATOMIC_QUEUE_MEM_AREA: [KeycoreToAdminMessage; QUEUE_CAPACITY] =
 static mut ATOMIC_QUEUE_HEAD: AtomicUsize = AtomicUsize::new(0);
 static mut ATOMIC_QUEUE_TAIL: AtomicUsize = AtomicUsize::new(0);
 pub fn new_shared_queue() -> (Producer, Consumer) {
-    #[allow(static_mut_refs)]
+    #[expect(static_mut_refs)]
     unsafe {
         new_atomic_producer_consumer(
             &mut ATOMIC_QUEUE_MEM_AREA,

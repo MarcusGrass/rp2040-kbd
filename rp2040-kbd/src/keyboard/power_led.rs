@@ -22,16 +22,28 @@ impl PowerLed {
     #[inline]
     pub fn turn_on(&mut self) {
         if !self.state {
-            let _ = self.pin.set_low();
-            self.state = true;
+            self.set_true();
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn set_true(&mut self) {
+        let _ = self.pin.set_low();
+        self.state = true;
     }
 
     #[inline]
     pub fn turn_off(&mut self) {
         if self.state {
-            let _ = self.pin.set_high();
-            self.state = false;
+            self.set_false();
         }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn set_false(&mut self) {
+        let _ = self.pin.set_high();
+        self.state = false;
     }
 }

@@ -97,7 +97,7 @@ impl<'a> core::fmt::Write for UsbGuard<'a> {
 }
 
 #[cfg(feature = "hiddev")]
-#[allow(static_mut_refs)]
+#[expect(static_mut_refs)]
 pub unsafe fn init_usb_hiddev(
     allocator: usb_device::bus::UsbBusAllocator<liatris::hal::usb::UsbBus>,
 ) {
