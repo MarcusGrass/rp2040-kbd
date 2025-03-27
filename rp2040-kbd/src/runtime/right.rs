@@ -12,7 +12,7 @@ use crate::runtime::shared::press_latency_counter::PressLatencyCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
-use rp2040_hal::multicore::Multicore;
+use rp2040_hal::multicore::{Multicore, StackAllocation};
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 
@@ -37,9 +37,15 @@ pub fn run_right<'a>(
     let serializer = MessageSerializer::new(uart_driver);
     let (producer, consumer) = new_shared_queue();
     #[expect(static_mut_refs)]
-    if let Err(_e) = c1.spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
-        run_key_core(serializer, right_buttons, timer, producer)
-    }) {
+    if let Err(_e) = c1.spawn(
+        unsafe {
+            StackAllocation::from_raw_parts(
+                CORE_1_STACK_AREA.as_mut_ptr(),
+                CORE_1_STACK_AREA.as_mut_ptr().add(CORE_1_STACK_AREA.len()),
+            )
+        },
+        move || run_key_core(serializer, right_buttons, timer, producer),
+    ) {
         oled_handle.clear();
         oled_handle.write(0, "ERROR");
         oled_handle.write(9, "SPAWN");

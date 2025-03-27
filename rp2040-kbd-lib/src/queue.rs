@@ -103,9 +103,9 @@ pub struct AtomicQueueProducer<'a, T, const N: usize> {
     tail: &'a AtomicUsize,
 }
 
-unsafe impl<'a, T, const N: usize> Send for AtomicQueueProducer<'a, T, N> {}
+unsafe impl<T, const N: usize> Send for AtomicQueueProducer<'_, T, N> {}
 
-impl<'a, T, const N: usize> AtomicQueueProducer<'a, T, N> {
+impl<T, const N: usize> AtomicQueueProducer<'_, T, N> {
     pub fn push_back(&self, val: T) -> bool {
         let tail = self.tail.load(Ordering::Relaxed);
         let next = (tail + 1) % N;
@@ -131,7 +131,7 @@ pub struct AtomicQueueConsumer<'a, T, const N: usize> {
     head: &'a AtomicUsize,
     tail: &'a AtomicUsize,
 }
-impl<'a, T, const N: usize> AtomicQueueConsumer<'a, T, N> {
+impl<T, const N: usize> AtomicQueueConsumer<'_, T, N> {
     #[must_use]
     pub fn available(&self) -> usize {
         let head = self.head.load(Ordering::Relaxed);

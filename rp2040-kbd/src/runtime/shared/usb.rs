@@ -82,7 +82,7 @@ pub struct UsbGuard<'a> {
 }
 
 #[cfg(feature = "serial")]
-impl<'a> core::fmt::Write for UsbGuard<'a> {
+impl core::fmt::Write for UsbGuard<'_> {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         if let Some(serial) = self.serial.as_mut() {
             if *self.output {

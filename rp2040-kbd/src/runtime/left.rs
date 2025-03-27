@@ -18,7 +18,7 @@ use crate::runtime::shared::usb::init_usb;
 use core::fmt::Write;
 #[cfg(feature = "hiddev")]
 use liatris::pac::interrupt;
-use rp2040_hal::multicore::Multicore;
+use rp2040_hal::multicore::{Multicore, StackAllocation};
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::Timer;
 use usb_device::bus::UsbBusAllocator;
@@ -42,16 +42,24 @@ pub fn run_left<'a>(
     let receiver = MessageReceiver::new(uart_driver);
     let (producer, consumer) = new_shared_queue();
     #[expect(static_mut_refs)]
-    if let Err(_e) = mc.cores()[1].spawn(unsafe { &mut CORE_1_STACK_AREA }, move || {
-        run_key_processsing_core(
-            receiver,
-            left_buttons,
-            timer,
-            producer,
-            #[cfg(feature = "hiddev")]
-            usb_bus,
-        )
-    }) {
+    if let Err(_e) = mc.cores()[1].spawn(
+        unsafe {
+            StackAllocation::from_raw_parts(
+                CORE_1_STACK_AREA.as_mut_ptr(),
+                CORE_1_STACK_AREA.as_mut_ptr().add(CORE_1_STACK_AREA.len()),
+            )
+        },
+        move || {
+            run_key_processsing_core(
+                receiver,
+                left_buttons,
+                timer,
+                producer,
+                #[cfg(feature = "hiddev")]
+                usb_bus,
+            )
+        },
+    ) {
         oled_handle.clear();
         oled_handle.write(0, "ERROR");
         oled_handle.write(9, "SPAWN");
