@@ -18,7 +18,7 @@ impl<'a> UsbSerial<'a> {
     }
 }
 
-impl<'a> Write for UsbSerial<'a> {
+impl Write for UsbSerial<'_> {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         serial_write_all(&mut self.inner, s.as_bytes());
         Ok(())

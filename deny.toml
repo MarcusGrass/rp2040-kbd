@@ -4,7 +4,12 @@ targets = [
 ]
 
 [advisories]
-ignore = []
+ignore = [
+    # proc-macro-error unmaintained
+    "RUSTSEC-2024-0370",
+    # paste unmaintained
+    "RUSTSEC-2024-0436",
+]
 
 [bans]
 multiple-versions = "deny"
@@ -13,16 +18,17 @@ skip = [
 
     # cortex-m has a bunch of outdated deps
     { name = "bitfield", version = "0.13.2" },
+    { name = "bitfield", version = "0.14.0" },
+    { name = "hashbrown", version = "0.13.2" },
     { name = "embedded-hal", version = "0.2.7" },
     { name = "nb", version = "0.1.3" },
     { name = "syn", version = "1.0.109" },
-    # This one sneaks in from pio
-    { name = "regex-syntax", version = "0.6.29" },
 ]
 
 [sources]
 allow-git = [
     "https://github.com/MarcusGrass/rp-hal-boards",
+    "https://github.com/MarcusGrass/rp-hal",
     "https://github.com/MarcusGrass/pio-uart",
     "https://github.com/MarcusGrass/usb-device",
 ]
@@ -38,6 +44,5 @@ allow = [
 exceptions = [
     { name = "rp2040-kbd", allow = ["GPL-3.0"] },
     { name = "rp2040-kbd-lib", allow = ["GPL-3.0"] },
-    { name = "tiny-keccak", allow = ["CC0-1.0"] },
-    { name = "unicode-ident", allow = ["Unicode-DFS-2016"] },
+    { name = "unicode-ident", allow = ["Unicode-3.0"] },
 ]
