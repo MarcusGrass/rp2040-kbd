@@ -1,16 +1,4 @@
-//! # Pico USB Serial Example
-//!
-//! Creates a USB Serial device on a Pico board, with the USB driver running in
-//! the main thread.
-//!
-//! This will create a USB Serial device echoing anything it receives. Incoming
-//! ASCII characters are converted to upercase, so you can tell it is working
-//! and not just local-echo!
-//!
-//! See the `Cargo.toml` file for Copyright and license details.
-//!
 #![cfg_attr(not(test), no_std)]
-//#![no_std]
 #![no_main]
 
 mod hid;
@@ -20,6 +8,7 @@ mod keymap;
 pub(crate) mod runtime;
 mod timer;
 
+use core::ops::Div;
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::pixelcolor::BinaryColor;
 // The macro for our start-up function
@@ -39,12 +28,18 @@ use liatris::hal;
 use crate::keyboard::oled::OledHandle;
 use crate::keyboard::power_led::PowerLed;
 use embedded_hal::digital::InputPin;
+use liatris::pac::vreg_and_chip_reset::vreg::VSEL_A;
 use liatris::pac::I2C1;
-use rp2040_hal::clocks::PeripheralClock;
-use rp2040_hal::fugit::{Rate, RateExtU32};
+use rp2040_hal::clocks::{ClocksManager, PeripheralClock};
+use rp2040_hal::fugit::{HertzU32, RateExtU32};
 use rp2040_hal::gpio::bank0::{Gpio2, Gpio3};
 use rp2040_hal::gpio::{FunctionI2C, Pin, PullDown};
 use rp2040_hal::multicore::Multicore;
+use rp2040_hal::pll::common_configs::PLL_USB_48MHZ;
+use rp2040_hal::pll::{setup_pll_blocking, PLLConfig};
+use rp2040_hal::vreg::{get_voltage, set_voltage};
+use rp2040_hal::xosc::setup_xosc_blocking;
+use rp2040_hal::Clock;
 use ssd1306::mode::DisplayConfig;
 use ssd1306::prelude::DisplayRotation;
 use ssd1306::size::DisplaySize128x32;
@@ -59,20 +54,44 @@ const _ILLEGAL_SIDES: () = assert!(false, "Can't compile as both right and left"
 #[cfg(all(feature = "hiddev", feature = "right"))]
 const _RIGHT_HIDDEN: () = assert!(false, "Can't compile right as hiddev");
 
-/// I want this high, but also as a clean divisor of the system clock
-/// I'm using some weird protocol now with a header and footer on the message,
-/// stretching it to 16 bits, to account for connects/disconnects of the right side
-/// producing faulty messages.
-/// The 'fake-uart' clock divisor is the baud-rate * 16, and can at most be 1,
-/// I'm putting it at 1, so that's `125_000_000 / 16 => 7_812_500`.
-/// That's going to be `125_000_000 / 8 = 15_625_000` bits per second
-/// or 1 925 125 bytes per second
-/// which is 512 nanos per byte, two bytes per message is around 1 microsecond per message
-/// of latency. Clock speed is 8 nanos per cycle, each bit is therefore held for 64 nanos (8 cycles),
-/// each byte is transferred in 64 * 8 = 512 nanos, which adds up with the above.
-const UART_BAUD: Rate<u32, 1, 1> = Rate::<u32, 1, 1>::Hz(7_812_500);
+/// FREF is the xosc crystal freq (12Mhz)
+/// POSTDIV(both) 1 -7
+/// If postdiv has different values, POSTDIV1 should be higher
+/// for energy efficiency
+/// Refdiv recommended to be 1
+/// MAX VCO = 1600Mhz
+/// Docs says FBDIV which is, but that can be replaced with VCO since it's a part of it
+/// Calculate by (FREF / REFDIV) * FBDIV / (POSTDIV1 * POSTDIV2)
+/// Where VCO = FREF * FBDIV => FBDIV = VCO / FREF
+/// Ex: (12 / 1) * 133 / (6 * 2) => VCO = 12 * 133 = 1596Mhz
+/// There's a script for finding your optimal clock frequency here:
+/// <https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/hardware_clocks/scripts/vcocalc.py>
+/// Ex legal config for 200Mhz
+/// `VCO_FREQ` = 1200Mhz
+/// refdiv = 1
+/// postdiv1 = 6, postdiv2 = 1
+/// Higher VCO-freq decreases jitter but increases power consumption,
+/// The only way to increase VCO is to compromize on output frequency
+/// Below is a Legal config for 199.5Mhz
+/// `VCO_FREQ` = 1596
+/// REFDIV = 1
+/// FBDIV = 133
+/// POSTDIV1 = 4
+/// POSTDIV2 = 2
+const PLL_1995_MHZ: PLLConfig = PLLConfig {
+    vco_freq: HertzU32::MHz(1596),
+    refdiv: 1,
+    post_div1: 4,
+    post_div2: 2,
+};
 
-const SYSTEM_FREQ: Rate<u32, 1, 1> = Rate::<u32, 1, 1>::MHz(125);
+/*/// Example 133Mhz config
+const PLL_133_MHZ: PLLConfig = PLLConfig {
+    vco_freq: HertzU32::MHz(1596),
+    refdiv: 1,
+    post_div1: 6,
+    post_div2: 2,
+};*/
 
 /// Entry point to our bare-metal application.
 ///
@@ -86,28 +105,48 @@ fn main() -> ! {
     setup_kbd()
 }
 
-#[expect(clippy::too_many_lines)]
+#[expect(clippy::too_many_lines, clippy::cast_possible_truncation)]
 fn setup_kbd() -> ! {
     // Grab our singleton objects
     let mut pac = pac::Peripherals::take().unwrap();
 
+    // Up voltage if necessary for 200Mhz clock
+    if get_voltage(&pac.VREG_AND_CHIP_RESET) != Some(VSEL_A::VOLTAGE1_15) {
+        set_voltage(&mut pac.VREG_AND_CHIP_RESET, VSEL_A::VOLTAGE1_15);
+    }
+
     // Set up the watchdog driver - needed by the clock setup code
     let mut watchdog = hal::Watchdog::new(pac.WATCHDOG);
 
-    // Configure the clocks
-    //
-    // The default is to generate a 125 MHz system clock
-    let clocks = hal::clocks::init_clocks_and_plls(
-        liatris::XOSC_CRYSTAL_FREQ,
-        pac.XOSC,
-        pac.CLOCKS,
+    let xosc = setup_xosc_blocking(pac.XOSC, liatris::XOSC_CRYSTAL_FREQ.Hz()).unwrap();
+    watchdog.enable_tick_generation((liatris::XOSC_CRYSTAL_FREQ / 1_000_000) as u8);
+
+    let mut clocks = ClocksManager::new(pac.CLOCKS);
+    let pll_sys = setup_pll_blocking(
         pac.PLL_SYS,
-        pac.PLL_USB,
+        xosc.operating_frequency(),
+        PLL_1995_MHZ,
+        &mut clocks,
         &mut pac.RESETS,
-        &mut watchdog,
     )
-    .ok()
     .unwrap();
+    let pll_usb = setup_pll_blocking(
+        pac.PLL_USB,
+        xosc.operating_frequency(),
+        PLL_USB_48MHZ,
+        &mut clocks,
+        &mut pac.RESETS,
+    )
+    .unwrap();
+    clocks.init_default(&xosc, &pll_sys, &pll_usb).unwrap();
+    // I want this high, but also as a clean divisor of the system clock
+    // I'm using some weird protocol now with a header and footer on the message,
+    // stretching it to 16 bits, to account for connects/disconnects of the right side
+    // producing faulty messages.
+    // The 'fake-uart' clock divisor is the baud-rate * 16, and can at most be 1,
+    // I'm putting it at 1, so that's `199_500_000 / 16 => 12_468_750`.
+    // Todo: Maybe check that this is a clean divisor
+    let uart_baud = clocks.system_clock.freq().div(16);
 
     let timer = hal::Timer::new(pac.TIMER, &mut pac.RESETS, &clocks);
     let mut sio = hal::Sio::new(pac.SIO);
@@ -150,8 +189,8 @@ fn setup_kbd() -> ! {
             // Left side flips tx/rx, check qmk for proton-c in kyria for reference
             let uart = keyboard::split_serial::UartLeft::new(
                 pins.gpio1,
-                UART_BAUD,
-                SYSTEM_FREQ,
+                uart_baud,
+                clocks.system_clock.freq(),
                 pac.PIO0,
                 &mut pac.RESETS,
             );
@@ -172,7 +211,16 @@ fn setup_kbd() -> ! {
                     Some(pins.gpio21.into_pull_up_input()),
                 ),
             );
-            runtime::left::run_left(&mut mc, usb_bus, oled, uart, left, pl, timer);
+            runtime::left::run_left(
+                &mut mc,
+                usb_bus,
+                oled,
+                uart,
+                left,
+                pl,
+                timer,
+                &clocks.system_clock,
+            );
         }
         #[cfg(not(feature = "left"))]
         {
@@ -186,8 +234,8 @@ fn setup_kbd() -> ! {
         {
             let uart = keyboard::split_serial::UartRight::new(
                 pins.gpio1.reconfigure(),
-                UART_BAUD,
-                SYSTEM_FREQ,
+                uart_baud,
+                clocks.system_clock.freq(),
                 pac.PIO0,
                 &mut pac.RESETS,
             );
@@ -221,6 +269,7 @@ fn setup_kbd() -> ! {
                 right,
                 pl,
                 timer,
+                &clocks.system_clock,
             );
         }
         #[cfg(not(feature = "right"))]

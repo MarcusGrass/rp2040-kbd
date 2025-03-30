@@ -18,12 +18,13 @@ use crate::runtime::shared::usb::init_usb;
 use core::fmt::Write;
 #[cfg(feature = "hiddev")]
 use liatris::pac::interrupt;
-use rp2040_hal::multicore::{Multicore, StackAllocation};
+use rp2040_hal::clocks::SystemClock;
+use rp2040_hal::multicore::{Multicore, Stack};
 use rp2040_hal::rom_data::reset_to_usb_boot;
-use rp2040_hal::Timer;
+use rp2040_hal::{Clock, Timer};
 use usb_device::bus::UsbBusAllocator;
 
-static mut CORE_1_STACK_AREA: [usize; 1024 * 8] = [0; 1024 * 8];
+static mut CORE_1_STACK: Stack<{ 1024 * 8 }> = Stack::new();
 
 #[inline(never)]
 pub fn run_left<'a>(
@@ -34,6 +35,7 @@ pub fn run_left<'a>(
     left_buttons: LeftButtons,
     power_led_pin: PowerLed,
     timer: Timer,
+    system_clock: &SystemClock,
 ) -> ! {
     #[cfg(feature = "serial")]
     unsafe {
@@ -43,12 +45,7 @@ pub fn run_left<'a>(
     let (producer, consumer) = new_shared_queue();
     #[expect(static_mut_refs)]
     if let Err(_e) = mc.cores()[1].spawn(
-        unsafe {
-            StackAllocation::from_raw_parts(
-                CORE_1_STACK_AREA.as_mut_ptr(),
-                CORE_1_STACK_AREA.as_mut_ptr().add(CORE_1_STACK_AREA.len()),
-            )
-        },
+        unsafe { CORE_1_STACK.take().unwrap_unchecked() },
         move || {
             run_key_processsing_core(
                 receiver,
@@ -69,7 +66,7 @@ pub fn run_left<'a>(
         reset_to_usb_boot(0, 0);
         panic!();
     }
-    run_admin_core(oled_handle, consumer, timer, power_led_pin)
+    run_admin_core(oled_handle, consumer, timer, power_led_pin, system_clock)
 }
 
 #[expect(clippy::needless_pass_by_value)]
@@ -78,6 +75,7 @@ pub fn run_admin_core(
     consumer: Consumer,
     timer: Timer,
     mut power_led_pin: PowerLed,
+    sys_clock: &SystemClock,
 ) -> ! {
     let mut oled_left = LeftOledDrawer::new(oled_handle);
     #[cfg(feature = "serial")]
@@ -91,7 +89,8 @@ pub fn run_admin_core(
     let mut left_counter: PressLatencyCounter = PressLatencyCounter::new();
     let mut right_counter: PressLatencyCounter = PressLatencyCounter::new();
     let mut last_avail = 0;
-    oled_left.update_layer(layer_to_string(KeymapLayer::DvorakSe), None);
+    oled_left.update_layer(layer_to_string(KeymapLayer::DvorakSe));
+    oled_left.set_clock(sys_clock.freq());
     loop {
         let avail = consumer.available();
         let now = timer.get_counter();
@@ -113,10 +112,9 @@ pub fn run_admin_core(
                     oled_left.update_scan_loop(lc.as_micros_fraction());
                 }
             }
-            Some(KeycoreToAdminMessage::LayerChange(default, temp)) => {
+            Some(KeycoreToAdminMessage::LayerChange(default)) => {
                 let dfl_out = layer_to_string(default);
-                let tmp_out = temp.map(layer_to_string);
-                oled_left.update_layer(dfl_out, tmp_out);
+                oled_left.update_layer(dfl_out);
             }
             Some(KeycoreToAdminMessage::Rx(incr)) => {
                 rx += incr;
@@ -145,7 +143,12 @@ pub fn run_admin_core(
         oled_left.render();
         #[cfg(feature = "serial")]
         {
-            handle_usb(&mut power_led_pin, &mut last_chars, &mut output_all);
+            handle_usb(
+                &mut power_led_pin,
+                &mut last_chars,
+                &mut output_all,
+                sys_clock,
+            );
             if output_all && !has_dumped {
                 let _ =
                     crate::runtime::shared::usb::acquire_usb().write_str("Left side running\r\n");
@@ -160,6 +163,7 @@ fn handle_usb(
     power_led: &mut PowerLed,
     last_chars: &mut [u8],
     output_all: &mut bool,
+    clocks: &SystemClock,
 ) -> Option<()> {
     let usb = crate::runtime::shared::usb::acquire_usb();
     let serial = usb.serial?;
@@ -191,6 +195,9 @@ fn handle_usb(
                         } else {
                             power_led.turn_on();
                         }
+                    } else if last_chars.ends_with(b"CLOCK") {
+                        let _ =
+                            serial.write_fmt(format_args!("SYS={}\r\n", clocks.freq().to_MHz(),));
                     }
                 }
             }
