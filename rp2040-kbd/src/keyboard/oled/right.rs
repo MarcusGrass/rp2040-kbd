@@ -1,6 +1,7 @@
 use crate::keyboard::oled::{DrawUnit, OledHandle};
 use crate::static_draw_unit_string;
 use core::fmt::Write;
+use rp2040_hal::fugit::HertzU32;
 
 pub struct RightOledDrawer {
     handle: OledHandle,
@@ -12,6 +13,8 @@ pub struct RightOledDrawer {
     dbg_header: DrawUnit,
     dbg_tx: DrawUnit,
     dbg_queue: DrawUnit,
+    clk_header: DrawUnit,
+    clk_freq: DrawUnit,
     underscores_need_redraw: bool,
 }
 
@@ -24,6 +27,8 @@ impl RightOledDrawer {
         let dbg_header = static_draw_unit_string!("DEBUG");
         let dbg_tx = static_draw_unit_string!("T ...");
         let dbg_queue = static_draw_unit_string!("Q ...");
+        let clk_header = static_draw_unit_string!("CLOCK");
+        let clk_freq = static_draw_unit_string!("...");
         Self {
             handle,
             hidden: false,
@@ -34,6 +39,8 @@ impl RightOledDrawer {
             dbg_header: DrawUnit::new(dbg_header, true),
             dbg_tx: DrawUnit::new(dbg_tx, true),
             dbg_queue: DrawUnit::new(dbg_queue, true),
+            clk_header: DrawUnit::new(clk_header, true),
+            clk_freq: DrawUnit::new(clk_freq, true),
             underscores_need_redraw: true,
         }
     }
@@ -54,6 +61,8 @@ impl RightOledDrawer {
             self.dbg_header.needs_redraw = true;
             self.dbg_tx.needs_redraw = true;
             self.dbg_queue.needs_redraw = true;
+            self.clk_header.needs_redraw = true;
+            self.clk_freq.needs_redraw = true;
             self.underscores_need_redraw = true;
         }
         self.hidden = false;
@@ -86,6 +95,15 @@ impl RightOledDrawer {
         self.dbg_queue.content.clear();
         let _ = self.dbg_queue.content.write_fmt(format_args!("Q {count}"));
         self.dbg_queue.needs_redraw = true;
+    }
+
+    pub fn set_clock(&mut self, freq: HertzU32) {
+        self.clk_freq.content.clear();
+        let _ = self
+            .clk_freq
+            .content
+            .write_fmt(format_args!("{}Mhz", freq.to_MHz()));
+        self.clk_freq.needs_redraw = true;
     }
 
     pub fn render(&mut self) {
@@ -137,6 +155,18 @@ impl RightOledDrawer {
                 .write_header(56, self.dbg_queue.content.as_str());
             self.dbg_queue.needs_redraw = false;
         }
+        if self.clk_header.needs_redraw {
+            let _ = self.handle.clear_line(68);
+            let _ = self
+                .handle
+                .write_header(68, self.clk_header.content.as_str());
+            self.clk_header.needs_redraw = false;
+        }
+        if self.clk_freq.needs_redraw {
+            let _ = self.handle.clear_line(76);
+            let _ = self.handle.write_header(76, self.clk_freq.content.as_str());
+            self.clk_freq.needs_redraw = false;
+        }
         if self.underscores_need_redraw {
             // Header
             let _ = self.handle.write_underscored_at(8);
@@ -144,6 +174,8 @@ impl RightOledDrawer {
             let _ = self.handle.write_underscored_at(36);
             // Dbg
             let _ = self.handle.write_underscored_at(64);
+            // Clock
+            let _ = self.handle.write_underscored_at(84);
             self.underscores_need_redraw = false;
         }
     }

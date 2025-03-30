@@ -12,9 +12,10 @@ use crate::runtime::shared::press_latency_counter::PressLatencyCounter;
 use crate::runtime::shared::sleep::SleepCountdown;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
+use rp2040_hal::clocks::SystemClock;
 use rp2040_hal::multicore::{Multicore, StackAllocation};
 use rp2040_hal::rom_data::reset_to_usb_boot;
-use rp2040_hal::Timer;
+use rp2040_hal::{Clock, Timer};
 
 static mut CORE_1_STACK_AREA: [usize; 2048] = [0; 2048];
 // Boot loop if the queue is bugged, not bothering with MemUninit here
@@ -27,6 +28,7 @@ pub fn run_right<'a>(
     right_buttons: RightButtons,
     power_led_pin: PowerLed,
     timer: Timer,
+    clock: &SystemClock,
 ) -> ! {
     #[cfg(feature = "serial")]
     unsafe {
@@ -55,7 +57,7 @@ pub fn run_right<'a>(
         reset_to_usb_boot(0, 0);
         panic!();
     }
-    run_admin_core(oled_handle, consumer, timer, power_led_pin)
+    run_admin_core(oled_handle, consumer, timer, power_led_pin, clock)
 }
 #[expect(clippy::needless_pass_by_value)]
 fn run_admin_core(
@@ -63,6 +65,7 @@ fn run_admin_core(
     consumer: Consumer,
     timer: Timer,
     mut power_led_pin: PowerLed,
+    clock: &SystemClock,
 ) -> ! {
     let mut oled = RightOledDrawer::new(oled_handle);
     #[cfg(feature = "serial")]
@@ -75,6 +78,7 @@ fn run_admin_core(
     let mut press_counter = PressLatencyCounter::new();
     let mut tx: u16 = 0;
     let mut last_avail = 0;
+    oled.set_clock(clock.freq());
     loop {
         let now = timer.get_counter();
         let avail = consumer.available();
