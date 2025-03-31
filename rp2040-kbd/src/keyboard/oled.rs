@@ -2,6 +2,7 @@
 pub mod left;
 #[cfg(feature = "right")]
 pub mod right;
+pub mod section;
 
 use embedded_graphics::draw_target::DrawTarget;
 use embedded_graphics::geometry::Point;
@@ -20,9 +21,8 @@ use ssd1306::prelude::{Brightness, DisplaySize128x32, I2CInterface};
 use ssd1306::Ssd1306;
 
 #[macro_export]
-macro_rules! static_draw_unit_string {
-    ($raw: literal) => {{
-        const _CHECK: () = assert!($raw.len() <= 8, "String too long to fit heapless string 5");
+macro_rules! draw_unit_string {
+    ($raw: expr) => {{
         let mut s: heapless::String<8> = heapless::String::new();
         let _ = s.push_str($raw);
         s
@@ -39,7 +39,7 @@ pub struct DrawUnit {
 }
 
 impl DrawUnit {
-    pub fn new(content: OledLineString, needs_redraw: bool) -> Self {
+    pub const fn new(content: OledLineString, needs_redraw: bool) -> Self {
         Self {
             content,
             needs_redraw,
