@@ -13,11 +13,11 @@ use crate::runtime::shared::sleep::SleepCountdown;
 #[cfg(feature = "serial")]
 use core::fmt::Write;
 use rp2040_hal::clocks::SystemClock;
-use rp2040_hal::multicore::{Multicore, StackAllocation};
+use rp2040_hal::multicore::{Multicore, Stack};
 use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::{Clock, Timer};
 
-static mut CORE_1_STACK_AREA: [usize; 2048] = [0; 2048];
+static CORE_1_STACK_AREA: Stack<2048> = Stack::new();
 // Boot loop if the queue is bugged, not bothering with MemUninit here
 #[inline(never)]
 pub fn run_right<'a>(
@@ -38,16 +38,9 @@ pub fn run_right<'a>(
     let c1 = &mut cores[1];
     let serializer = MessageSerializer::new(uart_driver);
     let (producer, consumer) = new_shared_queue();
-    #[expect(static_mut_refs)]
-    if let Err(_e) = c1.spawn(
-        unsafe {
-            StackAllocation::from_raw_parts(
-                CORE_1_STACK_AREA.as_mut_ptr(),
-                CORE_1_STACK_AREA.as_mut_ptr().add(CORE_1_STACK_AREA.len()),
-            )
-        },
-        move || run_key_core(serializer, right_buttons, timer, producer),
-    ) {
+    if let Err(_e) = c1.spawn(CORE_1_STACK_AREA.take().unwrap(), move || {
+        run_key_core(serializer, right_buttons, timer, producer)
+    }) {
         oled_handle.clear();
         oled_handle.write(0, "ERROR");
         oled_handle.write(9, "SPAWN");

@@ -24,7 +24,7 @@ use rp2040_hal::rom_data::reset_to_usb_boot;
 use rp2040_hal::{Clock, Timer};
 use usb_device::bus::UsbBusAllocator;
 
-static mut CORE_1_STACK: Stack<{ 1024 * 8 }> = Stack::new();
+static CORE_1_STACK: Stack<{ 1024 * 8 }> = Stack::new();
 
 #[inline(never)]
 pub fn run_left<'a>(
@@ -43,20 +43,16 @@ pub fn run_left<'a>(
     }
     let receiver = MessageReceiver::new(uart_driver);
     let (producer, consumer) = new_shared_queue();
-    #[expect(static_mut_refs)]
-    if let Err(_e) = mc.cores()[1].spawn(
-        unsafe { CORE_1_STACK.take().unwrap_unchecked() },
-        move || {
-            run_key_processsing_core(
-                receiver,
-                left_buttons,
-                timer,
-                producer,
-                #[cfg(feature = "hiddev")]
-                usb_bus,
-            )
-        },
-    ) {
+    if let Err(_e) = mc.cores()[1].spawn(CORE_1_STACK.take().unwrap(), move || {
+        run_key_processsing_core(
+            receiver,
+            left_buttons,
+            timer,
+            producer,
+            #[cfg(feature = "hiddev")]
+            usb_bus,
+        )
+    }) {
         oled_handle.clear();
         oled_handle.write(0, "ERROR");
         oled_handle.write(9, "SPAWN");
