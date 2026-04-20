@@ -38,13 +38,13 @@ impl<'a> UsbHiddev<'a> {
     }
 
     pub fn try_submit_report(&mut self, keyboard_report: &KeyboardReport) -> bool {
-        self.ready
-            .then(|| {
-                let res = self.hid.push_input(keyboard_report).is_ok();
-                self.ready = false;
-                res
-            })
-            .unwrap_or_default()
+        if self.ready {
+            let res = self.hid.push_input(keyboard_report).is_ok();
+            self.ready = false;
+            res
+        } else {
+            false
+        }
     }
 
     // Very easy to overproduce, only allow pushing after a previous poll, should come

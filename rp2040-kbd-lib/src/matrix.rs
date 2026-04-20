@@ -7,6 +7,7 @@ pub struct RowIndex(pub u8);
 
 impl RowIndex {
     #[must_use]
+    #[expect(clippy::missing_panics_doc)]
     pub const fn from_value(ind: u8) -> Self {
         assert!(
             ind < NUM_ROWS,
@@ -28,6 +29,7 @@ pub struct ColIndex(pub u8);
 
 impl ColIndex {
     #[must_use]
+    #[expect(clippy::missing_panics_doc)]
     pub const fn from_value(ind: u8) -> Self {
         assert!(
             ind < NUM_COLS,

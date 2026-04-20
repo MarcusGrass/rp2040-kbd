@@ -76,10 +76,8 @@ fn run_admin_core(
         let now = timer.get_counter();
         let avail = consumer.available();
         match pop_message(&consumer) {
-            Some(KeycoreToAdminMessage::Loop(lc)) => {
-                if sleep.is_awake() {
-                    oled.update_scan_loop(lc.as_micros_fraction());
-                }
+            Some(KeycoreToAdminMessage::Loop(lc)) if sleep.is_awake() => {
+                oled.update_scan_loop(lc.as_micros_fraction());
             }
             Some(KeycoreToAdminMessage::Touch {
                 tx_bytes,

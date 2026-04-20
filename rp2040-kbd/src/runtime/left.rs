@@ -103,10 +103,8 @@ pub fn run_admin_core(
                 power_led_pin.turn_on();
                 oled_left.show();
             }
-            Some(KeycoreToAdminMessage::Loop(lc)) => {
-                if sleep.is_awake() {
-                    oled_left.update_scan_loop(lc.as_micros_fraction());
-                }
+            Some(KeycoreToAdminMessage::Loop(lc)) if sleep.is_awake() => {
+                oled_left.update_scan_loop(lc.as_micros_fraction());
             }
             Some(KeycoreToAdminMessage::LayerChange(default)) => {
                 let dfl_out = layer_to_string(default);
@@ -193,7 +191,7 @@ fn handle_usb(
                         }
                     } else if last_chars.ends_with(b"CLOCK") {
                         let _ =
-                            serial.write_fmt(format_args!("SYS={}\r\n", clocks.freq().to_MHz(),));
+                            serial.write_fmt(format_args!("SYS={}\r\n", clocks.freq().to_MHz()));
                     }
                 }
             }

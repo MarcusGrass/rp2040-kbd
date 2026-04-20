@@ -40,9 +40,7 @@ fn serial_write_all<W: usb_device::bus::UsbBus, B1: BorrowMut<[u8]>, B2: BorrowM
                 Ok(wrote) => {
                     remaining = &remaining[wrote..];
                 }
-                Err(UsbError::WouldBlock) => {
-                    continue;
-                }
+                Err(UsbError::WouldBlock) => {}
                 Err(_e) => {
                     return;
                 }

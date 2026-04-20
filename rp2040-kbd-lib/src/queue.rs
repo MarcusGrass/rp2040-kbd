@@ -44,7 +44,7 @@ impl<T, const N: usize> Queue<T, N> {
     pub fn peek(&self) -> Option<&T> {
         if self.head == self.tail {
             return None;
-        };
+        }
         // Safety: Head always in range (always moves after tail) and points to initialized memory
         let val = unsafe {
             #[cfg(test)]
@@ -61,7 +61,7 @@ impl<T, const N: usize> Queue<T, N> {
     pub fn pop_front(&mut self) -> Option<T> {
         if self.head == self.tail {
             return None;
-        };
+        }
         // Safety: Head always in range (always moves after tail) and points to initialized memory
         let val = unsafe {
             #[cfg(test)]
@@ -149,7 +149,7 @@ impl<T, const N: usize> AtomicQueueConsumer<'_, T, N> {
         }
         if head == tail {
             return None;
-        };
+        }
         // Safety: Head always in range (always moves after tail) and points to initialized memory
         let val = unsafe {
             let cur = self.buffer.add(head);
@@ -169,7 +169,7 @@ impl<T, const N: usize> AtomicQueueConsumer<'_, T, N> {
         }
         if head == tail {
             return None;
-        };
+        }
         // Safety: Head always in range (always moves after tail) and points to initialized memory
         let val = unsafe {
             let cur = self.buffer.add(head);
