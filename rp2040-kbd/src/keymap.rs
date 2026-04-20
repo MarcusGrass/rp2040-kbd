@@ -18,6 +18,7 @@ use rp2040_kbd_lib::matrix::{MatrixChange, MatrixUpdate};
 pub enum KeymapLayer {
     DvorakSe,
     DvorakAnsi,
+    DvorakSeMac,
     QwertyGaming,
     Lower,
     LowerAnsi,
@@ -824,10 +825,19 @@ fn rotate_layer(
         }
         (KeymapLayer::DvorakAnsi, _) => {
             if clockwise {
-                keyboard_report_state.set_perm_layer(KeymapLayer::QwertyGaming);
+                keyboard_report_state.set_perm_layer(KeymapLayer::DvorakSeMac);
                 push_layer_change(producer, keyboard_report_state.active_layer);
             } else {
                 keyboard_report_state.set_perm_layer(KeymapLayer::DvorakSe);
+                push_layer_change(producer, keyboard_report_state.active_layer);
+            }
+        }
+        (KeymapLayer::DvorakSeMac, _) => {
+            if clockwise {
+                keyboard_report_state.set_perm_layer(KeymapLayer::QwertyGaming);
+                push_layer_change(producer, keyboard_report_state.active_layer);
+            } else {
+                keyboard_report_state.set_perm_layer(KeymapLayer::DvorakAnsi);
                 push_layer_change(producer, keyboard_report_state.active_layer);
             }
         }
@@ -895,7 +905,7 @@ impl KeyboardButton for LeftRow0Col1 {
             base_layer!(KeymapLayer::QwertyGaming) => {
                 keyboard_report_state.push_key(KeyCode::N1);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 if keyboard_report_state.has_modifier(Modifier::ANY_SHIFT) {
                     // Shifted, `SHIFT + 2` -> "
                     keyboard_report_state.jank.pressing_double_quote = true;
@@ -927,7 +937,7 @@ impl KeyboardButton for LeftRow0Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::COMMA);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 if keyboard_report_state.jank.pressing_double_quote {
                     keyboard_report_state.pop_key(KeyCode::N2);
                     keyboard_report_state.jank.pressing_double_quote = false;
@@ -966,7 +976,7 @@ impl KeyboardButton for LeftRow0Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::COMMA);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
                     // Need to remove shift for this key to go out, not putting it
                     // back after though for reasons that I don't remember and may be a bug
@@ -1009,7 +1019,7 @@ impl KeyboardButton for LeftRow0Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::COMMA);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 if keyboard_report_state.jank.pressing_left_bracket {
                     // These are on the same button and interfere with each other
                     if !keyboard_report_state.jank.pressing_right_bracket {
@@ -1047,7 +1057,7 @@ impl KeyboardButton for LeftRow0Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::DOT);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 // Button is > or . with and without shift, respectively
                 if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
                     // Needs a shift, but that's already pressed
@@ -1086,7 +1096,7 @@ impl KeyboardButton for LeftRow0Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::DOT);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 if keyboard_report_state.jank.pressing_right_bracket {
                     keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
                     keyboard_report_state.jank.pressing_right_bracket = false;
@@ -1123,7 +1133,7 @@ impl KeyboardButton for LeftRow0Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::P);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::P);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1155,7 +1165,7 @@ impl KeyboardButton for LeftRow0Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::P);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::P);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1184,7 +1194,7 @@ impl KeyboardButton for LeftRow0Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::Y);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::Y);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1216,7 +1226,7 @@ impl KeyboardButton for LeftRow0Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::Y);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::Y);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1264,7 +1274,7 @@ impl KeyboardButton for LeftRow1Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::A);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::A);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1297,7 +1307,7 @@ impl KeyboardButton for LeftRow1Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::A);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::A);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1329,7 +1339,7 @@ impl KeyboardButton for LeftRow1Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::O);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::O);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1363,7 +1373,7 @@ impl KeyboardButton for LeftRow1Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::O);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::O);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1396,7 +1406,7 @@ impl KeyboardButton for LeftRow1Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::E);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::E);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1430,7 +1440,7 @@ impl KeyboardButton for LeftRow1Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::E);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::E);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1462,7 +1472,7 @@ impl KeyboardButton for LeftRow1Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::U);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::U);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1496,7 +1506,7 @@ impl KeyboardButton for LeftRow1Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::U);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::U);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1529,7 +1539,7 @@ impl KeyboardButton for LeftRow1Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::I);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::I);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1564,7 +1574,7 @@ impl KeyboardButton for LeftRow1Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::I);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::I);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1600,7 +1610,7 @@ impl KeyboardButton for LeftRow2Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::SEMICOLON);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
                     // Needs a shift, but that's already pressed
                     keyboard_report_state.push_key(KeyCode::DOT);
@@ -1627,7 +1637,7 @@ impl KeyboardButton for LeftRow2Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::SEMICOLON);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_temp_modifiers();
                 if keyboard_report_state.jank.pressing_reg_colon {
                     keyboard_report_state.pop_key(KeyCode::DOT);
@@ -1663,7 +1673,7 @@ impl KeyboardButton for LeftRow2Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::Q);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::Q);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1692,7 +1702,7 @@ impl KeyboardButton for LeftRow2Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::Q);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::Q);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1719,7 +1729,7 @@ impl KeyboardButton for LeftRow2Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::J);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::J);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1748,7 +1758,7 @@ impl KeyboardButton for LeftRow2Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::J);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::J);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1775,7 +1785,7 @@ impl KeyboardButton for LeftRow2Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::K);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::K);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1804,7 +1814,7 @@ impl KeyboardButton for LeftRow2Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::K);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::K);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1842,7 +1852,7 @@ impl KeyboardButton for LeftRow2Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::X);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::X);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1871,7 +1881,7 @@ impl KeyboardButton for LeftRow2Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::X);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::X);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1907,7 +1917,7 @@ impl KeyboardButton for LeftRow3Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_modifier(Modifier::LEFT_GUI);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_modifier(Modifier::LEFT_GUI);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1927,7 +1937,7 @@ impl KeyboardButton for LeftRow3Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_modifier(Modifier::LEFT_GUI);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_modifier(Modifier::LEFT_GUI);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1947,7 +1957,7 @@ impl KeyboardButton for LeftRow3Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_modifier(Modifier::LEFT_ALT);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_modifier(Modifier::LEFT_ALT);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1967,7 +1977,7 @@ impl KeyboardButton for LeftRow3Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_modifier(Modifier::LEFT_ALT);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_modifier(Modifier::LEFT_ALT);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -1987,7 +1997,7 @@ impl KeyboardButton for LeftRow3Col3 {
             base_layer!(KeymapLayer::QwertyGaming) => {
                 keyboard_report_state.push_key(KeyCode::C);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {}
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {}
             base_layer!(KeymapLayer::DvorakAnsi) => {}
             _ => {}
         }
@@ -2003,7 +2013,7 @@ impl KeyboardButton for LeftRow3Col3 {
             base_layer!(KeymapLayer::QwertyGaming) => {
                 keyboard_report_state.pop_key(KeyCode::C);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {}
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {}
             base_layer!(KeymapLayer::DvorakAnsi) => {}
             _ => {}
         }
@@ -2023,6 +2033,10 @@ impl KeyboardButton for LeftRow3Col4 {
             base_layer!(KeymapLayer::DvorakSe) => {
                 keyboard_report_state.push_layer_with_fallback(KeymapLayer::Lower);
                 push_layer_change(producer, KeymapLayer::DvorakSe);
+            }
+            base_layer!(KeymapLayer::DvorakSeMac) => {
+                keyboard_report_state.push_layer_with_fallback(KeymapLayer::Lower);
+                push_layer_change(producer, KeymapLayer::DvorakSeMac);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
                 keyboard_report_state.push_key(KeyCode::V);
@@ -2051,7 +2065,7 @@ impl KeyboardButton for LeftRow3Col4 {
             }
 
             base_layer!(KeymapLayer::DvorakAnsi) => {}
-            base_layer!(KeymapLayer::DvorakSe) => {}
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {}
             _ => {}
         }
     }
@@ -2066,7 +2080,7 @@ impl KeyboardButton for LeftRow3Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::SPACE);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::SPACE);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2086,7 +2100,7 @@ impl KeyboardButton for LeftRow3Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::SPACE);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::SPACE);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2121,7 +2135,7 @@ impl KeyboardButton for LeftRow4Col2 {
             base_layer!(KeymapLayer::QwertyGaming) => {
                 keyboard_report_state.push_modifier(Modifier::LEFT_GUI);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {}
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {}
             base_layer!(KeymapLayer::DvorakAnsi) => {}
             _ => {}
         }
@@ -2137,7 +2151,7 @@ impl KeyboardButton for LeftRow4Col2 {
             base_layer!(KeymapLayer::QwertyGaming) => {
                 keyboard_report_state.pop_modifier(Modifier::LEFT_GUI);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {}
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {}
             base_layer!(KeymapLayer::DvorakAnsi) => {}
             _ => {}
         }
@@ -2166,7 +2180,7 @@ impl KeyboardButton for LeftRow4Col4 {
             base_layer!(KeymapLayer::QwertyGaming) => {
                 keyboard_report_state.push_key(KeyCode::SPACE);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 // _
                 keyboard_report_state.temp_modify(KeyCode::SLASH, &[Modifier::LEFT_SHIFT], &[]);
             }
@@ -2185,7 +2199,7 @@ impl KeyboardButton for LeftRow4Col4 {
             base_layer!(KeymapLayer::QwertyGaming) => {
                 keyboard_report_state.pop_key(KeyCode::SPACE);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::SLASH);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {}
@@ -2241,7 +2255,7 @@ impl KeyboardButton for RightRow0Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::L);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::L);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2273,7 +2287,7 @@ impl KeyboardButton for RightRow0Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::L);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::L);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2303,7 +2317,7 @@ impl KeyboardButton for RightRow0Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::R);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::R);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2335,7 +2349,7 @@ impl KeyboardButton for RightRow0Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::R);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::R);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2365,7 +2379,7 @@ impl KeyboardButton for RightRow0Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::C);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::C);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2397,7 +2411,7 @@ impl KeyboardButton for RightRow0Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::C);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::C);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2427,7 +2441,7 @@ impl KeyboardButton for RightRow0Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::G);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::G);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2459,7 +2473,7 @@ impl KeyboardButton for RightRow0Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::G);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::G);
             }
 
@@ -2507,7 +2521,7 @@ impl KeyboardButton for RightRow0Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::F);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::F);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2539,7 +2553,7 @@ impl KeyboardButton for RightRow0Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::F);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::F);
             }
 
@@ -2588,7 +2602,7 @@ impl KeyboardButton for RightRow1Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::S);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::S);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2621,7 +2635,7 @@ impl KeyboardButton for RightRow1Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::S);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::S);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2658,7 +2672,7 @@ impl KeyboardButton for RightRow1Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::N);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::N);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2693,7 +2707,7 @@ impl KeyboardButton for RightRow1Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::N);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::N);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2730,7 +2744,7 @@ impl KeyboardButton for RightRow1Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::T);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::T);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2765,7 +2779,7 @@ impl KeyboardButton for RightRow1Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::T);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::T);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2798,7 +2812,7 @@ impl KeyboardButton for RightRow1Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::H);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::H);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2832,7 +2846,7 @@ impl KeyboardButton for RightRow1Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::H);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::H);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2865,7 +2879,7 @@ impl KeyboardButton for RightRow1Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::D);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::D);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2899,7 +2913,7 @@ impl KeyboardButton for RightRow1Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::D);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::D);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2941,7 +2955,7 @@ impl KeyboardButton for RightRow2Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::Z);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::Z);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2968,7 +2982,7 @@ impl KeyboardButton for RightRow2Col1 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::Z);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::Z);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -2999,7 +3013,7 @@ impl KeyboardButton for RightRow2Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::V);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::V);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -3026,7 +3040,7 @@ impl KeyboardButton for RightRow2Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::V);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::V);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -3057,7 +3071,7 @@ impl KeyboardButton for RightRow2Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::W);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::W);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -3084,7 +3098,7 @@ impl KeyboardButton for RightRow2Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::W);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::W);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -3119,7 +3133,7 @@ impl KeyboardButton for RightRow2Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::M);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::M);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -3147,7 +3161,7 @@ impl KeyboardButton for RightRow2Col4 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::M);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::M);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -3160,11 +3174,15 @@ impl KeyboardButton for RightRow2Col4 {
 }
 
 impl KeyboardButton for RightRow2Col5 {
-    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, _producer: &Producer) {
+    fn on_press(&mut self, keyboard_report_state: &mut KeyboardReportState, producer: &Producer) {
         match (
             keyboard_report_state.last_perm_layer,
             keyboard_report_state.active_layer,
         ) {
+            temp_layer!(KeymapLayer::Settings) => {
+                keyboard_report_state.set_perm_layer(KeymapLayer::DvorakSeMac);
+                push_layer_change(producer, keyboard_report_state.active_layer);
+            }
             temp_layer!(KeymapLayer::LowerAnsi) => {
                 keyboard_report_state.push_key(KeyCode::GRAVE);
             }
@@ -3188,7 +3206,7 @@ impl KeyboardButton for RightRow2Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::B);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::B);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -3216,7 +3234,7 @@ impl KeyboardButton for RightRow2Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::B);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::B);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -3254,6 +3272,10 @@ impl KeyboardButton for RightRow3Col1 {
                 keyboard_report_state.push_layer_with_fallback(KeymapLayer::Settings);
                 push_layer_change(producer, KeymapLayer::DvorakSe);
             }
+            base_layer!(KeymapLayer::DvorakSeMac) => {
+                keyboard_report_state.push_layer_with_fallback(KeymapLayer::Settings);
+                push_layer_change(producer, KeymapLayer::DvorakSeMac);
+            }
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_layer_with_fallback(KeymapLayer::Settings);
                 push_layer_change(producer, KeymapLayer::DvorakAnsi);
@@ -3278,7 +3300,7 @@ impl KeyboardButton for RightRow3Col1 {
                 keyboard_report_state.pop_layer(KeymapLayer::Settings);
                 push_layer_change(producer, keyboard_report_state.active_layer);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {}
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {}
             base_layer!(KeymapLayer::DvorakAnsi) => {}
             base_layer!(KeymapLayer::QwertyGaming) => {}
 
@@ -3312,6 +3334,10 @@ impl KeyboardButton for RightRow3Col3 {
             base_layer!(KeymapLayer::DvorakSe) => {
                 keyboard_report_state.push_layer_with_fallback(KeymapLayer::Raise);
                 push_layer_change(producer, KeymapLayer::DvorakSe);
+            }
+            base_layer!(KeymapLayer::DvorakSeMac) => {
+                keyboard_report_state.push_layer_with_fallback(KeymapLayer::Raise);
+                push_layer_change(producer, KeymapLayer::DvorakSeMac);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_layer_with_fallback(KeymapLayer::Raise);
@@ -3360,6 +3386,10 @@ impl KeyboardButton for RightRow3Col4 {
                 keyboard_report_state.push_layer_with_fallback(KeymapLayer::Num);
                 push_layer_change(producer, KeymapLayer::DvorakSe);
             }
+            base_layer!(KeymapLayer::DvorakSeMac) => {
+                keyboard_report_state.push_layer_with_fallback(KeymapLayer::Num);
+                push_layer_change(producer, KeymapLayer::DvorakSeMac);
+            }
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_layer_with_fallback(KeymapLayer::Num);
                 push_layer_change(producer, KeymapLayer::DvorakAnsi);
@@ -3383,9 +3413,8 @@ impl KeyboardButton for RightRow3Col4 {
             base_layer!(KeymapLayer::QwertyGaming) => {
                 keyboard_report_state.push_key(KeyCode::I);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {}
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {}
             base_layer!(KeymapLayer::DvorakAnsi) => {}
-
             _ => {}
         }
     }
@@ -3400,7 +3429,7 @@ impl KeyboardButton for RightRow3Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::SPACE);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.push_key(KeyCode::SPACE);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {
@@ -3420,7 +3449,7 @@ impl KeyboardButton for RightRow3Col5 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::SPACE);
             }
-            base_layer!(KeymapLayer::DvorakSe) => {
+            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
                 keyboard_report_state.pop_key(KeyCode::SPACE);
             }
             base_layer!(KeymapLayer::QwertyGaming) => {

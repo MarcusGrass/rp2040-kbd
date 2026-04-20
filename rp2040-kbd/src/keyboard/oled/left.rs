@@ -245,6 +245,9 @@ pub fn layer_to_string(keymap_layer: crate::keymap::KeymapLayer) -> OledLineStri
         crate::keymap::KeymapLayer::DvorakAnsi => {
             let _ = s.push_str("DV-AN");
         }
+        crate::keymap::KeymapLayer::DvorakSeMac => {
+            let _ = s.push_str("DV-SM");
+        }
         crate::keymap::KeymapLayer::QwertyGaming => {
             let _ = s.push_str("QW-GM");
         }
