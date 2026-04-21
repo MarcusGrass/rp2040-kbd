@@ -1840,7 +1840,7 @@ impl KeyboardButton for LeftRow2Col5 {
             temp_layer!(KeymapLayer::LowerAnsi) => {
                 keyboard_report_state.temp_modify(KeyCode::GRAVE, &[Modifier::LEFT_SHIFT], &[]);
             }
-            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerSeMac) => {
+            temp_layer!(KeymapLayer::Lower) => {
                 // ~ Tilde double-tap to get it out immediately
                 keyboard_report_state.temp_modify(
                     KeyCode::RIGHT_BRACKET,
@@ -1853,6 +1853,16 @@ impl KeyboardButton for LeftRow2Col5 {
                     &[Modifier::RIGHT_ALT],
                     &[],
                 );
+            }
+            temp_layer!(KeymapLayer::LowerSeMac) => {
+                // ~ Tilde double-tap to get it out immediately
+                keyboard_report_state.temp_modify(
+                    KeyCode::RIGHT_BRACKET,
+                    &[Modifier::LEFT_ALT],
+                    &[],
+                );
+                keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
+                keyboard_report_state.temp_modify(KeyCode::SPACE, &[], &[Modifier::LEFT_ALT]);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::X);
@@ -1879,9 +1889,12 @@ impl KeyboardButton for LeftRow2Col5 {
                 keyboard_report_state.pop_temp_modifiers();
                 keyboard_report_state.pop_key(KeyCode::GRAVE);
             }
-            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerSeMac) => {
+            temp_layer!(KeymapLayer::Lower) => {
                 keyboard_report_state.pop_temp_modifiers();
                 keyboard_report_state.pop_key(KeyCode::RIGHT_BRACKET);
+            }
+            temp_layer!(KeymapLayer::LowerSeMac) => {
+                keyboard_report_state.pop_key(KeyCode::SPACE);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::X);
