@@ -189,6 +189,7 @@ impl KeyboardReportState {
     }
 
     fn temp_modify(&mut self, key_code: KeyCode, add_mods: &[Modifier], pop_mods: &[Modifier]) {
+        self.push_key(key_code);
         self.temp_mods = Some(Modifier(self.inner_report.modifier));
         let mut new_mods = self.inner_report.modifier;
         for md in add_mods {
@@ -205,7 +206,6 @@ impl KeyboardReportState {
                 .push_back(copy_report(&self.inner_report));
             self.inner_report_has_change = true;
         }
-        self.push_key(key_code);
         self.inner_report_has_change = true;
         self.outbound_reports
             .push_back(copy_report(&self.inner_report));
