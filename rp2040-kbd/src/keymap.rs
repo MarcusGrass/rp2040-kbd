@@ -3165,12 +3165,15 @@ impl KeyboardButton for RightRow2Col4 {
             temp_layer!(KeymapLayer::LowerAnsi) => {
                 keyboard_report_state.push_key(KeyCode::PIPE);
             }
-            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerSeMac) => {
+            temp_layer!(KeymapLayer::Lower) => {
                 keyboard_report_state.temp_modify(
                     KeyCode::NON_US_BACKSLASH,
                     &[Modifier::RIGHT_ALT],
                     &[],
                 );
+            }
+            temp_layer!(KeymapLayer::LowerSeMac) => {
+                keyboard_report_state.temp_modify(KeyCode::N7, &[Modifier::LEFT_ALT], &[]);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::M);
@@ -3196,9 +3199,13 @@ impl KeyboardButton for RightRow2Col4 {
             temp_layer!(KeymapLayer::LowerAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::PIPE);
             }
-            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerSeMac) => {
+            temp_layer!(KeymapLayer::Lower) => {
                 keyboard_report_state.pop_temp_modifiers();
                 keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
+            }
+            temp_layer!(KeymapLayer::LowerSeMac) => {
+                keyboard_report_state.pop_temp_modifiers();
+                keyboard_report_state.pop_key(KeyCode::N7);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::M);
