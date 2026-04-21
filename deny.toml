@@ -15,7 +15,6 @@ ignore = [
 multiple-versions = "deny"
 deny = []
 skip = [
-
     # cortex-m has a bunch of outdated deps
     { name = "bitfield", version = "0.13.2" },
     { name = "bitfield", version = "0.14.0" },
@@ -31,6 +30,7 @@ allow-git = [
     "https://github.com/MarcusGrass/rp-hal",
     "https://github.com/MarcusGrass/pio-uart",
     "https://github.com/MarcusGrass/usb-device",
+    "git+https://github.com/rust-embedded-community/usbd-serial?rev=822ae08a8a31f3be4a47eaf1a0b1149b4c4e5892",
 ]
 
 [licenses]
@@ -42,7 +42,7 @@ allow = [
     "MIT",
 ]
 exceptions = [
-    { name = "rp2040-kbd", allow = ["GPL-3.0"] },
-    { name = "rp2040-kbd-lib", allow = ["GPL-3.0"] },
+    { name = "rp2040-kbd", allow = ["GPL-3.0-only"] },
+    { name = "rp2040-kbd-lib", allow = ["GPL-3.0-only"] },
     { name = "unicode-ident", allow = ["Unicode-3.0"] },
 ]

@@ -227,7 +227,6 @@ fn setup_kbd() -> ! {
             // Hard error, needs new firmware loaded
             oled.write_bad_boot_msg();
             rp2040_hal::rom_data::reset_to_usb_boot(0, 0);
-            unreachable!("Should have gone into boot");
         }
     } else {
         #[cfg(feature = "right")]
@@ -277,7 +276,6 @@ fn setup_kbd() -> ! {
             // Hard error, needs new firmware loaded
             oled.write_bad_boot_msg();
             rp2040_hal::rom_data::reset_to_usb_boot(0, 0);
-            unreachable!("Should have gone into boot");
         }
     }
 }

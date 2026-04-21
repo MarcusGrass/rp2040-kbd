@@ -48,7 +48,6 @@ pub fn run_right<'a>(
         oled_handle.write(27, "FAIL");
         oled_handle.write(36, "BOOT");
         reset_to_usb_boot(0, 0);
-        panic!();
     }
     run_admin_core(oled_handle, consumer, timer, power_led_pin, clock)
 }
@@ -95,7 +94,6 @@ fn run_admin_core(
             Some(KeycoreToAdminMessage::Reboot) => {
                 oled.render_boot_msg();
                 reset_to_usb_boot(0, 0);
-                panic!("HALT POST RESET");
             }
             _ => {}
         }

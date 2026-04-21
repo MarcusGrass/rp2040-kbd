@@ -2,24 +2,24 @@
 name = "rp2040-kbd"
 version = "0.1.0"
 edition = "2021"
-license = "GPL-3.0"
+license = "GPL-3.0-only"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rp2040-kbd-lib = {workspace = true}
+rp2040-kbd-lib = { workspace = true }
 cortex-m-rt = { workspace = true }
-critical-section = {workspace = true }
+critical-section = { workspace = true }
 embedded-hal = { workspace = true }
 embedded-graphics = { workspace = true }
-rp2040-hal = {workspace = true, features = ["rt", "rp2040-e5", "rom-func-cache", "critical-section-impl", "rom-v2-intrinsics"]}
+rp2040-hal = { workspace = true, features = ["rt", "rp2040-e5", "rom-func-cache", "critical-section-impl", "rom-v2-intrinsics"] }
 liatris = { workspace = true }
 heapless = { workspace = true }
 usb-device = { workspace = true, default-features = false }
 usbd-hid = { workspace = true }
 usbd-serial = { workspace = true }
 paste = { workspace = true }
-pio-uart = {workspace = true}
+pio-uart = { workspace = true }
 ssd1306 = { workspace = true }
 
 

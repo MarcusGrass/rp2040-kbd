@@ -1,22 +1,22 @@
 [workspace]
 resolver = "2"
-members = [ "rp2040-kbd", "rp2040-kbd-lib"]
+members = ["rp2040-kbd", "rp2040-kbd-lib"]
 
 [workspace.dependencies]
 rp2040-kbd-lib = { path = "rp2040-kbd-lib" }
 cortex-m-rt = "0.7.5"
 critical-section = "1.2.0"
-embedded-graphics = "0.8.1"
+embedded-graphics = "0.8.2"
 embedded-hal = "1.0.0"
-fugit = "0.3.7"
-heapless = "0.8.0"
+fugit = "0.3.9"
+heapless = "0.9.2"
 paste = "1.0.15"
-pio-uart = { git = "https://github.com/MarcusGrass/pio-uart", rev = "80f5fdbdbfb56e456ece97bdb7c8aebe18d10042" }
-liatris = { git = "https://github.com/MarcusGrass/rp-hal-boards", rev = "748c497ce5f423599e168ca17d2f8017533c0afb" }
-rp2040-hal = "0.11.0"
+pio-uart = { version = "0.3.0" }
+liatris = { git = "https://github.com/MarcusGrass/rp-hal-boards", rev = "e2b258057ac6ad99161219b2a34a1bf985fd2cd7" }
+rp2040-hal = "0.12.0"
 ssd1306 = "0.10.0"
-usb-device = { version = "0.3.2", default-features = false}
-usbd-hid = "0.8.2"
+usb-device = { version = "0.3.2", default-features = false }
+usbd-hid = "0.10.0"
 usbd-serial = "0.2.2"
 
 [workspace.lints]
@@ -33,5 +33,7 @@ clippy.type_complexity = "allow"
 clippy.unnested_or_patterns = "allow"
 
 [patch.crates-io]
-usb-device = { git = "https://github.com/MarcusGrass/usb-device", rev = "b0b066059065db55fc9991f18f5de755f1accd7f" }
-rp2040-hal = { git = "https://github.com/MarcusGrass/rp-hal", rev = "79e022ddc15377c155682db15138b623212b978d"}
+pio-uart = { git = "https://github.com/MarcusGrass/pio-uart", rev = "521b842445c055c26641a8a2b22bdadb9b9b48da" }
+usb-device = { git = "https://github.com/MarcusGrass/usb-device", rev = "552bb34ea116bee19575428c93a1c28873b1c2c3" }
+rp2040-hal = { git = "https://github.com/MarcusGrass/rp-hal", rev = "5611fe4c1384bc4abd5adc644bedb0ae7cacf9c4" }
+usbd-serial = { git = "https://github.com/rust-embedded-community/usbd-serial", rev = "822ae08a8a31f3be4a47eaf1a0b1149b4c4e5892" }
