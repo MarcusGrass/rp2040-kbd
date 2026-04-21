@@ -254,6 +254,9 @@ pub fn layer_to_string(keymap_layer: crate::keymap::KeymapLayer) -> OledLineStri
         crate::keymap::KeymapLayer::Lower => {
             let _ = s.push_str("LO");
         }
+        crate::keymap::KeymapLayer::LowerSeMac => {
+            let _ = s.push_str("LO-MA");
+        }
         crate::keymap::KeymapLayer::LowerAnsi => {
             let _ = s.push_str("LO-AN");
         }
