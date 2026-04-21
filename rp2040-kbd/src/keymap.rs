@@ -981,7 +981,7 @@ impl KeyboardButton for LeftRow0Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::COMMA);
             }
-            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
+            base_layer!(KeymapLayer::DvorakSe) => {
                 if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
                     // Need to remove shift for this key to go out, not putting it
                     // back after though for reasons that I don't remember and may be a bug
@@ -990,6 +990,17 @@ impl KeyboardButton for LeftRow0Col2 {
                         &[],
                         &[Modifier::LEFT_SHIFT],
                     );
+                    keyboard_report_state.jank.pressing_left_bracket = true;
+                } else {
+                    keyboard_report_state.push_key(KeyCode::COMMA);
+                    keyboard_report_state.jank.pressing_comma = true;
+                }
+            }
+            base_layer!(KeymapLayer::DvorakSeMac) => {
+                if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
+                    // Need to remove shift for this key to go out, not putting it
+                    // back after though for reasons that I don't remember and may be a bug
+                    keyboard_report_state.temp_modify(KeyCode::GRAVE, &[], &[Modifier::LEFT_SHIFT]);
                     keyboard_report_state.jank.pressing_left_bracket = true;
                 } else {
                     keyboard_report_state.push_key(KeyCode::COMMA);
@@ -1024,12 +1035,26 @@ impl KeyboardButton for LeftRow0Col2 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::COMMA);
             }
-            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
+            base_layer!(KeymapLayer::DvorakSe) => {
                 if keyboard_report_state.jank.pressing_left_bracket {
                     // These are on the same button and interfere with each other
                     if !keyboard_report_state.jank.pressing_right_bracket {
                         keyboard_report_state.pop_temp_modifiers();
                         keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
+                    }
+                    keyboard_report_state.jank.pressing_left_bracket = false;
+                }
+                if keyboard_report_state.jank.pressing_comma {
+                    keyboard_report_state.pop_key(KeyCode::COMMA);
+                    keyboard_report_state.jank.pressing_comma = false;
+                }
+            }
+            base_layer!(KeymapLayer::DvorakSeMac) => {
+                if keyboard_report_state.jank.pressing_left_bracket {
+                    // These are on the same button and interfere with each other
+                    if !keyboard_report_state.jank.pressing_right_bracket {
+                        keyboard_report_state.pop_temp_modifiers();
+                        keyboard_report_state.pop_key(KeyCode::GRAVE);
                     }
                     keyboard_report_state.jank.pressing_left_bracket = false;
                 }
@@ -1062,7 +1087,7 @@ impl KeyboardButton for LeftRow0Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::DOT);
             }
-            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
+            base_layer!(KeymapLayer::DvorakSe) => {
                 // Button is > or . with and without shift, respectively
                 if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
                     // Needs a shift, but that's already pressed
@@ -1070,6 +1095,20 @@ impl KeyboardButton for LeftRow0Col3 {
                         keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
                     }
                     keyboard_report_state.push_key(KeyCode::NON_US_BACKSLASH);
+                    keyboard_report_state.jank.pressing_right_bracket = true;
+                } else {
+                    keyboard_report_state.push_key(KeyCode::DOT);
+                    keyboard_report_state.jank.pressing_dot = true;
+                }
+            }
+            base_layer!(KeymapLayer::DvorakSeMac) => {
+                // Button is > or . with and without shift, respectively
+                if keyboard_report_state.has_modifier(Modifier::LEFT_SHIFT) {
+                    // Needs a shift, but that's already pressed
+                    if keyboard_report_state.jank.pressing_left_bracket {
+                        keyboard_report_state.pop_key(KeyCode::GRAVE);
+                    }
+                    keyboard_report_state.push_key(KeyCode::GRAVE);
                     keyboard_report_state.jank.pressing_right_bracket = true;
                 } else {
                     keyboard_report_state.push_key(KeyCode::DOT);
@@ -1101,9 +1140,19 @@ impl KeyboardButton for LeftRow0Col3 {
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.pop_key(KeyCode::DOT);
             }
-            base_layer!(KeymapLayer::DvorakSe | KeymapLayer::DvorakSeMac) => {
+            base_layer!(KeymapLayer::DvorakSe) => {
                 if keyboard_report_state.jank.pressing_right_bracket {
                     keyboard_report_state.pop_key(KeyCode::NON_US_BACKSLASH);
+                    keyboard_report_state.jank.pressing_right_bracket = false;
+                }
+                if keyboard_report_state.jank.pressing_dot {
+                    keyboard_report_state.pop_key(KeyCode::DOT);
+                    keyboard_report_state.jank.pressing_dot = false;
+                }
+            }
+            base_layer!(KeymapLayer::DvorakSeMac) => {
+                if keyboard_report_state.jank.pressing_right_bracket {
+                    keyboard_report_state.pop_key(KeyCode::GRAVE);
                     keyboard_report_state.jank.pressing_right_bracket = false;
                 }
                 if keyboard_report_state.jank.pressing_dot {
