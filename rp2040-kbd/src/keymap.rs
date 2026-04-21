@@ -897,7 +897,7 @@ impl KeyboardButton for LeftRow0Col1 {
             temp_layer!(KeymapLayer::Raise) => {
                 keyboard_report_state.push_key(KeyCode::F1);
             }
-            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerAnsi) => {
+            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerAnsi | KeymapLayer::LowerSeMac) => {
                 keyboard_report_state.temp_modify(KeyCode::N1, &[Modifier::LEFT_SHIFT], &[]);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
@@ -931,7 +931,7 @@ impl KeyboardButton for LeftRow0Col1 {
             temp_layer!(KeymapLayer::Raise) => {
                 keyboard_report_state.pop_key(KeyCode::F1);
             }
-            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerAnsi) => {
+            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerAnsi | KeymapLayer::LowerSeMac) => {
                 keyboard_report_state.pop_temp_modifiers();
                 keyboard_report_state.pop_key(KeyCode::N1);
             }
@@ -971,8 +971,12 @@ impl KeyboardButton for LeftRow0Col2 {
             temp_layer!(KeymapLayer::LowerAnsi) => {
                 keyboard_report_state.temp_modify(KeyCode::N2, &[Modifier::LEFT_SHIFT], &[]);
             }
-            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerSeMac) => {
+            temp_layer!(KeymapLayer::Lower) => {
                 keyboard_report_state.temp_modify(KeyCode::N2, &[Modifier::RIGHT_ALT], &[]);
+            }
+            // Not particularly different, but it's safest to stick with L_ALT for macos
+            temp_layer!(KeymapLayer::LowerSeMac) => {
+                keyboard_report_state.temp_modify(KeyCode::N2, &[Modifier::LEFT_ALT], &[]);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
                 keyboard_report_state.push_key(KeyCode::COMMA);
@@ -1052,7 +1056,7 @@ impl KeyboardButton for LeftRow0Col3 {
             temp_layer!(KeymapLayer::Raise) => {
                 keyboard_report_state.push_key(KeyCode::F3);
             }
-            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerAnsi) => {
+            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerAnsi | KeymapLayer::LowerSeMac) => {
                 keyboard_report_state.temp_modify(KeyCode::N3, &[Modifier::LEFT_SHIFT], &[]);
             }
             base_layer!(KeymapLayer::DvorakAnsi) => {
@@ -1090,7 +1094,7 @@ impl KeyboardButton for LeftRow0Col3 {
             temp_layer!(KeymapLayer::Raise) => {
                 keyboard_report_state.pop_key(KeyCode::F3);
             }
-            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerAnsi) => {
+            temp_layer!(KeymapLayer::Lower | KeymapLayer::LowerAnsi | KeymapLayer::LowerSeMac) => {
                 keyboard_report_state.pop_temp_modifiers();
                 keyboard_report_state.pop_key(KeyCode::N3);
             }
