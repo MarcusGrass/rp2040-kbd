@@ -190,16 +190,21 @@ impl KeyboardReportState {
 
     fn temp_modify(&mut self, key_code: KeyCode, add_mods: &[Modifier], pop_mods: &[Modifier]) {
         self.temp_mods = Some(Modifier(self.inner_report.modifier));
+        let mut new_mods = self.inner_report.modifier;
         for md in add_mods {
-            self.inner_report.modifier |= md.0;
+            new_mods |= md.0;
         }
         for md in pop_mods {
-            self.inner_report.modifier &= !md.0;
+            new_mods &= !md.0;
         }
-        // Macos can't handle a change in modifier state at the same time as a key press,
-        // send the modifier change first, then the full report
-        self.outbound_reports
-            .push_back(copy_report(&self.inner_report));
+        if new_mods != self.inner_report.modifier {
+            self.inner_report.modifier = new_mods;
+            // Macos can't handle a change in modifier state at the same time as a key press,
+            // send the modifier change first, then the full report
+            self.outbound_reports
+                .push_back(copy_report(&self.inner_report));
+            self.inner_report_has_change = true;
+        }
         self.push_key(key_code);
         self.inner_report_has_change = true;
         self.outbound_reports
